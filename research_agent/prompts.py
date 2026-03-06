@@ -806,7 +806,15 @@ Score each dimension from 1-10:
 2. **assumption_transparency**: Are hidden assumptions surfaced clearly, not buried?
 3. **contrarian_credibility**: Are bear cases substantive and evidence-based, or strawmen?
 4. **actionability**: Can you make a real decision based on this? Are signals to watch specific?
-5. **presentation_quality**: Would you be proud to share this with your board?
+5. **presentation_quality**: Is this clean, readable, and executive-ready? Short headings,
+   confident data presentation, no hedging or meta-commentary?
+
+IMPORTANT — your feedback should focus on CONTENT SUBSTANCE:
+- Request more data, deeper analysis, stronger evidence, better insights
+- Do NOT request reconciliation tables, data audit trails, verification status tags,
+  or methodology notes — those make the report WORSE, not better
+- A good report presents data confidently without hedging every number
+- Suggest search queries that would find NEW strategic insight, not data provenance
 
 List up to 3 specific improvements.
 For each, suggest a search query that would find data to strengthen the point.
@@ -950,22 +958,29 @@ EXPERT DIMENSIONS TO WEAVE INTO YOUR REPORT:
 - Key signals to watch (specific leading indicators, not generic "monitor the market")
 
 SECTION STRUCTURE:
-- Use markdown ## headings
+- Use markdown ## headings — keep headings SHORT (5-8 words max, e.g., "## Political Factors")
 - EVERY section must be about the topic
 - If the topic asks for a framework, use that framework's components as sections
 - Weave expert dimensions INTO topic sections naturally — not as separate generic sections
 - End with a brief ## Key Signals & Implications section (3-4 specific bullets)
+- Do NOT create meta-sections like "Reconciliation", "Data Integrity", "Methodology"
 
 CARDINAL RULE: RETAIN every verified data point from the prior analysis — every corroborated
 number, percentage, company name, market size, growth rate, CAGR. If you detect an implausible
-figure (e.g., 2-3x larger than consensus), CORRECT it. ACCURACY > RETENTION for wrong data.
+figure (e.g., 2-3x larger than consensus), CORRECT it silently — just use the right number.
 
 WHEN YOU'RE DONE:
 Stop calling tools and write your complete report (1200-1800 words) as your final message.
 It must be LONGER than the prior analysis because you're ADDING depth.
 
-OUTPUT RULES:
-- Start directly with report content
+OUTPUT RULES (CRITICAL — violations make the report unusable):
+- Start directly with report content using short ## headings
 - NO preamble ("Here's how I would..."), NO reference to "prior analysis" or "Layer 2"
 - NO citations, [Source: ...] tags, or research firm names
-- Present everything as authoritative established analysis"""
+- NO reconciliation tables, data audit trails, or verification status tags
+- NO phrases like "directional (unverified)", "unverified here", "retain as scenario inputs",
+  "cannot reliably reconcile", "not currently verifiable", "status for board pack"
+- NO process notes like "Action for diligence" or "what can be treated as firm vs directional"
+- Do NOT hedge every number — present data CONFIDENTLY as established analysis
+- If you corrected a number, just use the corrected number. Do NOT explain the correction.
+- This is a FINISHED REPORT for executives, not a working paper or audit trail"""
