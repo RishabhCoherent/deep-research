@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+node_modules/
+.next/
+NUL
+outputs/
+output/
+*.docx
+frontend/.next/
+.claude/
