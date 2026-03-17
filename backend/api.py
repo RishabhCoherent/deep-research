@@ -33,12 +33,13 @@ from backend.research_manager import (
     run_research_thread,
 )
 from backend.history_manager import list_history, get_history, delete_history
+from research_agent.utils import strip_preamble
 
 from extractors.toc_extractor import extract_toc
 from extractors.me_extractor import extract_me
 from report.mapper import map_sections
 from ui.generation import start_generation, drain_queue
-from config import has_openai, has_searxng
+from config import has_openai, has_searxng, has_tavily
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ app.add_middleware(
 
 @app.get("/api/health", response_model=HealthResponse)
 def health():
-    return HealthResponse(openai=has_openai(), searxng=has_searxng())
+    return HealthResponse(openai=has_openai(), searxng=has_searxng(), tavily=has_tavily())
 
 
 # ─── Extraction ──────────────────────────────────────────────────────────────
@@ -343,6 +344,10 @@ async def research_history_get(history_id: str):
     entry = get_history(history_id)
     if not entry:
         raise HTTPException(status_code=404, detail="History entry not found")
+    # Strip meta-commentary preamble from any layer content (catches old saved reports)
+    for layer in entry.get("report", {}).get("layers", []):
+        if layer.get("content"):
+            layer["content"] = strip_preamble(layer["content"])
     return entry
 
 

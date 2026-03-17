@@ -36,6 +36,7 @@ class GenerateResponse(BaseModel):
 class HealthResponse(BaseModel):
     openai: bool
     searxng: bool
+    tavily: bool = False
 
 
 # ─── Research Agent Models ────────────────────────────────────

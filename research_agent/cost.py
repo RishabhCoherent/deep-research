@@ -1,12 +1,13 @@
 """
 Token usage tracking and cost calculation for multi-layer research agent.
 
-Pricing per 1M tokens (as of 2025):
+Pricing per 1M tokens (as of 2026):
   gpt-4o           : $2.50 input,  $10.00 output
   gpt-4o-mini      : $0.15 input,  $0.60 output
   gpt-4.1          : $2.00 input,  $8.00 output
   gpt-4.1-mini     : $0.40 input,  $1.60 output
   gpt-4.1-nano     : $0.10 input,  $0.40 output
+  gpt-5.2          : $1.75 input,  $14.00 output
   o3-mini          : $1.10 input,  $4.40 output
   o4-mini          : $1.10 input,  $4.40 output
 """
@@ -22,6 +23,7 @@ MODEL_PRICING = {
     "gpt-4.1":          (2.00,   8.00),
     "gpt-4.1-mini":     (0.40,   1.60),
     "gpt-4.1-nano":     (0.10,   0.40),
+    "gpt-5.2":          (1.75,  14.00),
     "o3-mini":          (1.10,   4.40),
     "o4-mini":          (1.10,   4.40),
 }
@@ -114,6 +116,29 @@ class CostTracker:
     @property
     def total_calls(self) -> int:
         return sum(u.calls for u in self.layers.values())
+
+    def to_dict(self) -> dict:
+        """Serialize cost breakdown as a dict for API responses."""
+        components = {}
+        for label, usage in sorted(self.layers.items()):
+            components[label] = {
+                "calls": usage.calls,
+                "input_tokens": usage.input_tokens,
+                "output_tokens": usage.output_tokens,
+                "reasoning_tokens": usage.reasoning_tokens,
+                "total_tokens": usage.total_tokens,
+                "cost_usd": round(usage.cost_usd, 6),
+                "model": usage.model,
+            }
+        return {
+            "components": components,
+            "total_calls": self.total_calls,
+            "total_input_tokens": self.total_input,
+            "total_output_tokens": self.total_output,
+            "total_reasoning_tokens": self.total_reasoning,
+            "total_tokens": self.total_tokens,
+            "total_cost_usd": round(self.total_cost, 6),
+        }
 
     def format_table(self) -> str:
         """Format cost breakdown as ASCII table."""

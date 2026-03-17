@@ -1,38 +1,42 @@
 """
 Evaluation & Comparison framework for multi-layer research outputs.
 
-Uses LLM to evaluate all layers COMPARATIVELY in a single call on 6 dimensions,
-then generates a comparative summary showing progressive improvement.
+Uses LLM to evaluate all layers COMPARATIVELY in a single call on 7 dimensions,
+then generates pairwise content-based comparisons showing exactly WHY each layer
+improves over the previous one — with specific evidence from the actual reports.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Optional
 
 from config import get_llm
-from research_agent.types import ResearchResult, LayerEvaluation, ComparisonReport
+from research_agent.models import (
+    ResearchResult, LayerEvaluation, LayerComparison, ComparisonReport,
+)
 from research_agent.prompts import (
     EVALUATION_PROMPT,
     COMPARATIVE_EVALUATION_PROMPT,
-    COMPARISON_SUMMARY,
+    LAYER_COMPARISON_PROMPT,
+    EXECUTIVE_COMPARISON_SUMMARY,
 )
-from research_agent.utils import extract_json_scores
+from research_agent.utils import extract_json_scores, get_content
 from research_agent.cost import track
 
 logger = logging.getLogger(__name__)
 
 LAYER_NAMES = {
     0: "Baseline (no research)",
-    1: "Research Agent (web search + synthesis)",
-    2: "Analysis Agent (cross-reference + frameworks)",
-    3: "Expert Agent (assumption challenging + contrarian views)",
+    1: "Enhanced (web search + synthesis)",
+    2: "CMI Expert (full pipeline: plan + research + verify + write)",
 }
 
 DIMS = [
     "factual_density", "source_grounding", "analytical_depth",
-    "specificity", "insight_quality", "completeness",
+    "specificity", "insight_quality", "completeness", "structure_quality",
 ]
 
 
@@ -115,13 +119,13 @@ async def evaluate_all_layers(
     topic = results[0].topic
     sorted_results = sorted(results, key=lambda r: r.layer)
 
-    # Build the layers content block — increased cap to 6000 chars per layer
+    # Build the layers content block — 20k chars per layer to avoid truncation
     layers_parts = []
     for r in sorted_results:
         name = LAYER_NAMES.get(r.layer, f"Layer {r.layer}")
         layers_parts.append(
             f"--- LAYER {r.layer}: {name} ({r.word_count} words, "
-            f"{len(r.sources)} sources) ---\n{r.content[:6000]}"
+            f"{len(r.sources)} sources) ---\n{r.content[:20000]}"
         )
     layers_content = "\n\n".join(layers_parts)
 
@@ -150,9 +154,9 @@ async def evaluate_all_layers(
 
     all_scores: dict[int, dict] = {}
     try:
-        response = llm.invoke(messages)
+        response = await llm.ainvoke(messages)
         track("Eval comparative", response)
-        text = response.content.strip()
+        text = get_content(response).strip()
 
         # Parse the comparative JSON response
         parsed = extract_json_scores(text)
@@ -210,9 +214,9 @@ async def evaluate_layer(result: ResearchResult) -> LayerEvaluation:
 
     scores = {}
     try:
-        response = llm.invoke(messages)
+        response = await llm.ainvoke(messages)
         track(f"Eval L{result.layer}", response)
-        text = response.content.strip()
+        text = get_content(response).strip()
         scores = extract_json_scores(text)
         if not scores:
             logger.warning(f"[Evaluator] No scores extracted for Layer {result.layer}")
@@ -223,73 +227,164 @@ async def evaluate_layer(result: ResearchResult) -> LayerEvaluation:
     return _build_layer_evaluation(result, scores)
 
 
-async def compare_layers(
-    results: list[ResearchResult],
+def _get_avg_score(ev: LayerEvaluation) -> float:
+    """Calculate average score across all dimensions for a LayerEvaluation."""
+    raw = getattr(ev, "_raw_scores", {})
+    scores = []
+    for dim in DIMS:
+        info = raw.get(dim, {})
+        if isinstance(info, dict):
+            s = info.get("score", 0)
+            if s:
+                scores.append(float(s))
+    return sum(scores) / len(scores) if scores else 0.0
+
+
+def _format_scores_for_prompt(ev: LayerEvaluation) -> str:
+    """Format evaluation scores as a readable string for the comparison prompt."""
+    raw = getattr(ev, "_raw_scores", {})
+    parts = []
+    for dim in DIMS:
+        info = raw.get(dim, {})
+        if isinstance(info, dict):
+            parts.append(f"{dim}: {info.get('score', '?')}/10")
+        else:
+            parts.append(f"{dim}: {info}")
+    return ", ".join(parts)
+
+
+async def _compare_pair(
+    r_from: ResearchResult,
+    r_to: ResearchResult,
     evaluations: list[LayerEvaluation],
-) -> ComparisonReport:
-    """Generate a comparative summary across all layers."""
-    if not results:
-        return ComparisonReport(topic="", summary="No results to compare.")
+) -> LayerComparison:
+    """Compare two adjacent layers using LLM with full content analysis."""
+    from_ev = next((e for e in evaluations if e.layer == r_from.layer),
+                   LayerEvaluation(layer=r_from.layer))
+    to_ev = next((e for e in evaluations if e.layer == r_to.layer),
+                 LayerEvaluation(layer=r_to.layer))
 
-    topic = results[0].topic
+    score_delta = _get_avg_score(to_ev) - _get_avg_score(from_ev)
 
-    # Build evaluation summaries for the comparison prompt
-    def eval_summary(ev: LayerEvaluation) -> str:
-        raw = getattr(ev, "_raw_scores", {})
-        parts = []
-        for dim in DIMS:
-            info = raw.get(dim, {})
-            if isinstance(info, dict):
-                parts.append(f"  {dim}: {info.get('score', 'N/A')}/10 — {info.get('justification', '')}")
-            else:
-                parts.append(f"  {dim}: {info}")
-        parts.append(f"  sources: {ev.source_diversity}")
-        parts.append(f"  frameworks: {', '.join(ev.framework_usage) if ev.framework_usage else 'none'}")
-        parts.append(f"  elapsed: {ev.elapsed_seconds:.1f}s")
-        return "\n".join(parts)
-
-    # Pad with empty defaults if we have fewer than 4 layers
-    def get_eval(layer: int) -> LayerEvaluation:
-        for ev in evaluations:
-            if ev.layer == layer:
-                return ev
-        return LayerEvaluation(layer=layer)
-
-    def get_words(layer: int) -> int:
-        for r in results:
-            if r.layer == layer:
-                return r.word_count
-        return 0
-
-    llm = get_llm("analyst")
+    llm = get_llm("reviewer")
     messages = [
-        {"role": "system", "content": "You are a research quality analyst."},
-        {"role": "user", "content": COMPARISON_SUMMARY.format(
-            topic=topic,
-            l0_words=get_words(0),
-            l0_eval=eval_summary(get_eval(0)),
-            l1_words=get_words(1),
-            l1_eval=eval_summary(get_eval(1)),
-            l2_words=get_words(2),
-            l2_eval=eval_summary(get_eval(2)),
-            l3_words=get_words(3),
-            l3_eval=eval_summary(get_eval(3)),
+        {"role": "system", "content": "You are a research quality analyst. Return ONLY valid JSON."},
+        {"role": "user", "content": LAYER_COMPARISON_PROMPT.format(
+            topic=r_from.topic,
+            from_layer=r_from.layer,
+            from_name=LAYER_NAMES.get(r_from.layer, f"Layer {r_from.layer}"),
+            from_words=r_from.word_count,
+            from_sources=len(r_from.sources),
+            from_content=r_from.content[:15000],
+            from_scores=_format_scores_for_prompt(from_ev),
+            to_layer=r_to.layer,
+            to_name=LAYER_NAMES.get(r_to.layer, f"Layer {r_to.layer}"),
+            to_words=r_to.word_count,
+            to_sources=len(r_to.sources),
+            to_content=r_to.content[:15000],
+            to_scores=_format_scores_for_prompt(to_ev),
         )},
     ]
 
     try:
-        response = llm.invoke(messages)
-        track("Eval compare", response)
-        summary = response.content.strip()
+        response = await llm.ainvoke(messages)
+        track(f"Eval compare L{r_from.layer}→L{r_to.layer}", response)
+        text = get_content(response).strip()
+        parsed = extract_json_scores(text)
+
+        improvements = parsed.get("improvements", []) if parsed else []
+        if not isinstance(improvements, list):
+            improvements = []
+
+        return LayerComparison(
+            from_layer=r_from.layer,
+            to_layer=r_to.layer,
+            improvements=improvements[:5],
+            score_delta=round(score_delta, 1),
+            key_evidence=parsed.get("key_evidence", "") if parsed else "",
+            overall_verdict=parsed.get("overall_verdict", "") if parsed else "",
+        )
     except Exception as e:
-        logger.error(f"[Evaluator] Comparison summary failed: {e}")
-        summary = f"Error generating comparison: {e}"
+        logger.error(f"[Evaluator] Pair comparison L{r_from.layer}→L{r_to.layer} failed: {e}")
+        return LayerComparison(
+            from_layer=r_from.layer,
+            to_layer=r_to.layer,
+            score_delta=round(score_delta, 1),
+        )
+
+
+async def compare_layers(
+    results: list[ResearchResult],
+    evaluations: list[LayerEvaluation],
+) -> ComparisonReport:
+    """Generate pairwise content-based comparisons + executive summary.
+
+    For each adjacent layer pair (L0→L1, L1→L2), analyzes the actual report
+    content to identify 4-5 specific improvements with evidence. Then generates
+    an executive summary from the structured comparison data.
+    """
+    if not results:
+        return ComparisonReport(topic="", summary="No results to compare.")
+
+    topic = results[0].topic
+    sorted_results = sorted(results, key=lambda r: r.layer)
+
+    # 1. Run pairwise content comparisons in parallel
+    pairs = list(zip(sorted_results[:-1], sorted_results[1:]))
+    if pairs:
+        comparison_tasks = [_compare_pair(r1, r2, evaluations) for r1, r2 in pairs]
+        layer_comparisons = await asyncio.gather(*comparison_tasks)
+    else:
+        layer_comparisons = []
+
+    logger.info(f"[Evaluator] Completed {len(layer_comparisons)} pairwise comparisons")
+
+    # 2. Generate executive summary from structured comparison data
+    pairwise_parts = []
+    for lc in layer_comparisons:
+        from_name = LAYER_NAMES.get(lc.from_layer, f"Layer {lc.from_layer}")
+        to_name = LAYER_NAMES.get(lc.to_layer, f"Layer {lc.to_layer}")
+        part = f"**Layer {lc.from_layer} ({from_name}) → Layer {lc.to_layer} ({to_name}):**\n"
+        part += f"Score improvement: +{lc.score_delta:.1f}/10\n"
+        part += f"Verdict: {lc.overall_verdict}\n"
+        part += "Improvements:\n"
+        for i, imp in enumerate(lc.improvements, 1):
+            part += f"  {i}. {imp}\n"
+        if lc.key_evidence:
+            part += f"Key evidence: {lc.key_evidence[:300]}\n"
+        pairwise_parts.append(part)
+
+    score_parts = []
+    for ev in sorted(evaluations, key=lambda e: e.layer):
+        name = LAYER_NAMES.get(ev.layer, f"Layer {ev.layer}")
+        avg = _get_avg_score(ev)
+        score_parts.append(f"Layer {ev.layer} ({name}): {avg:.1f}/10 avg, "
+                          f"{ev.word_count} words, {ev.source_diversity} sources")
+
+    llm = get_llm("analyst")
+    messages = [
+        {"role": "system", "content": "You are a research quality analyst."},
+        {"role": "user", "content": EXECUTIVE_COMPARISON_SUMMARY.format(
+            topic=topic,
+            pairwise_summaries="\n\n".join(pairwise_parts),
+            score_summary="\n".join(score_parts),
+        )},
+    ]
+
+    try:
+        response = await llm.ainvoke(messages)
+        track("Eval summary", response)
+        summary = get_content(response).strip()
+    except Exception as e:
+        logger.error(f"[Evaluator] Executive summary failed: {e}")
+        summary = f"Error generating summary: {e}"
 
     return ComparisonReport(
         topic=topic,
         results=results,
         evaluations=evaluations,
         summary=summary,
+        layer_comparisons=list(layer_comparisons),
     )
 
 

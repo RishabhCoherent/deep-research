@@ -25,7 +25,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from config import set_model_tier, get_model_tier, MODEL_TIERS
-from research_agent.runner import run_all_layers, print_report, save_report
+from research_agent import run_all_layers
+from research_agent.cli import print_report, save_report
 
 
 def main():

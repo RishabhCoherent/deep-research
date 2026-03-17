@@ -1,5 +1,10 @@
 """
-Shared utilities for the multi-layer research agent.
+Shared utilities for the research agent pipeline.
+
+- get_content: safe LLM response text extraction
+- extract_json / extract_json_scores: robust JSON parsing from LLM output
+- strip_preamble: remove meta-commentary before first heading
+- infer_publisher: extract publisher name from URL
 """
 
 from __future__ import annotations
@@ -7,8 +12,31 @@ from __future__ import annotations
 import json
 import logging
 import re
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
+
+
+def get_content(response) -> str:
+    """Safely extract string content from an LLM response.
+
+    Some models return response.content as a list of content blocks
+    (dicts with 'text' keys) instead of a plain string.
+    """
+    content = response.content
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, dict):
+                parts.append(block.get("text", str(block)))
+            elif isinstance(block, str):
+                parts.append(block)
+            else:
+                parts.append(str(block))
+        return "".join(parts)
+    return str(content)
 
 
 def extract_json(text: str):
@@ -115,3 +143,35 @@ def extract_json_scores(text: str) -> dict:
     if scores:
         logger.info(f"[extract_json_scores] Recovered {len(scores)}/6 scores via regex fallback")
     return scores
+
+
+def strip_preamble(draft: str) -> str:
+    """Remove any meta-commentary before the first ## heading.
+
+    The agent sometimes produces preamble like:
+      "I can't run more queries. Below is an improved PEST that retains..."
+      "Here is the final report:"
+      "Budget exhausted. Writing report now."
+
+    All legitimate report content starts with a ## heading. Any text before
+    the first ## is meta-commentary and must be stripped.
+    """
+    lines = draft.split("\n")
+    for i, line in enumerate(lines):
+        if line.startswith("## ") or line.startswith("# "):
+            stripped = "\n".join(lines[i:]).strip()
+            if stripped != draft.strip():
+                logger.info(f"[Output] Stripped {i} lines of preamble before first heading")
+            return stripped
+    # No ## heading found — return as-is (let evaluator penalise it)
+    return draft
+
+
+def infer_publisher(url: str) -> str:
+    """Extract publisher name from URL domain."""
+    try:
+        host = urlparse(url).hostname or ""
+        host = host.replace("www.", "")
+        return host.split(".")[0].capitalize() if host else "Unknown"
+    except Exception:
+        return "Unknown"

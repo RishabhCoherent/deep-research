@@ -62,7 +62,7 @@ def run_research_thread(topic: str, max_layer: int,
     """Thread target: runs the multi-layer research agent."""
     try:
 
-        from research_agent.runner import run_all_layers
+        from research_agent import run_all_layers
 
         def progress_callback(layer, status, message):
             event = json.dumps({
@@ -106,12 +106,30 @@ def run_research_thread(topic: str, max_layer: int,
                 "scores": raw,
             })
 
+        # Capture cost breakdown from the global tracker
+        from research_agent.cost import get_tracker
+        cost_data = get_tracker().to_dict()
+
+        # Serialize pairwise layer comparisons
+        layer_comparisons = []
+        for lc in report.layer_comparisons:
+            layer_comparisons.append({
+                "from_layer": lc.from_layer,
+                "to_layer": lc.to_layer,
+                "improvements": lc.improvements,
+                "score_delta": lc.score_delta,
+                "key_evidence": lc.key_evidence,
+                "overall_verdict": lc.overall_verdict,
+            })
+
         result_holder["success"] = True
         result_holder["report"] = {
             "topic": report.topic,
             "layers": layers,
             "evaluations": evaluations,
             "summary": report.summary,
+            "layer_comparisons": layer_comparisons,
+            "cost": cost_data,
         }
 
         # Auto-save to persistent history
@@ -124,7 +142,8 @@ def run_research_thread(topic: str, max_layer: int,
         progress_queue.put(("done", json.dumps({"success": True})))
 
     except Exception as e:
-        logger.error(f"Research thread failed: {e}")
+        import traceback
+        logger.error(f"Research thread failed: {e}\n{traceback.format_exc()}")
         result_holder["success"] = False
         result_holder["error"] = str(e)
         progress_queue.put(("done", json.dumps({
