@@ -813,7 +813,7 @@ function CmiPipelineFlow({
                                         {q.queries.map((query, k) => (
                                           <span
                                             key={k}
-                                            className="text-[8px] text-warm-gray/60 italic truncate max-w-[180px]"
+                                            className="text-[8px] text-warm-gray/60 italic truncate max-w-45"
                                           >
                                             &ldquo;{query}&rdquo;
                                           </span>
@@ -991,7 +991,7 @@ function CmiPipelineFlow({
                                 }}
                               >
                                 <span className="text-[8px] opacity-60">{toolCfg?.icon ?? "🔍"}</span>
-                                <span className="truncate max-w-[200px]">{nq.query}</span>
+                                <span className="truncate max-w-50">{nq.query}</span>
                                 {hasHits && (
                                   <span className="text-[8px] opacity-50 ml-0.5">({nq.hits.length})</span>
                                 )}
@@ -1614,7 +1614,7 @@ function ImprovementCard({ comparison }: { comparison: LayerComparisonData }) {
           {comparison.improvements.map((imp, i) => (
             <div key={i} className="flex gap-2.5 items-start">
               <span
-                className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+                className="mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
                 style={{ background: toCfg.chipBg, color: toCfg.color }}
               >
                 {i + 1}
