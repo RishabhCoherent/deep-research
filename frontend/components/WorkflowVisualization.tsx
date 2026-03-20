@@ -466,7 +466,7 @@ const WorkflowNode = React.memo(function WorkflowNode({
             style={{ top: `calc(100% + 12px)` }}
           >
             <div
-              className="rounded-xl px-4 py-2.5 text-[12px] leading-relaxed max-w-[260px] text-center"
+              className="rounded-xl px-4 py-2.5 text-[12px] leading-relaxed max-w-65 text-center"
               style={{
                 background: "rgba(8,8,12,0.92)",
                 color: "rgba(255,255,255,0.90)",
