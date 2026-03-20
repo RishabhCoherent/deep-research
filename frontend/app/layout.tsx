@@ -1,36 +1,39 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import { Geist_Mono } from "next/font/google";
-import "./globals.css";
+import React from "react"
+import type { Metadata } from 'next'
+import { Instrument_Sans, Instrument_Serif, JetBrains_Mono } from 'next/font/google'
+import './globals.css'
 
-const inter = Inter({
-  variable: "--font-inter",
+const instrumentSans = Instrument_Sans({ 
   subsets: ["latin"],
+  variable: '--font-instrument'
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const instrumentSerif = Instrument_Serif({ 
   subsets: ["latin"],
+  weight: "400",
+  variable: '--font-instrument-serif'
+});
+
+const jetbrainsMono = JetBrains_Mono({ 
+  subsets: ["latin"],
+  variable: '--font-jetbrains'
 });
 
 export const metadata: Metadata = {
-  title: "Coherent Market Insights — AI Research & Reports",
-  description:
-    "AI-powered market research and report generation platform by Coherent Market Insights.",
-};
+  title: 'CoherentBot — AI Research & Reports',
+  description: 'AI-powered market research and report generation platform by CoherentBot.',
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${inter.variable} ${geistMono.variable} antialiased font-sans bg-surface-0 text-foreground`}
-      >
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning className={`${instrumentSans.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         {children}
       </body>
     </html>
-  );
+  )
 }

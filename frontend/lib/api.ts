@@ -1,6 +1,4 @@
 import type {
-  ExtractionResponse,
-  GenerateResponse,
   HealthStatus,
   ResearchJobResponse,
   ComparisonReport,
@@ -8,10 +6,10 @@ import type {
   ResearchHistoryDetail,
 } from "./types";
 
-const API_BASE = "/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${url}`, init);
+  const res = await fetch(`${API_BASE}/api${url}`, init);
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(body.detail || `Request failed: ${res.status}`);
@@ -23,91 +21,26 @@ export async function checkHealth(): Promise<HealthStatus> {
   return request<HealthStatus>("/health");
 }
 
-export async function extractFiles(
-  pptxFile: File,
-  xlsxFile: File
-): Promise<ExtractionResponse> {
-  const form = new FormData();
-  form.append("pptx", pptxFile);
-  form.append("xlsx", xlsxFile);
-  return request<ExtractionResponse>("/extract/files", {
-    method: "POST",
-    body: form,
-  });
-}
-
-export async function extractJson(
-  jsonFile: File
-): Promise<ExtractionResponse> {
-  const form = new FormData();
-  form.append("file", jsonFile);
-  return request<ExtractionResponse>("/extract/json", {
-    method: "POST",
-    body: form,
-  });
-}
-
-export async function extractFromPaths(
-  pptxPath: string,
-  xlsxPath: string
-): Promise<ExtractionResponse> {
-  return request<ExtractionResponse>(
-    `/extract/paths?pptx_path=${encodeURIComponent(pptxPath)}&xlsx_path=${encodeURIComponent(xlsxPath)}`,
-    { method: "POST" }
-  );
-}
-
-export async function extractJsonFromPath(
-  jsonPath: string
-): Promise<ExtractionResponse> {
-  return request<ExtractionResponse>(
-    `/extract/json-path?json_path=${encodeURIComponent(jsonPath)}`,
-    { method: "POST" }
-  );
-}
-
-export async function startGeneration(
-  extractedData: Record<string, unknown>,
-  skipContent: boolean,
-  topicOverride: string
-): Promise<GenerateResponse> {
-  return request<GenerateResponse>("/generate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      extracted_data: extractedData,
-      skip_content: skipContent,
-      topic_override: topicOverride,
-    }),
-  });
-}
-
-export function getProgressUrl(jobId: string): string {
-  return `${API_BASE}/generate/${jobId}/progress`;
-}
-
-export function getDownloadUrl(jobId: string): string {
-  return `${API_BASE}/generate/${jobId}/download`;
-}
-
 // ─── Research Agent API ──────────────────────────────────────
 
 export async function startResearch(
   topic: string,
-  maxLayer: number
+  maxLayer: number,
+  brief: string = ""
 ): Promise<ResearchJobResponse> {
   return request<ResearchJobResponse>("/research", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       topic,
+      brief,
       max_layer: maxLayer,
     }),
   });
 }
 
 export function getResearchProgressUrl(jobId: string): string {
-  return `${API_BASE}/research/${jobId}/progress`;
+  return `${API_BASE}/api/research/${jobId}/progress`;
 }
 
 export async function getResearchResult(

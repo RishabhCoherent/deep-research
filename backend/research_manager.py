@@ -57,7 +57,7 @@ def cleanup_stale_research(max_age_seconds: int = 7200):
             del _research_jobs[jid]
 
 
-def run_research_thread(topic: str, max_layer: int,
+def run_research_thread(topic: str, brief: str, max_layer: int,
                         progress_queue: queue.Queue, result_holder: dict):
     """Thread target: runs the multi-layer research agent."""
     try:
@@ -74,6 +74,7 @@ def run_research_thread(topic: str, max_layer: int,
 
         report = asyncio.run(run_all_layers(
             topic=topic,
+            brief=brief,
             max_layer=max_layer,
             progress_callback=progress_callback,
         ))
@@ -113,6 +114,15 @@ def run_research_thread(topic: str, max_layer: int,
         # Serialize pairwise layer comparisons
         layer_comparisons = []
         for lc in report.layer_comparisons:
+            claim_pairs = []
+            for cp in (lc.claim_pairs or []):
+                claim_pairs.append({
+                    "category": cp.category,
+                    "baseline": cp.baseline,
+                    "improved": cp.improved,
+                    "tags": cp.tags,
+                    "source": cp.source,
+                })
             layer_comparisons.append({
                 "from_layer": lc.from_layer,
                 "to_layer": lc.to_layer,
@@ -120,7 +130,40 @@ def run_research_thread(topic: str, max_layer: int,
                 "score_delta": lc.score_delta,
                 "key_evidence": lc.key_evidence,
                 "overall_verdict": lc.overall_verdict,
+                "claim_pairs": claim_pairs,
             })
+
+        # Serialize claim journey (showcase transformation across all layers)
+        claim_journey = None
+        if report.claim_journey:
+            cj = report.claim_journey
+            claim_journey = {
+                "category": cj.category,
+                "topic_sentence": cj.topic_sentence,
+                "overall_narrative": cj.overall_narrative,
+                "selection_reason": cj.selection_reason,
+                "snapshots": [
+                    {
+                        "layer": s.layer,
+                        "claim_text": s.claim_text,
+                        "data_points": s.data_points,
+                        "sources_cited": s.sources_cited,
+                        "quality_tags": s.quality_tags,
+                        "transformation_steps": [
+                            {
+                                "action": ts.action,
+                                "query": ts.query,
+                                "source_title": ts.source_title,
+                                "source_url": ts.source_url,
+                                "data_point_added": ts.data_point_added,
+                                "why_it_matters": ts.why_it_matters,
+                            }
+                            for ts in s.transformation_steps
+                        ],
+                    }
+                    for s in cj.snapshots
+                ],
+            }
 
         result_holder["success"] = True
         result_holder["report"] = {
@@ -129,12 +172,16 @@ def run_research_thread(topic: str, max_layer: int,
             "evaluations": evaluations,
             "summary": report.summary,
             "layer_comparisons": layer_comparisons,
+            "claim_journey": claim_journey,
             "cost": cost_data,
+            "hallucination_reduction": report.hallucination_reduction,
+            "outcome_efficiency": report.outcome_efficiency,
+            "relevancy": report.relevancy,
         }
 
         # Auto-save to persistent history
         try:
-            from backend.history_manager import save_research
+            from history_manager import save_research
             save_research(result_holder["report"])
         except Exception as save_err:
             logger.warning(f"Failed to auto-save research history: {save_err}")

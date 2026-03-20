@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Brain,
   Layers,
   FileText,
   Globe,
@@ -11,9 +10,10 @@ import {
   Trash2,
   Loader2,
   Inbox,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Sidebar } from "@/components/Sidebar";
+import { ResearchLayout } from "@/components/ResearchLayout";
 import { getResearchHistory, deleteResearchHistory } from "@/lib/api";
 import type { ResearchHistoryItem } from "@/lib/types";
 
@@ -22,6 +22,11 @@ export default function ResearchHistoryPage() {
   const [items, setItems] = useState<ResearchHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
 
   useEffect(() => {
     getResearchHistory()
@@ -43,135 +48,134 @@ export default function ResearchHistoryPage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto px-8 py-6">
-        <div className="mx-auto max-w-5xl animate-fade-in-up">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple/20">
-                <Brain className="h-5 w-5 text-orange" />
-              </div>
-              <h2 className="text-2xl font-bold text-foreground">
-                Research History
-              </h2>
-              {!loading && items.length > 0 && (
-                <span className="rounded-full bg-surface-3 px-2.5 py-0.5 text-xs font-medium text-warm-gray">
-                  {items.length}
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-warm-gray">
-              Browse and review your past research results.
-            </p>
-          </div>
-
-          {/* Loading */}
-          {loading && (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-6 w-6 animate-spin text-warm-gray" />
-            </div>
-          )}
-
-          {/* Empty State */}
-          {!loading && items.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-2 mb-4">
-                <Inbox className="h-8 w-8 text-warm-gray" />
-              </div>
-              <h3 className="text-sm font-semibold text-foreground mb-1">
-                No research history yet
-              </h3>
-              <p className="text-xs text-warm-gray mb-4">
-                Completed research will appear here automatically.
-              </p>
-              <button
-                onClick={() => router.push("/research")}
-                className="rounded-lg gradient-brand px-4 py-2 text-xs font-semibold text-white hover:opacity-90 transition-opacity"
-              >
-                Start Research
-              </button>
-            </div>
-          )}
-
-          {/* History Grid */}
+    <ResearchLayout>
+      {/* Header */}
+      <div
+        className={`mb-12 transition-all duration-700 ${
+          isVisible
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-8"
+        }`}
+      >
+        <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-4">
+          <span className="w-8 h-px bg-foreground/30" />
+          Research History
+        </span>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl lg:text-4xl font-display leading-[1.1] tracking-tight">
+            Past research
+          </h1>
           {!loading && items.length > 0 && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() =>
-                    router.push(`/research/history/${item.id}`)
-                  }
-                  className="glass-card-hover cursor-pointer p-5 transition-all hover:shadow-lg"
-                >
-                  {/* Topic + Delete */}
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-foreground line-clamp-2 flex-1 mr-2 leading-snug">
-                      {item.topic}
-                    </h3>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(item.id);
-                      }}
-                      disabled={deleting === item.id}
-                      className="flex-shrink-0 rounded-lg p-1.5 text-warm-gray hover:text-error hover:bg-error/10 transition-colors"
-                    >
-                      {deleting === item.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Date */}
-                  <p className="text-[11px] text-warm-gray mb-3">
-                    {new Date(item.saved_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}{" "}
-                    at{" "}
-                    {new Date(item.saved_at).toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-
-                  {/* Stats Grid */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <MiniStat
-                      icon={<Layers className="h-3 w-3" />}
-                      label="Layers"
-                      value={item.layer_count}
-                    />
-                    <MiniStat
-                      icon={<FileText className="h-3 w-3" />}
-                      label="Words"
-                      value={item.total_words.toLocaleString()}
-                    />
-                    <MiniStat
-                      icon={<Globe className="h-3 w-3" />}
-                      label="Sources"
-                      value={item.total_sources}
-                    />
-                    <MiniStat
-                      icon={<BarChart3 className="h-3 w-3" />}
-                      label="Score"
-                      value={`${item.avg_score}/10`}
-                    />
-                  </div>
-
-                </div>
-              ))}
-            </div>
+            <span className="rounded-full bg-foreground/5 px-3 py-1 text-xs font-mono text-muted-foreground">
+              {items.length}
+            </span>
           )}
         </div>
-      </main>
-    </div>
+        <p className="mt-3 text-base text-muted-foreground">
+          Browse and review your completed research results.
+        </p>
+      </div>
+
+      {/* Loading */}
+      {loading && (
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && items.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-foreground/5 mb-6">
+            <Inbox className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="font-display text-xl mb-2">No research yet</h3>
+          <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+            Completed research will appear here automatically.
+          </p>
+          <button
+            onClick={() => router.push("/research")}
+            className="inline-flex items-center gap-2 bg-foreground hover:bg-foreground/90 text-background rounded-full px-6 h-12 text-sm font-medium group transition-colors"
+          >
+            Start Research
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </button>
+        </div>
+      )}
+
+      {/* History Grid */}
+      {!loading && items.length > 0 && (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((item, index) => (
+            <div
+              key={item.id}
+              onClick={() => router.push(`/research/history/${item.id}`)}
+              className="glass-card hover-lift cursor-pointer rounded-2xl p-6 group animate-fade-in-up"
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              {/* Topic + Delete */}
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="font-display text-lg text-foreground line-clamp-2 flex-1 mr-3 leading-snug">
+                  {item.topic}
+                </h3>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(item.id);
+                  }}
+                  disabled={deleting === item.id}
+                  className="shrink-0 rounded-full p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  {deleting === item.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
+
+              {/* Date */}
+              <p className="font-mono text-xs text-muted-foreground mb-4">
+                {new Date(item.saved_at).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}{" "}
+                at{" "}
+                {new Date(item.saved_at).toLocaleTimeString("en-US", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <MiniStat
+                  icon={<Layers className="h-3 w-3" />}
+                  label="Layers"
+                  value={item.layer_count}
+                />
+                <MiniStat
+                  icon={<FileText className="h-3 w-3" />}
+                  label="Words"
+                  value={item.total_words.toLocaleString()}
+                />
+                <MiniStat
+                  icon={<Globe className="h-3 w-3" />}
+                  label="Sources"
+                  value={item.total_sources}
+                />
+                <MiniStat
+                  icon={<BarChart3 className="h-3 w-3" />}
+                  label="Score"
+                  value={`${item.avg_score}/10`}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </ResearchLayout>
   );
 }
 
@@ -185,13 +189,13 @@ function MiniStat({
   value: string | number;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-surface-2 px-2.5 py-1.5">
-      <span className="text-warm-gray">{icon}</span>
+    <div className="flex items-center gap-2 rounded-lg bg-foreground/5 px-2.5 py-2">
+      <span className="text-muted-foreground">{icon}</span>
       <div className="min-w-0">
-        <p className="text-[9px] text-warm-gray uppercase tracking-wide">
+        <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wide">
           {label}
         </p>
-        <p className="text-xs font-semibold text-foreground truncate">
+        <p className="text-xs font-display text-foreground truncate">
           {value}
         </p>
       </div>

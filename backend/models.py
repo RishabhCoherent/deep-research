@@ -1,36 +1,6 @@
-"""Pydantic request/response schemas for the FastAPI layer."""
+"""Pydantic request/response schemas for the Deep Research API."""
 
 from pydantic import BaseModel
-
-
-class SectionPlanSummary(BaseModel):
-    number: int
-    type: str
-    title: str
-
-
-class ExtractionSummary(BaseModel):
-    report_title: str
-    subtitle: str
-    section_count: int
-    sheet_count: int
-    sheets: list[str]
-    plans: list[SectionPlanSummary]
-
-
-class ExtractionResponse(BaseModel):
-    extracted_data: dict
-    summary: ExtractionSummary
-
-
-class GenerateRequest(BaseModel):
-    extracted_data: dict
-    skip_content: bool = False
-    topic_override: str = ""
-
-
-class GenerateResponse(BaseModel):
-    job_id: str
 
 
 class HealthResponse(BaseModel):
@@ -39,11 +9,9 @@ class HealthResponse(BaseModel):
     tavily: bool = False
 
 
-# ─── Research Agent Models ────────────────────────────────────
-
-
 class ResearchRequest(BaseModel):
     topic: str
+    brief: str = ""
     max_layer: int = 3
 
 

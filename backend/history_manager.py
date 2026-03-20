@@ -9,8 +9,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
-HISTORY_DIR = os.path.join(PROJECT_ROOT, "outputs", "research_history")
+BACKEND_ROOT = str(Path(__file__).resolve().parent)
+HISTORY_DIR = os.path.join(BACKEND_ROOT, "data", "research_history")
 
 _write_lock = threading.Lock()
 
@@ -111,8 +111,18 @@ def get_history(history_id: str) -> dict | None:
 
 
 def migrate_scores():
-    """One-time migration: recompute avg_score for all history entries using last-layer-only logic."""
+    """One-time migration: recompute avg_score and remap old dimension keys for all history entries."""
     _ensure_dir()
+
+    # Map old evaluation score keys → new keys
+    _KEY_REMAP = {
+        "source_traceability": "source_grounding",
+        "clarity": "analytical_depth",
+        "actionability": "insight_quality",
+    }
+    # Keys to remove entirely
+    _KEYS_DROP = {"data_accuracy"}
+
     updated = 0
     for fname in os.listdir(HISTORY_DIR):
         if not fname.endswith(".json"):
@@ -121,14 +131,33 @@ def migrate_scores():
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
+
+            changed = False
+
+            # Remap evaluation score keys
+            for ev in data.get("report", {}).get("evaluations", []):
+                scores = ev.get("scores", {})
+                for old_key, new_key in _KEY_REMAP.items():
+                    if old_key in scores and new_key not in scores:
+                        scores[new_key] = scores.pop(old_key)
+                        changed = True
+                for drop_key in _KEYS_DROP:
+                    if drop_key in scores:
+                        del scores[drop_key]
+                        changed = True
+
+            # Recompute avg_score
             new_score = _compute_avg_score(data.get("report", {}))
             if data.get("avg_score") != new_score:
                 data["avg_score"] = new_score
+                changed = True
+
+            if changed:
                 with _write_lock:
                     with open(path, "w", encoding="utf-8") as f:
                         json.dump(data, f, indent=2, ensure_ascii=False)
                 updated += 1
-                logger.info(f"Migrated score for {fname}: {new_score}")
+                logger.info(f"Migrated {fname}: remapped keys, avg_score={new_score}")
         except Exception as e:
             logger.warning(f"Skipping {fname} during migration: {e}")
     logger.info(f"Score migration complete: {updated} entries updated")

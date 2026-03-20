@@ -25,16 +25,16 @@ const SECTION_ACCENTS = [
     dot: "bg-purple",
   },
   {
-    border: "border-l-orange",
-    bg: "bg-orange/5",
-    badge: "bg-orange/15 text-orange",
-    dot: "bg-orange",
+    border: "border-l-purple-light",
+    bg: "bg-purple-light/5",
+    badge: "bg-purple-light/15 text-purple-light",
+    dot: "bg-purple-light",
   },
   {
-    border: "border-l-coral",
-    bg: "bg-coral/5",
-    badge: "bg-coral/15 text-coral",
-    dot: "bg-coral",
+    border: "border-l-foreground",
+    bg: "bg-foreground/5",
+    badge: "bg-foreground/15 text-muted-foreground",
+    dot: "bg-foreground",
   },
   {
     border: "border-l-success",
@@ -68,16 +68,16 @@ const CALLOUT_CONFIG = {
   COUNTEREVIDENCE: {
     label: "Counterevidence",
     Icon: AlertTriangle,
-    border: "border-l-orange",
-    bg: "bg-orange/8",
-    header: "text-orange",
+    border: "border-l-purple",
+    bg: "bg-purple/8",
+    header: "text-purple",
   },
   "SECOND-ORDER": {
     label: "Second-Order Effect",
     Icon: GitBranch,
-    border: "border-l-coral",
-    bg: "bg-coral/8",
-    header: "text-coral",
+    border: "border-l-foreground",
+    bg: "bg-foreground/8",
+    header: "text-foreground",
   },
   "CROSS-INDUSTRY": {
     label: "Cross-Industry Parallel",
@@ -195,18 +195,20 @@ function parseSections(markdown: string): Section[] {
 const PROSE_CLASSES = cn(
   "prose prose-sm max-w-none",
   "prose-headings:text-foreground prose-headings:font-semibold",
-  "prose-h3:text-[13px] prose-h3:mt-4 prose-h3:mb-1.5 prose-h3:text-foreground/90",
-  "prose-h4:text-xs prose-h4:mt-3 prose-h4:mb-1 prose-h4:text-foreground/80",
-  "prose-p:text-warm-gray-light prose-p:leading-relaxed prose-p:my-1.5 prose-p:text-[13px]",
+  // Sub-headings: visible, styled, with clear spacing
+  "prose-h3:text-base prose-h3:font-semibold prose-h3:mt-6 prose-h3:mb-2 prose-h3:text-foreground prose-h3:border-b prose-h3:border-foreground/10 prose-h3:pb-1",
+  "prose-h4:text-sm prose-h4:font-medium prose-h4:mt-4 prose-h4:mb-1.5 prose-h4:text-foreground/80",
+  "prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:my-2 prose-p:text-[13px]",
   "prose-strong:text-foreground prose-strong:font-semibold",
-  "prose-ul:text-warm-gray-light prose-ul:my-1.5 prose-ul:text-[13px]",
-  "prose-ol:text-warm-gray-light prose-ol:my-1.5 prose-ol:text-[13px]",
-  "prose-li:my-0.5 prose-li:leading-relaxed",
+  "prose-ul:text-muted-foreground prose-ul:my-2 prose-ul:text-[13px] prose-ul:pl-5",
+  "prose-ol:text-muted-foreground prose-ol:my-2 prose-ol:text-[13px] prose-ol:pl-5",
+  "prose-li:my-1 prose-li:leading-relaxed",
   "prose-a:text-purple prose-a:no-underline hover:prose-a:underline",
-  "prose-hr:border-surface-3 prose-hr:my-3",
-  "prose-table:text-xs prose-table:my-3",
-  "prose-th:text-foreground prose-th:bg-surface-2 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:font-semibold prose-th:whitespace-nowrap",
-  "prose-td:px-3 prose-td:py-1.5 prose-td:text-warm-gray-light prose-td:border-b prose-td:border-surface-3",
+  "prose-hr:border-foreground/10 prose-hr:my-3",
+  // Tables: proper sizing with full grid borders
+  "prose-table:text-sm prose-table:my-4 prose-table:w-full",
+  "prose-th:text-foreground prose-th:bg-foreground/5 prose-th:px-4 prose-th:py-2.5 prose-th:text-left prose-th:font-semibold prose-th:border prose-th:border-foreground/15",
+  "prose-td:px-4 prose-td:py-2 prose-td:text-muted-foreground prose-td:border prose-td:border-foreground/10",
   // Suppress default blockquote prose styles — we handle them custom
   "prose-blockquote:not-italic prose-blockquote:border-0 prose-blockquote:p-0 prose-blockquote:m-0",
 );
@@ -248,13 +250,71 @@ function CalloutCard({
 /* ── Custom ReactMarkdown components ────────────────────────────── */
 function makeMarkdownComponents() {
   return {
+    h3: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
+      <h3
+        className="text-base font-semibold text-foreground mt-6 mb-2 pb-1.5 border-b border-foreground/10"
+        {...props}
+      >
+        {children}
+      </h3>
+    ),
+
+    h4: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
+      <h4
+        className="text-sm font-medium text-foreground/80 mt-4 mb-1.5"
+        {...props}
+      >
+        {children}
+      </h4>
+    ),
+
     table: ({
       children,
       ...props
     }: React.HTMLAttributes<HTMLTableElement>) => (
-      <div className="overflow-x-auto rounded-lg border border-surface-3 my-3">
-        <table {...props}>{children}</table>
+      <div className="overflow-x-auto rounded-lg border border-foreground/15 my-4">
+        <table className="w-full text-sm border-collapse" {...props}>{children}</table>
       </div>
+    ),
+
+    thead: ({ children, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) => (
+      <thead className="bg-foreground/5" {...props}>{children}</thead>
+    ),
+
+    th: ({ children, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
+      <th
+        className="px-4 py-2.5 text-left text-foreground font-semibold border border-foreground/15 whitespace-nowrap"
+        {...props}
+      >
+        {children}
+      </th>
+    ),
+
+    td: ({ children, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
+      <td
+        className="px-4 py-2 text-muted-foreground border border-foreground/10"
+        {...props}
+      >
+        {children}
+      </td>
+    ),
+
+    ul: ({ children, ...props }: React.HTMLAttributes<HTMLUListElement>) => (
+      <ul className="list-disc pl-6 my-2 space-y-1 text-[13px] text-muted-foreground" {...props}>
+        {children}
+      </ul>
+    ),
+
+    ol: ({ children, ...props }: React.HTMLAttributes<HTMLOListElement>) => (
+      <ol className="list-decimal pl-6 my-2 space-y-1 text-[13px] text-muted-foreground" {...props}>
+        {children}
+      </ol>
+    ),
+
+    li: ({ children, ...props }: React.HTMLAttributes<HTMLLIElement>) => (
+      <li className="leading-relaxed" {...props}>
+        {children}
+      </li>
     ),
 
     blockquote: ({ children }: { children?: React.ReactNode }) => {
@@ -293,7 +353,7 @@ function makeMarkdownComponents() {
 
       // Default plain blockquote
       return (
-        <blockquote className="border-l-2 border-surface-3 pl-4 text-warm-gray italic my-2">
+        <blockquote className="border-l-2 border-foreground/10 pl-4 text-muted-foreground italic my-2">
           {children}
         </blockquote>
       );
@@ -319,7 +379,7 @@ function ImpactBadge({ impact }: { impact: SectionImpact }) {
         {impact.impact}
       </span>
       {impact.reason && (
-        <div className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 w-64 rounded-lg border border-surface-3 bg-surface-1 px-3 py-2 text-[11px] text-warm-gray-light opacity-0 shadow-xl transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+        <div className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 w-64 rounded-lg border border-foreground/10 bg-background px-3 py-2 text-[11px] text-muted-foreground opacity-0 shadow-xl transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
           {impact.reason}
         </div>
       )}
@@ -377,7 +437,7 @@ export function MarkdownReport({ content, className, sectionImpacts }: MarkdownR
       {/* ── Table of Contents ─────────────────────────────────── */}
       {tocSections.length > 1 && (
         <div className="glass-card px-5 py-3.5">
-          <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-warm-gray">
+          <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Sections
           </p>
           <div className="flex flex-wrap gap-1.5">

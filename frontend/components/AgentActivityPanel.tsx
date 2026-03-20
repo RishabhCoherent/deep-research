@@ -29,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { LayerResult, LayerEvaluation, LayerComparisonData } from "@/lib/types";
 import { LAYER_NAMES } from "@/lib/types";
+import { EvidenceCards } from "@/components/EvidenceCards";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -61,7 +62,7 @@ const LAYER_CFG = {
     chipBg: "rgba(225,29,72,0.12)",
     Icon: Target,
     role: "CMI Expert pipeline",
-    description: "Full 4-phase pipeline: Plan → Research → Verify → Write. Publication-ready.",
+    description: "5-phase pipeline: Dissect → Plan → Investigate → Synthesize → Compose.",
   },
 } as const;
 
@@ -99,7 +100,10 @@ interface IterHistory {
 }
 
 interface PhaseDetail {
-  phase: string; // "plan" | "research" | "verify" | "write"
+  phase: string; // "dissect" | "plan" | "investigate" | "synthesize" | "compose"
+  // dissect
+  claims_total?: number;
+  claims_weak?: number;
   // plan
   sections?: number;
   questions?: number;
@@ -111,28 +115,33 @@ interface PhaseDetail {
     data_type: string;
     queries: string[];
   }>>;
-  // research
+  // investigate
   facts?: number;
   sources?: number;
   coverage?: number;
+  searches?: number;
+  scrapes?: number;
   facts_by_section?: Record<string, number>;
   questions_answered?: number;
   questions_gap?: number;
-  // verify
-  verified?: number;
-  corrected?: number;
+  // synthesize
   insights?: number;
+  cross_links?: number;
   risks?: number;
+  gaps?: number;
   insight_texts?: string[];
   risk_texts?: string[];
   section_impacts?: Array<{ section: string; impact: string; reason: string }>;
   verify_by_section?: Record<string, { total: number; high_confidence: number }>;
-  // write
+  // compose
   words?: number;
   review_score?: number;
   refinement_ran?: boolean;
   pre_refinement_score?: number;
   issues_fixed?: number;
+  // legacy aliases (old 4-phase pipeline compat)
+  verified?: number;
+  corrected?: number;
   // all
   elapsed?: number;
 }
@@ -155,7 +164,7 @@ const TOOL_DISPLAY: Record<string, { label: string; icon: string }> = {
 /* Per-layer loop descriptions */
 const LOOP_CONFIG: Record<number, { title: string; subtitle: string }> = {
   1: { title: "Research Loop", subtitle: "Search · Scrape · Synthesize" },
-  2: { title: "CMI Pipeline", subtitle: "Plan · Research · Verify · Write" },
+  2: { title: "CMI Pipeline", subtitle: "Dissect · Plan · Investigate · Synthesize · Compose" },
 };
 
 function safeDomain(url: string): string {
@@ -220,7 +229,7 @@ function FillBar({
     return () => clearTimeout(t);
   }, [pct, delay]);
   return (
-    <div className={cn("relative w-full rounded-full bg-surface-3 overflow-hidden", height)}>
+    <div className={cn("relative w-full rounded-full bg-foreground/10 overflow-hidden", height)}>
       <div
         className="absolute inset-y-0 left-0 rounded-full"
         style={{
@@ -239,7 +248,7 @@ function PipelineConnector({ fromColor, toColor }: { fromColor: string; toColor:
   return (
     <div className="flex flex-1 items-center gap-1 min-w-0 px-0.5 pt-0">
       <div className="relative flex-1 h-px overflow-hidden rounded-full">
-        <div className="absolute inset-0 bg-surface-3" />
+        <div className="absolute inset-0 bg-foreground/10" />
         <div
           className="absolute inset-0"
           style={{
@@ -248,7 +257,7 @@ function PipelineConnector({ fromColor, toColor }: { fromColor: string; toColor:
           }}
         />
       </div>
-      <ArrowRight className="h-3 w-3 shrink-0 text-warm-gray/40" />
+      <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground/40" />
     </div>
   );
 }
@@ -273,8 +282,8 @@ function PipelineOverview({
   return (
     <div className="glass-card p-5">
       <div className="flex items-center gap-2 mb-5">
-        <Activity className="h-4 w-4 text-orange" />
-        <span className="text-xs font-semibold uppercase tracking-widest text-warm-gray">
+        <Activity className="h-4 w-4 text-purple" />
+        <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Agent Pipeline
         </span>
       </div>
@@ -318,7 +327,7 @@ function PipelineOverview({
                       {postscore.toFixed(1)}/10
                     </div>
                   ) : (
-                    <div className="text-[10px] text-warm-gray mt-0.5">—</div>
+                    <div className="text-[10px] text-muted-foreground mt-0.5">—</div>
                   )}
                 </div>
               </div>
@@ -333,7 +342,7 @@ function PipelineOverview({
         })}
       </div>
 
-      <div className="grid grid-cols-4 gap-3 border-t border-surface-3 pt-4">
+      <div className="grid grid-cols-4 gap-3 border-t border-foreground/10 pt-4">
         <StatBox icon={<Search className="h-3.5 w-3.5" />} label="Searches Run" value={totalQueries} color="#7C3AED" />
         <StatBox icon={<Activity className="h-3.5 w-3.5" />} label="Tool Calls" value={totalToolCalls} color="#EA580C" />
         <StatBox icon={<Globe className="h-3.5 w-3.5" />} label="Sources Found" value={totalSources} color="#E11D48" />
@@ -345,10 +354,10 @@ function PipelineOverview({
 
 function StatBox({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number | string; color: string }) {
   return (
-    <div className="rounded-xl bg-surface-2 px-3 py-2.5 text-center">
+    <div className="rounded-xl bg-foreground/5 px-3 py-2.5 text-center">
       <div className="flex justify-center mb-1" style={{ color }}>{icon}</div>
       <div className="text-sm font-bold" style={{ color }}>{value}</div>
-      <div className="text-[10px] text-warm-gray leading-tight mt-0.5">{label}</div>
+      <div className="text-[10px] text-muted-foreground leading-tight mt-0.5">{label}</div>
     </div>
   );
 }
@@ -382,8 +391,8 @@ function ReactLoopFlow({
         <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color }}>
           {loopCfg.title} — {iterHistory.length} iteration{iterHistory.length !== 1 ? "s" : ""}
         </span>
-        <div className="flex-1 h-px bg-surface-3" />
-        <span className="text-[9px] text-warm-gray">{loopCfg.subtitle}</span>
+        <div className="flex-1 h-px bg-foreground/10" />
+        <span className="text-[9px] text-muted-foreground">{loopCfg.subtitle}</span>
       </div>
 
       <div className="space-y-2">
@@ -413,7 +422,7 @@ function ReactLoopFlow({
                     <Search className="h-2.5 w-2.5" />
                     {layer === 2 ? `Phase ${i + 1}` : `Round ${i + 1}`}
                     {queries.length > 0 && (
-                      <span className="ml-auto font-normal text-warm-gray">
+                      <span className="ml-auto font-normal text-muted-foreground">
                         {queries.length}q
                       </span>
                     )}
@@ -480,15 +489,15 @@ function ReactLoopFlow({
                                 rel="noopener noreferrer"
                                 className="flex items-start gap-1.5 group"
                               >
-                                <ExternalLink className="h-3 w-3 shrink-0 mt-px text-warm-gray/40 group-hover:text-foreground transition-colors" />
+                                <ExternalLink className="h-3 w-3 shrink-0 mt-px text-muted-foreground/40 group-hover:text-foreground transition-colors" />
                                 <div className="min-w-0">
                                   <div className="text-[10px] font-medium leading-tight group-hover:underline line-clamp-1 text-foreground">
                                     {hit.title || safeDomain(hit.url)}
                                   </div>
-                                  <div className="text-[9px] text-warm-gray leading-snug mt-0.5 line-clamp-2">
+                                  <div className="text-[9px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
                                     {hit.snippet}
                                   </div>
-                                  <div className="text-[8px] text-warm-gray/50 mt-0.5">{safeDomain(hit.url)}</div>
+                                  <div className="text-[8px] text-muted-foreground/50 mt-0.5">{safeDomain(hit.url)}</div>
                                 </div>
                               </a>
                             ))}
@@ -499,7 +508,7 @@ function ReactLoopFlow({
                       {queries.length > 3 && (
                         <button
                           onClick={() => setExpandedQueries(queriesExpanded ? null : i)}
-                          className="mt-1.5 text-[9px] text-warm-gray hover:text-foreground transition-colors flex items-center gap-0.5"
+                          className="mt-1.5 text-[9px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5"
                         >
                           {queriesExpanded ? (
                             <><ChevronUp className="h-2.5 w-2.5" /> less</>
@@ -510,7 +519,7 @@ function ReactLoopFlow({
                       )}
                     </>
                   ) : (
-                    <p className="text-[10px] text-warm-gray italic">
+                    <p className="text-[10px] text-muted-foreground italic">
                       Web research + source synthesis
                     </p>
                   )}
@@ -518,7 +527,7 @@ function ReactLoopFlow({
 
                 {/* Arrow */}
                 <div className="flex items-center justify-center">
-                  <ArrowRight className="h-3 w-3 text-warm-gray/40 shrink-0" />
+                  <ArrowRight className="h-3 w-3 text-muted-foreground/40 shrink-0" />
                 </div>
 
                 {/* Evaluation block */}
@@ -545,7 +554,7 @@ function ReactLoopFlow({
                     >
                       {iter.score.toFixed(1)}
                     </span>
-                    <span className="text-[9px] text-warm-gray">/10</span>
+                    <span className="text-[9px] text-muted-foreground">/10</span>
                     {delta !== null && delta !== 0 && (
                       <span
                         className={cn(
@@ -576,7 +585,7 @@ function ReactLoopFlow({
                       {weaknesses.slice(0, 2).map((w, j) => (
                         <div key={j} className="flex items-start gap-1">
                           <AlertTriangle className="h-2.5 w-2.5 shrink-0 mt-0.5 text-amber-500" />
-                          <span className="text-[9px] text-warm-gray leading-snug line-clamp-2">
+                          <span className="text-[9px] text-muted-foreground leading-snug line-clamp-2">
                             {w}
                           </span>
                         </div>
@@ -611,32 +620,39 @@ function ReactLoopFlow({
 
 const CMI_PHASES = [
   {
-    key: "plan",
-    label: "Plan",
+    key: "dissect",
+    label: "Dissect",
     Icon: ClipboardList,
     color: "#F59E0B",
-    description: "Research planning & question generation",
+    description: "Extract & grade every claim from prior report",
   },
   {
-    key: "research",
-    label: "Research",
+    key: "plan",
+    label: "Plan",
+    Icon: Database,
+    color: "#EA580C",
+    description: "Generate targeted research queries per claim",
+  },
+  {
+    key: "investigate",
+    label: "Investigate",
     Icon: Search,
     color: "#7C3AED",
-    description: "Systematic web data collection",
+    description: "Execute research plan with evidence tracking",
   },
   {
-    key: "verify",
-    label: "Verify",
+    key: "synthesize",
+    label: "Synthesize",
     Icon: ShieldCheck,
     color: "#059669",
-    description: "Fact verification & insight generation",
+    description: "Cross-reference findings & generate insights",
   },
   {
-    key: "write",
-    label: "Write",
+    key: "compose",
+    label: "Compose",
     Icon: PenTool,
     color: "#E11D48",
-    description: "Report writing with quality review",
+    description: "Write definitive report with all evidence",
   },
 ];
 
@@ -645,28 +661,20 @@ function CmiPipelineFlow({
   planSections,
   planQuestions,
   factsCollected,
-  factsVerified,
   insightsGenerated,
   contrarianRisks,
-  reviewScore,
-  iterHistory,
   color,
 }: {
   phaseDetails: PhaseDetail[];
   planSections: string[];
   planQuestions: number;
   factsCollected: number;
-  factsVerified: number;
   insightsGenerated: number;
   contrarianRisks: number;
-  reviewScore: number;
-  iterHistory: IterHistory[];
   color: string;
 }) {
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
   const [sectionsExpanded, setSectionsExpanded] = useState(false);
-  const [queriesExpanded, setQueriesExpanded] = useState(false);
-  const [activeHit, setActiveHit] = useState<string | null>(null);
 
   const getPhase = (key: string) => phaseDetails.find((p) => p.phase === key);
 
@@ -676,9 +684,9 @@ function CmiPipelineFlow({
       <div className="flex items-center gap-2 mb-4">
         <Target className="h-3.5 w-3.5" style={{ color }} />
         <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color }}>
-          CMI Expert Pipeline — 4 Phases
+          CMI Expert Pipeline — 5 Phases
         </span>
-        <div className="flex-1 h-px bg-surface-3" />
+        <div className="flex-1 h-px bg-foreground/10" />
       </div>
 
       {/* Phase timeline - horizontal steps */}
@@ -705,13 +713,13 @@ function CmiPipelineFlow({
                   {phase.label}
                 </span>
                 {detail?.elapsed && (
-                  <span className="text-[8px] text-warm-gray">{detail.elapsed.toFixed(0)}s</span>
+                  <span className="text-[8px] text-muted-foreground">{detail.elapsed.toFixed(0)}s</span>
                 )}
               </div>
               {!isLast && (
                 <div className="flex items-center px-1 -mt-4">
                   <div className="w-6 h-px" style={{ background: `${phase.color}40` }} />
-                  <ArrowRight className="h-2.5 w-2.5 text-warm-gray/40 shrink-0" />
+                  <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/40 shrink-0" />
                 </div>
               )}
             </div>
@@ -719,612 +727,223 @@ function CmiPipelineFlow({
         })}
       </div>
 
-      {/* Phase detail cards */}
+      {/* Phase detail cards — 5 phases */}
       <div className="space-y-2.5">
-        {/* ── Phase 1: PLAN ──────────────────────────────────────── */}
-        {(() => {
-          const p = getPhase("plan");
-          const isOpen = expandedPhase === "plan";
+        {CMI_PHASES.map((phase, i) => {
+          const p = getPhase(phase.key);
+          const isOpen = expandedPhase === phase.key;
+          const PhaseIcon = phase.Icon;
+
+          // Build summary text per phase
+          let summary = phase.description;
+          if (p) {
+            if (phase.key === "dissect") {
+              summary = `${p.claims_total ?? 0} claims extracted, ${p.claims_weak ?? 0} need research`;
+            } else if (phase.key === "plan") {
+              summary = `${p.sections ?? 0} sections · ${p.questions ?? 0} targeted queries`;
+            } else if (phase.key === "investigate") {
+              summary = `${p.facts ?? 0} findings · ${p.sources ?? 0} sources · ${Math.round((p.coverage ?? 0) * 100)}% coverage`;
+            } else if (phase.key === "synthesize") {
+              summary = `${p.cross_links ?? 0} connections · ${p.insights ?? 0} insights · ${p.gaps ?? 0} gaps`;
+            } else if (phase.key === "compose") {
+              summary = `${p.words ?? 0} words`;
+            }
+          }
+
           return (
             <div
+              key={phase.key}
               className="rounded-xl border overflow-hidden transition-all"
               style={{
-                borderColor: `${CMI_PHASES[0].color}30`,
-                background: `${CMI_PHASES[0].color}06`,
+                borderColor: `${phase.color}30`,
+                background: `${phase.color}06`,
               }}
             >
               <button
-                onClick={() => setExpandedPhase(isOpen ? null : "plan")}
+                onClick={() => setExpandedPhase(isOpen ? null : phase.key)}
                 className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left"
               >
-                <ClipboardList className="h-3.5 w-3.5 shrink-0" style={{ color: CMI_PHASES[0].color }} />
+                <PhaseIcon className="h-3.5 w-3.5 shrink-0" style={{ color: phase.color }} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: CMI_PHASES[0].color }}>
-                      Phase 1: Plan
+                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: phase.color }}>
+                      Phase {i + 1}: {phase.label}
                     </span>
-                    <span className="text-[9px] text-warm-gray">
-                      {p ? `${p.sections} sections · ${p.questions} questions` : "Research planning"}
-                    </span>
+                    <span className="text-[9px] text-muted-foreground">{summary}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {p?.elapsed && (
-                    <span className="text-[9px] text-warm-gray">{p.elapsed.toFixed(1)}s</span>
+                  {p?.elapsed != null && (
+                    <span className="text-[9px] text-muted-foreground">{Number(p.elapsed).toFixed(1)}s</span>
                   )}
-                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                  {isOpen ? <ChevronUp className="h-3 w-3 text-warm-gray" /> : <ChevronDown className="h-3 w-3 text-warm-gray" />}
+                  {p && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
+                  {isOpen ? <ChevronUp className="h-3 w-3 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 text-muted-foreground" />}
                 </div>
               </button>
 
-              {isOpen && (
+              {isOpen && p && (
                 <div className="px-3.5 pb-3 animate-fade-in-up">
-                  <div className="border-t pt-2.5" style={{ borderColor: `${CMI_PHASES[0].color}20` }}>
-                    {/* Report type badge */}
-                    {p?.report_type && (
-                      <div className="flex items-center gap-2 mb-2">
-                        <span
-                          className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold"
-                          style={{ background: `${CMI_PHASES[0].color}20`, color: CMI_PHASES[0].color }}
-                        >
-                          {p.report_type}
-                        </span>
-                        <span className="text-[9px] text-warm-gray">
-                          {p.sections} sections · {p.questions} questions
-                        </span>
-                      </div>
-                    )}
+                  <div className="border-t pt-2.5" style={{ borderColor: `${phase.color}20` }}>
 
-                    {/* Sections with questions */}
-                    {p?.questions_by_section && Object.keys(p.questions_by_section).length > 0 ? (
-                      <div className="space-y-2">
-                        {Object.entries(p.questions_by_section).map(([section, questions], i) => (
-                          <div key={i}>
-                            <button
-                              onClick={() => setSectionsExpanded(sectionsExpanded === false ? true : sectionsExpanded === true ? false : true)}
-                              className="flex items-center gap-1.5 w-full text-left"
-                            >
-                              <BookOpen className="h-2.5 w-2.5 shrink-0" style={{ color: CMI_PHASES[0].color }} />
-                              <span className="text-[9px] font-semibold" style={{ color: CMI_PHASES[0].color }}>
-                                {section}
-                              </span>
-                              <span className="text-[8px] text-warm-gray ml-auto">
-                                {questions.length} questions
-                              </span>
-                            </button>
-                            <div className="ml-4 mt-1 space-y-1">
-                              {questions.map((q, j) => (
-                                <div key={j} className="flex items-start gap-1.5">
-                                  <span
-                                    className="mt-0.5 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full text-[7px] font-bold shrink-0"
-                                    style={{
-                                      background: q.priority === 1 ? "#EF444420" : q.priority === 2 ? "#F59E0B20" : "#6B728020",
-                                      color: q.priority === 1 ? "#EF4444" : q.priority === 2 ? "#F59E0B" : "#6B7280",
-                                    }}
-                                  >
-                                    P{q.priority}
-                                  </span>
-                                  <div className="min-w-0">
-                                    <div className="text-[9px] text-foreground/80 leading-snug">
-                                      {q.question}
-                                    </div>
-                                    {q.queries.length > 0 && (
-                                      <div className="flex flex-wrap gap-1 mt-0.5">
-                                        {q.queries.map((query, k) => (
-                                          <span
-                                            key={k}
-                                            className="text-[8px] text-warm-gray/60 italic truncate max-w-45"
-                                          >
-                                            &ldquo;{query}&rdquo;
-                                          </span>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
+                    {/* ── Dissect detail ──────────────────── */}
+                    {phase.key === "dissect" && (
+                      <>
+                        <p className="text-[10px] text-muted-foreground mb-2.5">
+                          Audited the prior report section by section, extracting every factual claim and grading its evidence quality.
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="rounded-lg bg-foreground/5/50 px-3 py-2.5 text-center">
+                            <div className="text-lg font-bold" style={{ color: phase.color }}>{p.claims_total ?? 0}</div>
+                            <div className="text-[8px] text-muted-foreground mt-0.5">Claims Extracted</div>
                           </div>
-                        ))}
-                      </div>
-                    ) : planSections.length > 0 ? (
-                      <div>
-                        <button
-                          onClick={() => setSectionsExpanded(!sectionsExpanded)}
-                          className="flex items-center gap-1 text-[9px] font-semibold mb-1.5"
-                          style={{ color: CMI_PHASES[0].color }}
-                        >
-                          <BookOpen className="h-2.5 w-2.5" />
-                          Report Sections ({planSections.length})
-                          {sectionsExpanded ? <ChevronUp className="h-2 w-2" /> : <ChevronDown className="h-2 w-2" />}
-                        </button>
-                        {sectionsExpanded && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {planSections.map((section, i) => (
-                              <span
-                                key={i}
-                                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px]"
-                                style={{ background: `${CMI_PHASES[0].color}15`, color: CMI_PHASES[0].color }}
-                              >
-                                <span className="text-[8px] opacity-60">{i + 1}</span>
-                                {section}
+                          <div className="rounded-lg bg-foreground/5/50 px-3 py-2.5 text-center">
+                            <div className="text-lg font-bold text-amber-500">{p.claims_weak ?? 0}</div>
+                            <div className="text-[8px] text-muted-foreground mt-0.5">Need Research</div>
+                          </div>
+                        </div>
+                        {(p.claims_total ?? 0) > 0 && (
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[9px] font-semibold" style={{ color: phase.color }}>Claims Already Strong</span>
+                              <span className="text-[10px] font-bold" style={{ color: phase.color }}>
+                                {Math.round((1 - (p.claims_weak ?? 0) / (p.claims_total ?? 1)) * 100)}%
                               </span>
-                            ))}
+                            </div>
+                            <FillBar pct={(1 - (p.claims_weak ?? 0) / (p.claims_total ?? 1)) * 100} color={phase.color} height="h-2" />
                           </div>
                         )}
-                        <div className="flex gap-3 mt-2 text-[9px] text-warm-gray">
-                          <span>{planQuestions} research questions generated</span>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* ── Phase 2: RESEARCH ──────────────────────────────────── */}
-        {(() => {
-          const p = getPhase("research");
-          const isOpen = expandedPhase === "research";
-          const queries = iterHistory[0]?.queries ?? [];
-          return (
-            <div
-              className="rounded-xl border overflow-hidden transition-all"
-              style={{
-                borderColor: `${CMI_PHASES[1].color}30`,
-                background: `${CMI_PHASES[1].color}06`,
-              }}
-            >
-              <button
-                onClick={() => setExpandedPhase(isOpen ? null : "research")}
-                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left"
-              >
-                <Database className="h-3.5 w-3.5 shrink-0" style={{ color: CMI_PHASES[1].color }} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: CMI_PHASES[1].color }}>
-                      Phase 2: Research
-                    </span>
-                    <span className="text-[9px] text-warm-gray">
-                      {p ? `${p.facts} facts · ${p.sources} sources · ${Math.round((p.coverage ?? 0) * 100)}% coverage` : "Data collection"}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {p?.elapsed && (
-                    <span className="text-[9px] text-warm-gray">{p.elapsed.toFixed(1)}s</span>
-                  )}
-                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                  {isOpen ? <ChevronUp className="h-3 w-3 text-warm-gray" /> : <ChevronDown className="h-3 w-3 text-warm-gray" />}
-                </div>
-              </button>
-
-              {isOpen && (
-                <div className="px-3.5 pb-3 animate-fade-in-up">
-                  <div className="border-t pt-2.5" style={{ borderColor: `${CMI_PHASES[1].color}20` }}>
-                    <p className="text-[10px] text-warm-gray mb-2.5">
-                      Systematically queried web sources for each research question, extracted facts, and built a knowledge base.
-                    </p>
-
-                    {/* Coverage bar */}
-                    {p?.coverage !== undefined && (
-                      <div className="mb-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[9px] font-semibold" style={{ color: CMI_PHASES[1].color }}>
-                            Question Coverage
-                          </span>
-                          <span className="text-[10px] font-bold" style={{ color: CMI_PHASES[1].color }}>
-                            {Math.round(p.coverage * 100)}%
-                          </span>
-                        </div>
-                        <FillBar pct={p.coverage * 100} color={CMI_PHASES[1].color} height="h-2" />
-                      </div>
+                      </>
                     )}
 
-                    {/* Stats grid */}
-                    <div className="grid grid-cols-3 gap-2 mb-3">
-                      <div className="rounded-lg bg-surface-2/50 px-2.5 py-2 text-center">
-                        <div className="text-sm font-bold" style={{ color: CMI_PHASES[1].color }}>{p?.facts ?? factsCollected}</div>
-                        <div className="text-[8px] text-warm-gray mt-0.5">Facts Found</div>
-                      </div>
-                      <div className="rounded-lg bg-surface-2/50 px-2.5 py-2 text-center">
-                        <div className="text-sm font-bold" style={{ color: CMI_PHASES[1].color }}>{p?.sources ?? 0}</div>
-                        <div className="text-[8px] text-warm-gray mt-0.5">Sources</div>
-                      </div>
-                      <div className="rounded-lg bg-surface-2/50 px-2.5 py-2 text-center">
-                        <div className="text-sm font-bold" style={{ color: CMI_PHASES[1].color }}>
-                          {p?.questions_answered ?? 0}/{(p?.questions_answered ?? 0) + (p?.questions_gap ?? 0)}
+                    {/* ── Plan detail ─────────────────────── */}
+                    {phase.key === "plan" && (
+                      <>
+                        <p className="text-[10px] text-muted-foreground mb-2.5">
+                          Generated targeted search queries for each weak or unsupported claim, with rationale for each search.
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="rounded-lg bg-foreground/5/50 px-3 py-2.5 text-center">
+                            <div className="text-lg font-bold" style={{ color: phase.color }}>{p.sections ?? planSections.length}</div>
+                            <div className="text-[8px] text-muted-foreground mt-0.5">Sections Covered</div>
+                          </div>
+                          <div className="rounded-lg bg-foreground/5/50 px-3 py-2.5 text-center">
+                            <div className="text-lg font-bold" style={{ color: phase.color }}>{p.questions ?? planQuestions}</div>
+                            <div className="text-[8px] text-muted-foreground mt-0.5">Search Queries</div>
+                          </div>
                         </div>
-                        <div className="text-[8px] text-warm-gray mt-0.5">Answered</div>
-                      </div>
-                    </div>
-
-                    {/* Per-section fact breakdown */}
-                    {p?.facts_by_section && Object.keys(p.facts_by_section).length > 0 && (
-                      <div className="mb-3">
-                        <div className="text-[8px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: CMI_PHASES[1].color }}>
-                          Facts by Section
-                        </div>
-                        <div className="space-y-1.5">
-                          {Object.entries(p.facts_by_section).map(([section, count]) => {
-                            const maxFacts = Math.max(...Object.values(p.facts_by_section!));
-                            const pct = maxFacts > 0 ? (count / maxFacts) * 100 : 0;
-                            return (
-                              <div key={section}>
-                                <div className="flex items-center justify-between mb-0.5">
-                                  <span className="text-[9px] text-foreground/70 truncate pr-2">{section}</span>
-                                  <span className="text-[9px] font-bold shrink-0" style={{ color: CMI_PHASES[1].color }}>
-                                    {count}
+                        {planSections.length > 0 && (
+                          <div className="mt-3">
+                            <button
+                              onClick={() => setSectionsExpanded(!sectionsExpanded)}
+                              className="flex items-center gap-1 text-[9px] font-semibold mb-1.5"
+                              style={{ color: phase.color }}
+                            >
+                              <BookOpen className="h-2.5 w-2.5" />
+                              Report Sections ({planSections.length})
+                              {sectionsExpanded ? <ChevronUp className="h-2 w-2" /> : <ChevronDown className="h-2 w-2" />}
+                            </button>
+                            {sectionsExpanded && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {planSections.map((section, si) => (
+                                  <span
+                                    key={si}
+                                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px]"
+                                    style={{ background: `${phase.color}15`, color: phase.color }}
+                                  >
+                                    <span className="text-[8px] opacity-60">{si + 1}</span>
+                                    {section}
                                   </span>
-                                </div>
-                                <FillBar pct={pct} color={CMI_PHASES[1].color} height="h-1" />
+                                ))}
                               </div>
-                            );
-                          })}
-                        </div>
-                      </div>
+                            )}
+                          </div>
+                        )}
+                      </>
                     )}
 
-                    {/* Search queries — clickable to show results */}
-                    {queries.length > 0 && (
-                      <div>
-                        <div className="text-[8px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: CMI_PHASES[1].color }}>
-                          Search Queries — click to see results
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {(queriesExpanded ? queries : queries.slice(0, 6)).map((q, j) => {
-                            const nq = normalizeQuery(q);
-                            const toolCfg = TOOL_DISPLAY[nq.tool ?? "search_web"];
-                            const hasHits = nq.hits.length > 0;
-                            const isActive = activeHit === nq.query;
-                            return (
-                              <button
-                                key={j}
-                                onClick={() => hasHits && setActiveHit(isActive ? null : nq.query)}
-                                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] transition-opacity hover:opacity-80"
-                                style={{
-                                  background: isActive ? `${CMI_PHASES[1].color}35` : `${CMI_PHASES[1].color}12`,
-                                  color: CMI_PHASES[1].color,
-                                  cursor: hasHits ? "pointer" : "default",
-                                }}
-                              >
-                                <span className="text-[8px] opacity-60">{toolCfg?.icon ?? "🔍"}</span>
-                                <span className="truncate max-w-50">{nq.query}</span>
-                                {hasHits && (
-                                  <span className="text-[8px] opacity-50 ml-0.5">({nq.hits.length})</span>
-                                )}
-                                {hasHits && (
-                                  isActive
-                                    ? <ChevronUp className="h-2 w-2 shrink-0 opacity-60" />
-                                    : <ChevronDown className="h-2 w-2 shrink-0 opacity-60" />
-                                )}
-                              </button>
-                            );
-                          })}
-                          {queries.length > 6 && !queriesExpanded && (
-                            <button
-                              onClick={() => setQueriesExpanded(true)}
-                              className="text-[9px] text-warm-gray hover:text-foreground px-1"
-                            >
-                              +{queries.length - 6} more
-                            </button>
-                          )}
-                          {queriesExpanded && queries.length > 6 && (
-                            <button
-                              onClick={() => setQueriesExpanded(false)}
-                              className="text-[9px] text-warm-gray hover:text-foreground px-1"
-                            >
-                              show less
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Hits panel for active query */}
-                        {activeHit && (() => {
-                          const activeQ = queries.map(normalizeQuery).find(qq => qq.query === activeHit);
-                          if (!activeQ || activeQ.hits.length === 0) return null;
-                          return (
-                            <div
-                              className="mt-2.5 rounded-lg border p-2.5 space-y-2 animate-fade-in-up"
-                              style={{ borderColor: `${CMI_PHASES[1].color}25`, background: `${CMI_PHASES[1].color}06` }}
-                            >
-                              <div className="text-[8px] font-semibold uppercase tracking-wider mb-1" style={{ color: CMI_PHASES[1].color }}>
-                                Results for &ldquo;{activeQ.query}&rdquo;
-                              </div>
-                              {activeQ.hits.map((hit, k) => (
-                                <a
-                                  key={k}
-                                  href={hit.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-start gap-1.5 group"
-                                >
-                                  <ExternalLink className="h-3 w-3 shrink-0 mt-px text-warm-gray/40 group-hover:text-foreground transition-colors" />
-                                  <div className="min-w-0">
-                                    <div className="text-[10px] font-medium leading-tight group-hover:underline line-clamp-1 text-foreground">
-                                      {hit.title || safeDomain(hit.url)}
-                                    </div>
-                                    <div className="text-[9px] text-warm-gray leading-snug mt-0.5 line-clamp-2">
-                                      {hit.snippet}
-                                    </div>
-                                    <div className="text-[8px] text-warm-gray/50 mt-0.5">{safeDomain(hit.url)}</div>
-                                  </div>
-                                </a>
-                              ))}
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* ── Phase 3: VERIFY ────────────────────────────────────── */}
-        {(() => {
-          const p = getPhase("verify");
-          const isOpen = expandedPhase === "verify";
-          return (
-            <div
-              className="rounded-xl border overflow-hidden transition-all"
-              style={{
-                borderColor: `${CMI_PHASES[2].color}30`,
-                background: `${CMI_PHASES[2].color}06`,
-              }}
-            >
-              <button
-                onClick={() => setExpandedPhase(isOpen ? null : "verify")}
-                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left"
-              >
-                <ShieldCheck className="h-3.5 w-3.5 shrink-0" style={{ color: CMI_PHASES[2].color }} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: CMI_PHASES[2].color }}>
-                      Phase 3: Verify
-                    </span>
-                    <span className="text-[9px] text-warm-gray">
-                      {p ? `${p.verified} verified · ${p.corrected} corrected · ${p.insights} insights` : "Fact verification"}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {p?.elapsed && (
-                    <span className="text-[9px] text-warm-gray">{p.elapsed.toFixed(1)}s</span>
-                  )}
-                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                  {isOpen ? <ChevronUp className="h-3 w-3 text-warm-gray" /> : <ChevronDown className="h-3 w-3 text-warm-gray" />}
-                </div>
-              </button>
-
-              {isOpen && (
-                <div className="px-3.5 pb-3 animate-fade-in-up">
-                  <div className="border-t pt-2.5" style={{ borderColor: `${CMI_PHASES[2].color}20` }}>
-                    <p className="text-[10px] text-warm-gray mb-2.5">
-                      Cross-referenced collected facts against multiple sources, corrected inaccuracies, and generated analytical insights.
-                    </p>
-
-                    {/* Verification stats */}
-                    <div className="grid grid-cols-4 gap-2 mb-3">
-                      <div className="rounded-lg bg-surface-2/50 px-2 py-2 text-center">
-                        <div className="text-sm font-bold text-emerald-500">{p?.verified ?? factsVerified}</div>
-                        <div className="text-[8px] text-warm-gray mt-0.5">Confirmed</div>
-                      </div>
-                      <div className="rounded-lg bg-surface-2/50 px-2 py-2 text-center">
-                        <div className="text-sm font-bold text-amber-500">{p?.corrected ?? 0}</div>
-                        <div className="text-[8px] text-warm-gray mt-0.5">Corrected</div>
-                      </div>
-                      <div className="rounded-lg bg-surface-2/50 px-2 py-2 text-center">
-                        <div className="text-sm font-bold" style={{ color: CMI_PHASES[2].color }}>{p?.insights ?? insightsGenerated}</div>
-                        <div className="text-[8px] text-warm-gray mt-0.5">Insights</div>
-                      </div>
-                      <div className="rounded-lg bg-surface-2/50 px-2 py-2 text-center">
-                        <div className="text-sm font-bold text-rose-500">{p?.risks ?? contrarianRisks}</div>
-                        <div className="text-[8px] text-warm-gray mt-0.5">Risks</div>
-                      </div>
-                    </div>
-
-                    {/* Verification integrity indicator */}
-                    {p && (p.verified ?? 0) > 0 && (
-                      <div className="mb-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[9px] font-semibold" style={{ color: CMI_PHASES[2].color }}>
-                            Data Integrity
-                          </span>
-                          <span className="text-[10px] font-bold" style={{ color: CMI_PHASES[2].color }}>
-                            {Math.round(((p.verified ?? 0) / ((p.verified ?? 0) + (p.corrected ?? 0))) * 100)}% accurate
-                          </span>
-                        </div>
-                        <FillBar
-                          pct={((p.verified ?? 0) / ((p.verified ?? 0) + (p.corrected ?? 0))) * 100}
-                          color={CMI_PHASES[2].color}
-                          height="h-2"
-                        />
-                      </div>
-                    )}
-
-                    {/* Analytical Insights */}
-                    {p?.insight_texts && p.insight_texts.length > 0 && (
-                      <div className="mb-3">
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <Lightbulb className="h-2.5 w-2.5" style={{ color: CMI_PHASES[2].color }} />
-                          <span className="text-[8px] font-semibold uppercase tracking-wider" style={{ color: CMI_PHASES[2].color }}>
-                            Key Insights
-                          </span>
-                        </div>
-                        <div className="space-y-1">
-                          {p.insight_texts.map((insight, j) => (
-                            <div key={j} className="flex items-start gap-1.5">
-                              <span className="text-[8px] mt-0.5 shrink-0" style={{ color: CMI_PHASES[2].color }}>&#9679;</span>
-                              <span className="text-[9px] text-foreground/70 leading-snug">{insight}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Contrarian Risks */}
-                    {p?.risk_texts && p.risk_texts.length > 0 && (
-                      <div className="mb-3">
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <AlertTriangle className="h-2.5 w-2.5 text-rose-500" />
-                          <span className="text-[8px] font-semibold uppercase tracking-wider text-rose-500">
-                            Contrarian Risks
-                          </span>
-                        </div>
-                        <div className="space-y-1">
-                          {p.risk_texts.map((risk, j) => (
-                            <div key={j} className="flex items-start gap-1.5">
-                              <span className="text-[8px] mt-0.5 text-rose-500 shrink-0">&#9679;</span>
-                              <span className="text-[9px] text-foreground/70 leading-snug">{risk}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Section Impact Ratings */}
-                    {p?.section_impacts && p.section_impacts.length > 0 && (
-                      <div>
-                        <div className="text-[8px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: CMI_PHASES[2].color }}>
-                          Section Impact Ratings
-                        </div>
-                        <div className="space-y-1">
-                          {p.section_impacts.map((si, j) => (
-                            <div key={j} className="flex items-center gap-2">
-                              <span
-                                className="inline-flex h-4 items-center rounded-full px-1.5 text-[8px] font-bold uppercase shrink-0"
-                                style={{
-                                  background: si.impact === "high" ? "#EF444420" : si.impact === "moderate" ? "#F59E0B20" : "#6B728020",
-                                  color: si.impact === "high" ? "#EF4444" : si.impact === "moderate" ? "#F59E0B" : "#6B7280",
-                                }}
-                              >
-                                {si.impact}
+                    {/* ── Investigate detail ──────────────── */}
+                    {phase.key === "investigate" && (
+                      <>
+                        <p className="text-[10px] text-muted-foreground mb-2.5">
+                          Executed the research plan via agent with evidence tracking — each discovery mapped back to a specific claim.
+                        </p>
+                        {p.coverage !== undefined && (
+                          <div className="mb-3">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[9px] font-semibold" style={{ color: phase.color }}>Claim Coverage</span>
+                              <span className="text-[10px] font-bold" style={{ color: phase.color }}>
+                                {Math.round((p.coverage ?? 0) * 100)}%
                               </span>
-                              <span className="text-[9px] text-foreground/70 truncate">{si.section}</span>
                             </div>
-                          ))}
+                            <FillBar pct={(p.coverage ?? 0) * 100} color={phase.color} height="h-2" />
+                          </div>
+                        )}
+                        <div className="grid grid-cols-4 gap-2">
+                          <div className="rounded-lg bg-foreground/5/50 px-2 py-2 text-center">
+                            <div className="text-sm font-bold" style={{ color: phase.color }}>{p.facts ?? factsCollected}</div>
+                            <div className="text-[8px] text-muted-foreground mt-0.5">Findings</div>
+                          </div>
+                          <div className="rounded-lg bg-foreground/5/50 px-2 py-2 text-center">
+                            <div className="text-sm font-bold" style={{ color: phase.color }}>{p.sources ?? 0}</div>
+                            <div className="text-[8px] text-muted-foreground mt-0.5">Sources</div>
+                          </div>
+                          <div className="rounded-lg bg-foreground/5/50 px-2 py-2 text-center">
+                            <div className="text-sm font-bold" style={{ color: phase.color }}>{p.searches ?? 0}</div>
+                            <div className="text-[8px] text-muted-foreground mt-0.5">Searches</div>
+                          </div>
+                          <div className="rounded-lg bg-foreground/5/50 px-2 py-2 text-center">
+                            <div className="text-sm font-bold" style={{ color: phase.color }}>{p.scrapes ?? 0}</div>
+                            <div className="text-[8px] text-muted-foreground mt-0.5">Scraped</div>
+                          </div>
                         </div>
-                      </div>
+                      </>
+                    )}
+
+                    {/* ── Synthesize detail ───────────────── */}
+                    {phase.key === "synthesize" && (
+                      <>
+                        <p className="text-[10px] text-muted-foreground mb-2.5">
+                          Cross-referenced findings across sections, identified causal chains, resolved contradictions, and generated insights.
+                        </p>
+                        <div className="grid grid-cols-4 gap-2">
+                          <div className="rounded-lg bg-foreground/5/50 px-2 py-2 text-center">
+                            <div className="text-sm font-bold" style={{ color: phase.color }}>{p.cross_links ?? 0}</div>
+                            <div className="text-[8px] text-muted-foreground mt-0.5">Cross-Links</div>
+                          </div>
+                          <div className="rounded-lg bg-foreground/5/50 px-2 py-2 text-center">
+                            <div className="text-sm font-bold" style={{ color: phase.color }}>{p.insights ?? insightsGenerated}</div>
+                            <div className="text-[8px] text-muted-foreground mt-0.5">Insights</div>
+                          </div>
+                          <div className="rounded-lg bg-foreground/5/50 px-2 py-2 text-center">
+                            <div className="text-sm font-bold text-rose-500">{p.risks ?? contrarianRisks}</div>
+                            <div className="text-[8px] text-muted-foreground mt-0.5">Risks</div>
+                          </div>
+                          <div className="rounded-lg bg-foreground/5/50 px-2 py-2 text-center">
+                            <div className="text-sm font-bold text-amber-500">{p.gaps ?? 0}</div>
+                            <div className="text-[8px] text-muted-foreground mt-0.5">Gaps</div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* ── Compose detail ──────────────────── */}
+                    {phase.key === "compose" && (
+                      <>
+                        <p className="text-[10px] text-muted-foreground mb-2.5">
+                          Wrote the definitive report with all structured evidence woven in, cross-section connections as transitions.
+                        </p>
+                        <div className="rounded-lg bg-foreground/5/50 px-3 py-2.5 text-center">
+                          <div className="text-lg font-bold" style={{ color: phase.color }}>{p.words ?? 0}</div>
+                          <div className="text-[8px] text-muted-foreground mt-0.5">Words Written</div>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
               )}
             </div>
           );
-        })()}
-
-        {/* ── Phase 4: WRITE ─────────────────────────────────────── */}
-        {(() => {
-          const p = getPhase("write");
-          const isOpen = expandedPhase === "write";
-          const score = p?.review_score ?? reviewScore;
-          return (
-            <div
-              className="rounded-xl border overflow-hidden transition-all"
-              style={{
-                borderColor: `${CMI_PHASES[3].color}30`,
-                background: `${CMI_PHASES[3].color}06`,
-              }}
-            >
-              <button
-                onClick={() => setExpandedPhase(isOpen ? null : "write")}
-                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left"
-              >
-                <PenTool className="h-3.5 w-3.5 shrink-0" style={{ color: CMI_PHASES[3].color }} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: CMI_PHASES[3].color }}>
-                      Phase 4: Write
-                    </span>
-                    <span className="text-[9px] text-warm-gray">
-                      {p ? `${p.words} words · ${score.toFixed(1)}/10 quality${p.refinement_ran ? " · refined" : ""}` : "Report generation"}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {p?.elapsed && (
-                    <span className="text-[9px] text-warm-gray">{p.elapsed.toFixed(1)}s</span>
-                  )}
-                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                  {isOpen ? <ChevronUp className="h-3 w-3 text-warm-gray" /> : <ChevronDown className="h-3 w-3 text-warm-gray" />}
-                </div>
-              </button>
-
-              {isOpen && (
-                <div className="px-3.5 pb-3 animate-fade-in-up">
-                  <div className="border-t pt-2.5" style={{ borderColor: `${CMI_PHASES[3].color}20` }}>
-                    <p className="text-[10px] text-warm-gray mb-2.5">
-                      Generated a publication-ready report from verified facts, then ran an AI quality review to check for fabricated claims.
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-lg bg-surface-2/50 px-3 py-2.5 text-center">
-                        <div className="text-lg font-bold" style={{ color: CMI_PHASES[3].color }}>
-                          {p?.words ?? 0}
-                        </div>
-                        <div className="text-[8px] text-warm-gray mt-0.5">Words Written</div>
-                      </div>
-                      <div className="rounded-lg bg-surface-2/50 px-3 py-2.5 text-center">
-                        <div className="text-lg font-bold" style={{ color: score >= 7 ? "#059669" : "#D97706" }}>
-                          {score.toFixed(1)}
-                        </div>
-                        <div className="text-[8px] text-warm-gray mt-0.5">Quality Score /10</div>
-                      </div>
-                    </div>
-
-                    {/* Refinement indicator */}
-                    {p?.refinement_ran && (
-                      <div className="mt-2.5 rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-3 py-2">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <RefreshCw className="h-2.5 w-2.5 text-cyan-400" />
-                          <span className="text-[9px] font-semibold text-cyan-400 uppercase tracking-wider">
-                            Refinement Loop Ran
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-[10px]">
-                          <span className="text-amber-400 font-medium">
-                            {(p.pre_refinement_score ?? 0).toFixed(1)}
-                          </span>
-                          <ArrowRight className="h-2.5 w-2.5 text-warm-gray" />
-                          <span className="font-medium" style={{ color: score >= 7 ? "#059669" : "#D97706" }}>
-                            {score.toFixed(1)}/10
-                          </span>
-                          {(p.issues_fixed ?? 0) > 0 && (
-                            <span className="text-warm-gray ml-1">
-                              · {p.issues_fixed} issues addressed
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Fabricated claims (weaknesses from iteration history) */}
-                    {iterHistory[1]?.weaknesses && iterHistory[1].weaknesses.length > 0 && (
-                      <div className="mt-2.5">
-                        <div className="text-[8px] font-semibold uppercase tracking-wider text-amber-500 mb-1">
-                          Claims Flagged for Review
-                        </div>
-                        <div className="space-y-1">
-                          {iterHistory[1].weaknesses.map((w, j) => (
-                            <div key={j} className="flex items-start gap-1.5">
-                              <AlertTriangle className="h-2.5 w-2.5 shrink-0 mt-0.5 text-amber-500" />
-                              <span className="text-[9px] text-warm-gray leading-snug">{w}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
+        })}
       </div>
     </div>
   );
@@ -1351,7 +970,7 @@ function DimensionBreakdown({ evaluation, color }: { evaluation: LayerEvaluation
         {entries.map(([key, val], i) => (
           <div key={key} title={val.justification}>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-warm-gray truncate pr-2">
+              <span className="text-[10px] text-muted-foreground truncate pr-2">
                 {DIMENSION_LABELS[key] ?? key}
               </span>
               <span className="text-[10px] font-bold shrink-0" style={{ color }}>
@@ -1413,8 +1032,8 @@ function MissionCard({ layer, evaluation }: { layer: LayerResult; evaluation?: L
               <div className="text-sm font-bold text-foreground mb-0.5">
                 L{layer.layer}: {LAYER_NAMES[layer.layer] ?? `Layer ${layer.layer}`}
               </div>
-              <p className="text-[11px] text-warm-gray leading-snug">{cfg.description}</p>
-              <div className="flex flex-wrap items-center gap-3 mt-2 text-[10px] text-warm-gray">
+              <p className="text-[11px] text-muted-foreground leading-snug">{cfg.description}</p>
+              <div className="flex flex-wrap items-center gap-3 mt-2 text-[10px] text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <FileText className="h-2.5 w-2.5" />
                   {layer.word_count.toLocaleString()} words
@@ -1466,32 +1085,29 @@ function MissionCard({ layer, evaluation }: { layer: LayerResult; evaluation?: L
               <div className="text-3xl font-extrabold leading-none" style={{ color: cfg.color }}>
                 {postscore.toFixed(1)}
               </div>
-              <div className="text-[10px] text-warm-gray">/10</div>
+              <div className="text-[10px] text-muted-foreground">/10</div>
             </div>
           )}
         </div>
 
         {/* ── Baseline note ───────────────────────────────────────── */}
         {isBaseline && !isCmi && (
-          <div className="mb-3 rounded-xl bg-surface-2/60 border border-surface-3 px-3 py-2.5 text-[11px] text-warm-gray">
+          <div className="mb-3 rounded-xl bg-foreground/5/60 border border-foreground/10 px-3 py-2.5 text-[11px] text-muted-foreground">
             No tools used — raw LLM answer with zero external research.
             Establishes a quality floor that all subsequent agents must beat.
           </div>
         )}
 
-        {/* ── CMI Pipeline Flow (dedicated 4-phase visualization) ─── */}
+        {/* ── CMI Pipeline Flow (dedicated 5-phase visualization) ─── */}
         {isCmi && meta.phaseDetails.length > 0 && (
-          <div className="mb-4 rounded-xl bg-white/3 border border-surface-3 p-3">
+          <div className="mb-4 rounded-xl bg-white/3 border border-foreground/10 p-3">
             <CmiPipelineFlow
               phaseDetails={meta.phaseDetails}
               planSections={meta.planSections}
               planQuestions={meta.planQuestions}
               factsCollected={meta.factsCollected}
-              factsVerified={meta.factsVerified}
               insightsGenerated={meta.insightsGenerated}
               contrarianRisks={meta.contrarianRisks}
-              reviewScore={meta.reviewScore}
-              iterHistory={meta.iterHistory}
               color={cfg.color}
             />
           </div>
@@ -1499,7 +1115,7 @@ function MissionCard({ layer, evaluation }: { layer: LayerResult; evaluation?: L
 
         {/* ── ReAct Loop Flow (for Enhanced layer) ─────────────────── */}
         {!isBaseline && !isCmi && meta.iterHistory.length > 0 && (
-          <div className="mb-4 rounded-xl bg-white/3 border border-surface-3 p-3">
+          <div className="mb-4 rounded-xl bg-white/3 border border-foreground/10 p-3">
             <ReactLoopFlow
               iterHistory={meta.iterHistory}
               color={cfg.color}
@@ -1514,7 +1130,7 @@ function MissionCard({ layer, evaluation }: { layer: LayerResult; evaluation?: L
           <div>
             <button
               onClick={() => setDimOpen(!dimOpen)}
-              className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-warm-gray hover:text-foreground transition-colors"
+              className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
             >
               <Target className="h-2.5 w-2.5" />
               Quality Dimensions
@@ -1522,7 +1138,7 @@ function MissionCard({ layer, evaluation }: { layer: LayerResult; evaluation?: L
             </button>
 
             {dimOpen && (
-              <div className="mt-3 animate-fade-in-up rounded-xl bg-white/3 border border-surface-3 p-3">
+              <div className="mt-3 animate-fade-in-up rounded-xl bg-white/3 border border-foreground/10 p-3">
                 <DimensionBreakdown evaluation={evaluation} color={cfg.color} />
               </div>
             )}
@@ -1573,7 +1189,7 @@ function ImprovementCard({ comparison }: { comparison: LayerComparisonData }) {
           >
             L{comparison.from_layer}
           </span>
-          <ArrowRight size={14} className="text-warm-gray" />
+          <ArrowRight size={14} className="text-muted-foreground" />
           <span
             className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
             style={{ background: toCfg.chipBg, color: toCfg.color }}
@@ -1607,7 +1223,7 @@ function ImprovementCard({ comparison }: { comparison: LayerComparisonData }) {
 
       {/* Improvements */}
       <div className="px-5 pb-3">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-warm-gray mb-2">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
           Key Improvements
         </p>
         <div className="space-y-2">
@@ -1630,7 +1246,7 @@ function ImprovementCard({ comparison }: { comparison: LayerComparisonData }) {
         <div className="px-5 pb-4">
           <button
             onClick={() => setEvidenceOpen(!evidenceOpen)}
-            className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-warm-gray hover:text-primary transition-colors"
+            className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
           >
             <Lightbulb size={12} />
             Most Striking Evidence
@@ -1845,9 +1461,9 @@ export function LayerComparison({
               {LAYER_NAMES[layer.layer]}
             </div>
             {section && (
-              <div className="flex items-center gap-2 text-[9px] text-warm-gray">
+              <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
                 <span>{words} words</span>
-                <span className="text-warm-gray/30">|</span>
+                <span className="text-muted-foreground/30">|</span>
                 <span>{data} data pts</span>
               </div>
             )}
@@ -1874,7 +1490,7 @@ export function LayerComparison({
             </div>
           ) : (
             <div className="p-4 flex items-center justify-center h-32">
-              <span className="text-[10px] text-warm-gray/30 italic">
+              <span className="text-[10px] text-muted-foreground/30 italic">
                 Section not covered by this layer
               </span>
             </div>
@@ -1898,11 +1514,29 @@ export function LayerComparison({
         </>
       )}
 
+      {/* ── Claim Transformations (Evidence Cards) ────────────── */}
+      {layerComparisons && layerComparisons.some((lc) => lc.claim_pairs && lc.claim_pairs.length > 0) && (
+        <>
+          <Divider label="Claim Transformations" />
+          {layerComparisons
+            .filter((lc) => lc.claim_pairs && lc.claim_pairs.length > 0)
+            .map((lc) => (
+              <div key={`evidence-${lc.from_layer}-${lc.to_layer}`} className="glass-card p-5">
+                <EvidenceCards
+                  pairs={lc.claim_pairs!}
+                  fromLayer={lc.from_layer}
+                  toLayer={lc.to_layer}
+                />
+              </div>
+            ))}
+        </>
+      )}
+
       {/* ── Layer Selector ──────────────────────────────────────── */}
       <div className="glass-card p-4">
         <div className="flex items-center gap-2 mb-3">
           <BarChart3 className="h-4 w-4 text-cyan-400" />
-          <span className="text-xs font-semibold uppercase tracking-widest text-warm-gray">
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Compare Two Layers Side by Side
           </span>
         </div>
@@ -1910,7 +1544,7 @@ export function LayerComparison({
         <div className="flex items-center gap-3">
           {/* Left picker */}
           <div className="flex-1">
-            <div className="text-[9px] font-semibold uppercase tracking-wider text-warm-gray mb-1.5">Left</div>
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Left</div>
             <div className="flex gap-1.5">
               {sortedLayers.map((l, i) => {
                 const cfg = LAYER_CFG[l.layer as LayerKey] ?? LAYER_CFG[0];
@@ -1925,8 +1559,8 @@ export function LayerComparison({
                       isActive
                         ? "text-white shadow-md"
                         : i === rightIdx
-                          ? "border-surface-3 bg-surface-2/30 text-warm-gray/30 cursor-not-allowed"
-                          : "border-surface-3 bg-surface-2/50 text-warm-gray hover:text-foreground"
+                          ? "border-foreground/10 bg-foreground/5/30 text-muted-foreground/30 cursor-not-allowed"
+                          : "border-foreground/10 bg-foreground/5/50 text-muted-foreground hover:text-foreground"
                     )}
                     style={isActive ? { background: cfg.color, borderColor: cfg.color } : undefined}
                   >
@@ -1939,14 +1573,14 @@ export function LayerComparison({
 
           {/* VS badge */}
           <div className="flex flex-col items-center pt-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-3 text-[10px] font-bold text-warm-gray">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground/10 text-[10px] font-bold text-muted-foreground">
               VS
             </div>
           </div>
 
           {/* Right picker */}
           <div className="flex-1">
-            <div className="text-[9px] font-semibold uppercase tracking-wider text-warm-gray mb-1.5">Right</div>
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Right</div>
             <div className="flex gap-1.5">
               {sortedLayers.map((l, i) => {
                 const cfg = LAYER_CFG[l.layer as LayerKey] ?? LAYER_CFG[0];
@@ -1961,8 +1595,8 @@ export function LayerComparison({
                       isActive
                         ? "text-white shadow-md"
                         : i === leftIdx
-                          ? "border-surface-3 bg-surface-2/30 text-warm-gray/30 cursor-not-allowed"
-                          : "border-surface-3 bg-surface-2/50 text-warm-gray hover:text-foreground"
+                          ? "border-foreground/10 bg-foreground/5/30 text-muted-foreground/30 cursor-not-allowed"
+                          : "border-foreground/10 bg-foreground/5/50 text-muted-foreground hover:text-foreground"
                     )}
                     style={isActive ? { background: cfg.color, borderColor: cfg.color } : undefined}
                   >
@@ -1979,7 +1613,7 @@ export function LayerComparison({
       <div className="glass-card p-4">
         <div className="flex items-center gap-2 mb-2.5">
           <BookOpen className="h-3.5 w-3.5 text-cyan-400" />
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-warm-gray">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
             Section
           </span>
         </div>
@@ -1996,7 +1630,7 @@ export function LayerComparison({
                   "rounded-lg px-2.5 py-1.5 text-[10px] font-medium transition-all border",
                   isActive
                     ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300"
-                    : "border-surface-3 bg-surface-2/50 text-warm-gray hover:text-foreground hover:border-surface-3"
+                    : "border-foreground/10 bg-foreground/5/50 text-muted-foreground hover:text-foreground hover:border-foreground/10"
                 )}
               >
                 {m.heading}
@@ -2012,12 +1646,12 @@ export function LayerComparison({
       {/* ── Delta Bar ──────────────────────────────────────────── */}
       {leftSection && rightSection && (
         <div className="glass-card px-4 py-2.5 flex items-center justify-center gap-6">
-          <span className="text-[9px] text-warm-gray uppercase tracking-wider font-semibold">
+          <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">
             Difference
           </span>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
-              <FileText className="h-3 w-3 text-warm-gray/50" />
+              <FileText className="h-3 w-3 text-muted-foreground/50" />
               <span
                 className="text-[10px] font-bold"
                 style={{ color: wordDelta > 0 ? "#059669" : wordDelta < 0 ? "#EF4444" : "#6B7280" }}
@@ -2025,9 +1659,9 @@ export function LayerComparison({
                 {wordDelta > 0 ? "+" : ""}{wordDelta} words
               </span>
             </div>
-            <div className="w-px h-3 bg-surface-3" />
+            <div className="w-px h-3 bg-foreground/10" />
             <div className="flex items-center gap-1.5">
-              <Target className="h-3 w-3 text-warm-gray/50" />
+              <Target className="h-3 w-3 text-muted-foreground/50" />
               <span
                 className="text-[10px] font-bold"
                 style={{ color: dataDelta > 0 ? "#059669" : dataDelta < 0 ? "#EF4444" : "#6B7280" }}
@@ -2051,11 +1685,11 @@ export function LayerComparison({
 function Divider({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-3 px-1">
-      <div className="h-px flex-1 bg-surface-3" />
-      <span className="text-[10px] font-semibold uppercase tracking-widest text-warm-gray shrink-0">
+      <div className="h-px flex-1 bg-foreground/10" />
+      <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground shrink-0">
         {label}
       </span>
-      <div className="h-px flex-1 bg-surface-3" />
+      <div className="h-px flex-1 bg-foreground/10" />
     </div>
   );
 }

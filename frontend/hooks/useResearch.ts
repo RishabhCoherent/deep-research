@@ -63,6 +63,28 @@ export function useResearch(jobId: string | null) {
       }
     });
 
+    // Intermediate phase events (expert pipeline: dissect, plan, investigate, synthesize, compose)
+    const intermediateStatuses = [
+      "dissect", "plan", "investigate", "synthesize", "compose", "format",
+      "scoping", "evaluating",
+    ];
+    for (const status of intermediateStatuses) {
+      es.addEventListener(`layer_${status}`, (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          const inner = typeof data === "string" ? JSON.parse(data) : data;
+          addProgressEvent({
+            layer: inner.layer,
+            status,
+            message: inner.message || `${status}...`,
+            timestamp: Date.now(),
+          });
+        } catch {
+          // ignore
+        }
+      });
+    }
+
     // done event — fetch the full result
     es.addEventListener("done", async (e: MessageEvent) => {
       try {

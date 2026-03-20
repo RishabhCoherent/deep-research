@@ -1,46 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Brain,
   Loader2,
-  Layers,
-  Search,
-  FileText,
-  Target,
+  ArrowRight,
 } from "lucide-react";
 import { ResearchLayout } from "@/components/ResearchLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 import { useResearchStore } from "@/lib/store";
 import { startResearch } from "@/lib/api";
+import { WorkflowVisualization } from "@/components/WorkflowVisualization";
 
-const LAYER_CARDS = [
-  {
-    layer: 0,
-    name: "Baseline",
-    Icon: FileText,
-    color: "#6B7280",
-    description: "Model knowledge only — no tools, no web research",
-  },
-  {
-    layer: 1,
-    name: "Enhanced",
-    Icon: Search,
-    color: "#7C3AED",
-    description: "ReAct agent with web search, scraping, and source assessment",
-  },
-  {
-    layer: 2,
-    name: "CMI Expert",
-    Icon: Target,
-    color: "#E11D48",
-    description: "Full pipeline: Plan → Research → Verify → Write",
-  },
-];
+const words = ["research", "analyze", "compare", "deliver"];
 
 export default function ResearchPage() {
   const router = useRouter();
@@ -52,6 +25,19 @@ export default function ResearchPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [wordIndex, setWordIndex] = useState(0);
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWordIndex((prev) => (prev + 1) % words.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
 
   async function handleStart() {
     if (!topic.trim()) return;
@@ -70,103 +56,116 @@ export default function ResearchPage() {
 
   return (
     <ResearchLayout currentStep={1}>
-      <div className="mx-auto max-w-3xl animate-fade-in-up">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange/20">
-              <Brain className="h-5 w-5 text-orange" />
-            </div>
-            <h2 className="text-2xl font-bold text-foreground">
-              Research Agent
-            </h2>
-          </div>
-          <p className="text-sm text-warm-gray">
-            Enter a topic to run 3-layer parallel AI research. Each layer uses
-            a different methodology — from baseline to full CMI expert pipeline —
-            so you can compare quality at every level.
-          </p>
+      {/* ── Hero Section ──────────────────────────────────── */}
+      <div className="mx-auto max-w-5xl text-center">
+        <div
+          className={`mb-8 transition-all duration-700 ${
+            isVisible
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-4"
+          }`}
+        >
+          <span className="block text-3xl lg:text-5xl font-display tracking-tight text-foreground whitespace-nowrap">
+            Trained on 25,000+ reports and 2,00,000+ white papers
+          </span>
         </div>
 
+        <h1
+          className={`text-4xl lg:text-6xl font-display leading-[1.05] tracking-tight transition-all duration-1000 ${
+            isVisible
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-8"
+          }`}
+        >
+          <span className="block">What should we</span>
+          <span className="block relative mt-2">
+            <span key={wordIndex} className="inline-flex">
+              {words[wordIndex].split("").map((char, i) => (
+                <span
+                  key={`${wordIndex}-${i}`}
+                  className="inline-block animate-char-in"
+                  style={{ animationDelay: `${i * 50}ms` }}
+                >
+                  {char}
+                </span>
+              ))}
+            </span>
+            <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-foreground/10 rounded-full" />
+          </span>
+        </h1>
+
+        <p
+          className={`mt-8 text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto transition-all duration-700 delay-200 ${
+            isVisible
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-4"
+          }`}
+        >
+          Enter a topic to run 3-layer sequential AI research. Each layer
+          builds on the last — compare quality at every level.
+        </p>
+      </div>
+
+      {/* ── Topic Input ──────────────────────────────────── */}
+      <div
+        className={`mx-auto max-w-2xl mt-12 transition-all duration-700 delay-300 ${
+          isVisible
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-8"
+        }`}
+      >
         {error && (
-          <div className="mb-6 rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
+          <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
             {error}
           </div>
         )}
 
-        {/* Topic Input */}
-        <div className="glass-card p-6 mb-6">
-          <Label className="text-sm font-medium text-foreground">
+        <div className="glass-card rounded-2xl p-8">
+          <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground mb-4">
             Research Topic
-          </Label>
+          </label>
           <Textarea
             placeholder="e.g., Global EV Battery Market — competitive landscape, technology trends, and 2025-2030 outlook"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
-            className="mt-2 min-h-24 bg-surface-2 text-foreground placeholder:text-warm-gray/50"
+            className="min-h-40 rounded-xl border-foreground/10 bg-background/50 text-foreground placeholder:text-muted-foreground/40 focus:border-purple/30 focus:ring-purple/10 text-base leading-relaxed resize-none"
           />
         </div>
 
-        {/* Layer Preview */}
-        <div className="glass-card p-6 mb-6">
-          <Label className="text-sm font-medium text-foreground mb-4 block">
-            3 Layers — Running in Parallel
-          </Label>
-          <div className="grid grid-cols-3 gap-3">
-            {LAYER_CARDS.map((card) => {
-              const Icon = card.Icon;
-              return (
-                <div
-                  key={card.layer}
-                  className="flex flex-col items-center gap-2 rounded-2xl border p-4 text-center"
-                  style={{
-                    borderColor: `${card.color}35`,
-                    background: `${card.color}08`,
-                  }}
-                >
-                  <div
-                    className="flex h-10 w-10 items-center justify-center rounded-xl"
-                    style={{ background: `${card.color}20` }}
-                  >
-                    <Icon className="h-5 w-5" style={{ color: card.color }} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">
-                      {card.name}
-                    </p>
-                    <p className="mt-0.5 text-[10px] leading-tight text-warm-gray">
-                      {card.description}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Summary + Start */}
-        <div className="glass-card p-6">
-          <div className="rounded-lg bg-surface-2 px-4 py-3 text-xs text-warm-gray">
-            <p>
-              All <span className="text-foreground font-medium">3 layers</span>{" "}
-              run simultaneously — Baseline (no research), Enhanced (web search),
-              and CMI Expert (full pipeline with verification). Compare results
-              side by side.
-            </p>
-          </div>
-
+        <div className="mt-6 text-center">
+          <p className="font-mono text-xs text-muted-foreground mb-4">
+            3 layers run sequentially &middot; 3-8 minutes
+          </p>
           <Button
             onClick={handleStart}
             disabled={!topic.trim() || loading}
-            className="mt-4 w-full gradient-brand text-white hover:opacity-90 h-12 text-sm font-semibold"
+            className="bg-foreground hover:bg-foreground/90 text-background rounded-full h-14 px-10 text-base font-medium group disabled:opacity-40"
           >
             {loading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Layers className="mr-2 h-4 w-4" />
+              <>
+                Start Research
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </>
             )}
-            Start Research
           </Button>
         </div>
+      </div>
+
+      {/* ── Pipeline Workflow (below fold) ─────────────────── */}
+      <div className="mt-24 lg:mt-32">
+        <div className="text-center mb-12">
+          <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-4">
+            <span className="w-8 h-px bg-foreground/30" />
+            Pipeline
+            <span className="w-8 h-px bg-foreground/30" />
+          </span>
+          <h2 className="text-3xl lg:text-4xl font-display tracking-tight">
+            Three layers of analysis
+          </h2>
+        </div>
+        <WorkflowVisualization />
       </div>
     </ResearchLayout>
   );
