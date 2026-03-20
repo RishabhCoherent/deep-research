@@ -65,7 +65,7 @@ export default function ResearchPage() {
               : "opacity-0 translate-y-4"
           }`}
         >
-          <span className="block text-3xl lg:text-5xl font-display tracking-tight text-foreground whitespace-nowrap">
+          <span className="block text-2xl sm:text-3xl lg:text-5xl font-display tracking-tight text-foreground">
             Trained on 25,000+ reports and 2,00,000+ white papers
           </span>
         </div>
