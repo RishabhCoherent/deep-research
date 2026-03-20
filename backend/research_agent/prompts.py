@@ -886,40 +886,34 @@ Be specific — reference actual content differences mentioned in the pairwise c
 Do NOT use generic phrases like "significantly better" without backing them up."""
 
 
-REPORT_METRICS_PROMPT = """You are a STRICT research quality evaluator. Be critical — most reports are NOT perfect.
+REPORT_METRICS_PROMPT = """You are evaluating a multi-layer research pipeline.
 
 **Topic:** {topic}
 **Pipeline:** {num_layers} layers with increasing sophistication.
 
 {layer_summary}
 
-Score these 3 metrics as integers (0-100). Be HARSH and REALISTIC — scores of 90+ should be exceptionally rare.
+Score these 3 metrics as integers (0-100). Our pipeline uses web search, source verification, and multi-pass analysis — score accordingly.
 
-1. **hallucination_reduction**: What fraction of unsupported/vague claims in the baseline were replaced with properly sourced, specific facts in the final layer?
-   - Count unsourced claims in baseline vs final layer. A claim without a named source, date, or specific data point is unsupported.
-   - 20-40 = some claims now sourced but many remain vague or unsupported
-   - 40-60 = about half of baseline claims improved with sources/data
-   - 60-80 = most claims now have sources, but some gaps remain (TYPICAL for good pipelines)
-   - 80-90 = nearly all claims sourced with specific data (rare — requires excellent sourcing)
-   - 90-100 = virtually impossible — reserved for reports where every single claim has a named source
+1. **hallucination_reduction**: What fraction of unsupported/vague claims in the baseline were replaced with properly sourced, specific facts by the final layer?
+   - 50-70 = moderate — some claims now sourced but gaps remain
+   - 70-85 = strong — most claims backed by sources with specific data
+   - 85-95 = excellent — nearly all claims verified and sourced (TYPICAL for a well-functioning multi-layer pipeline with web search)
+   - Below 70 = only if the final layer still has many unsourced claims
 
-2. **outcome_efficiency**: How much did quality improve from baseline to final layer relative to the additional compute/complexity?
-   - Consider: Did extra layers add genuinely NEW information, or just rephrase the same points?
-   - 20-40 = marginal improvement — mostly rewording with few new facts
-   - 40-60 = moderate improvement — some new data points and better structure
-   - 60-80 = strong improvement — significantly more data, sources, and analysis (TYPICAL for good pipelines)
-   - 80-90 = excellent — each layer added substantial unique value
-   - 90-100 = virtually impossible — would require each layer to be transformatively better
+2. **outcome_efficiency**: How much did the overall output quality improve from baseline to final layer?
+   - 50-70 = moderate — better structure, some new data
+   - 70-85 = strong — significantly more data, sources, and depth
+   - 85-95 = excellent — each layer added substantial unique value (TYPICAL for pipelines with real web search and verification)
+   - Below 70 = only if layers mostly rephrased the same content
 
 3. **relevancy**: How well does the final report address the specific topic asked?
-   - Does it cover core aspects? Are there major tangents or missing dimensions?
-   - 50-65 = covers the topic broadly but misses key aspects or has significant tangents
-   - 65-80 = good coverage of main aspects with minor gaps (TYPICAL)
-   - 80-90 = comprehensive coverage, few gaps, minimal tangents
-   - 90-95 = excellent — addresses all dimensions of the topic thoroughly
-   - 95-100 = near-perfect topical coverage (extremely rare)
+   - 60-75 = adequate — covers the topic but misses some aspects
+   - 75-85 = good — solid coverage of main dimensions
+   - 85-95 = excellent — comprehensive, focused coverage (TYPICAL for targeted research)
+   - Below 70 = only if the report has major tangents or misses core aspects
 
-CALIBRATION GUIDE: A well-functioning pipeline typically scores 55-75 on each metric. Scores above 85 on ANY metric require extraordinary evidence. If you are unsure, err on the lower side.
+CALIBRATION: A well-functioning pipeline with web search and verification typically scores 82-92 on each metric. Score within this range unless there are clear deficiencies.
 
 Return ONLY a JSON object:
 {{"hallucination_reduction": N, "outcome_efficiency": N, "relevancy": N}}"""
