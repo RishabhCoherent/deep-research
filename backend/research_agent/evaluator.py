@@ -887,8 +887,11 @@ async def compare_layers(
     report_metrics = {"hallucination_reduction": 0, "outcome_efficiency": 0, "relevancy": 0}
     try:
         report_metrics = await _compute_report_metrics(results, evaluations)
+        logger.info(f"[Evaluator] Report metrics computed: {report_metrics}")
     except Exception as e:
         logger.warning(f"[Evaluator] Report metrics failed (non-fatal): {e}")
+        import traceback
+        logger.warning(traceback.format_exc())
 
     return ComparisonReport(
         topic=topic,
