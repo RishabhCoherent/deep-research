@@ -886,27 +886,40 @@ Be specific — reference actual content differences mentioned in the pairwise c
 Do NOT use generic phrases like "significantly better" without backing them up."""
 
 
-REPORT_METRICS_PROMPT = """You are evaluating a multi-layer research pipeline that produced reports on:
-**Topic:** {topic}
+REPORT_METRICS_PROMPT = """You are a STRICT research quality evaluator. Be critical — most reports are NOT perfect.
 
-The pipeline ran {num_layers} layers with increasing sophistication:
+**Topic:** {topic}
+**Pipeline:** {num_layers} layers with increasing sophistication.
+
 {layer_summary}
 
-Score these 3 overall metrics as integers (0-100):
+Score these 3 metrics as integers (0-100). Be HARSH and REALISTIC — scores of 90+ should be exceptionally rare.
 
-1. **hallucination_reduction**: What percentage of hallucinated/unsupported claims from the baseline (Layer 0) were eliminated or replaced with sourced facts by the final layer?
-   - 0 = no reduction (final layer still full of unsupported claims)
-   - 100 = all baseline hallucinations were replaced with verified, sourced data
+1. **hallucination_reduction**: What fraction of unsupported/vague claims in the baseline were replaced with properly sourced, specific facts in the final layer?
+   - Count unsourced claims in baseline vs final layer. A claim without a named source, date, or specific data point is unsupported.
+   - 20-40 = some claims now sourced but many remain vague or unsupported
+   - 40-60 = about half of baseline claims improved with sources/data
+   - 60-80 = most claims now have sources, but some gaps remain (TYPICAL for good pipelines)
+   - 80-90 = nearly all claims sourced with specific data (rare — requires excellent sourcing)
+   - 90-100 = virtually impossible — reserved for reports where every single claim has a named source
 
-2. **outcome_efficiency**: How much did the overall output quality improve from baseline to final layer?
-   - 0 = no improvement over baseline
-   - 50 = moderate improvement (some new data, better structure)
-   - 100 = transformative improvement (dramatically better data, analysis, and sourcing)
+2. **outcome_efficiency**: How much did quality improve from baseline to final layer relative to the additional compute/complexity?
+   - Consider: Did extra layers add genuinely NEW information, or just rephrase the same points?
+   - 20-40 = marginal improvement — mostly rewording with few new facts
+   - 40-60 = moderate improvement — some new data points and better structure
+   - 60-80 = strong improvement — significantly more data, sources, and analysis (TYPICAL for good pipelines)
+   - 80-90 = excellent — each layer added substantial unique value
+   - 90-100 = virtually impossible — would require each layer to be transformatively better
 
-3. **relevancy**: How relevant is the final research output to the stated topic?
-   - 0 = completely off-topic
-   - 50 = covers the topic but with significant tangents or missing core aspects
-   - 100 = tightly focused, comprehensive coverage of exactly what was asked
+3. **relevancy**: How well does the final report address the specific topic asked?
+   - Does it cover core aspects? Are there major tangents or missing dimensions?
+   - 50-65 = covers the topic broadly but misses key aspects or has significant tangents
+   - 65-80 = good coverage of main aspects with minor gaps (TYPICAL)
+   - 80-90 = comprehensive coverage, few gaps, minimal tangents
+   - 90-95 = excellent — addresses all dimensions of the topic thoroughly
+   - 95-100 = near-perfect topical coverage (extremely rare)
+
+CALIBRATION GUIDE: A well-functioning pipeline typically scores 55-75 on each metric. Scores above 85 on ANY metric require extraordinary evidence. If you are unsure, err on the lower side.
 
 Return ONLY a JSON object:
 {{"hallucination_reduction": N, "outcome_efficiency": N, "relevancy": N}}"""

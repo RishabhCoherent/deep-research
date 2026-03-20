@@ -764,10 +764,48 @@ async def _compute_report_metrics(
     results: list[ResearchResult],
     evaluations: list[LayerEvaluation],
 ) -> dict[str, float]:
-    """Compute report-level metrics (hallucination_reduction, outcome_efficiency, relevancy) via LLM."""
+    """Compute report-level metrics via hybrid approach: data-driven bounds + LLM judgment."""
     sorted_results = sorted(results, key=lambda r: r.layer)
     topic = sorted_results[0].topic if sorted_results else "unknown"
 
+    # ── Compute data-driven anchors ──────────────────────────────────
+    baseline_ev = next((e for e in evaluations if e.layer == 0), None)
+    final_ev = next((e for e in evaluations if e.layer == max(r.layer for r in sorted_results)), None)
+    baseline_avg = _get_avg_score(baseline_ev) if baseline_ev else 0.0
+    final_avg = _get_avg_score(final_ev) if final_ev else 0.0
+
+    # Source grounding dimension specifically tracks hallucination-like issues
+    baseline_sg = 0.0
+    final_sg = 0.0
+    if baseline_ev:
+        raw = getattr(baseline_ev, "_raw_scores", {})
+        sg_info = raw.get("source_grounding", {})
+        if isinstance(sg_info, dict):
+            baseline_sg = float(sg_info.get("score", 0))
+    if final_ev:
+        raw = getattr(final_ev, "_raw_scores", {})
+        sg_info = raw.get("source_grounding", {})
+        if isinstance(sg_info, dict):
+            final_sg = float(sg_info.get("score", 0))
+
+    baseline_sources = 0
+    final_sources = 0
+    for r in sorted_results:
+        if r.layer == 0:
+            baseline_sources = len(r.sources)
+        if r.layer == max(sr.layer for sr in sorted_results):
+            final_sources = len(r.sources)
+
+    # Data-driven anchors (0-100 scale) — these set reasonable bounds
+    # Hallucination reduction: based on source grounding improvement
+    source_grounding_delta = max(0, final_sg - baseline_sg)  # 0-10 scale
+    data_halluc = min(85, source_grounding_delta * 10)  # cap at 85
+
+    # Outcome efficiency: based on overall score improvement
+    score_delta = max(0, final_avg - baseline_avg)  # 0-10 scale
+    data_efficiency = min(85, score_delta * 12)  # cap at 85
+
+    # ── Build layer summary for LLM ─────────────────────────────────
     layer_lines = []
     for r in sorted_results:
         name = LAYER_NAMES.get(r.layer, f"Layer {r.layer}")
@@ -776,12 +814,21 @@ async def _compute_report_metrics(
         layer_lines.append(
             f"- Layer {r.layer} ({name}): {r.word_count} words, "
             f"{len(r.sources)} sources, avg score {avg:.1f}/10\n"
-            f"  First 2000 chars: {r.content[:2000]}"
+            f"  First 3000 chars: {r.content[:3000]}"
         )
+
+    # Add quantitative context so LLM can calibrate
+    layer_lines.append(
+        f"\n--- Quantitative Context ---\n"
+        f"Baseline avg score: {baseline_avg:.1f}/10, source_grounding: {baseline_sg:.1f}/10, sources: {baseline_sources}\n"
+        f"Final avg score: {final_avg:.1f}/10, source_grounding: {final_sg:.1f}/10, sources: {final_sources}\n"
+        f"Score improvement: +{final_avg - baseline_avg:.1f}/10\n"
+        f"Source grounding improvement: +{source_grounding_delta:.1f}/10"
+    )
 
     llm = get_llm("organizer")
     messages = [
-        {"role": "system", "content": "You are a research quality evaluator. Return ONLY valid JSON."},
+        {"role": "system", "content": "You are a STRICT research quality evaluator. Return ONLY valid JSON. Most reports score 55-75."},
         {"role": "user", "content": REPORT_METRICS_PROMPT.format(
             topic=topic,
             num_layers=len(results),
@@ -795,13 +842,31 @@ async def _compute_report_metrics(
         text = get_content(response).strip()
         parsed = extract_json(text)
         if parsed and isinstance(parsed, dict):
+            llm_halluc = int(parsed.get("hallucination_reduction", 50))
+            llm_efficiency = int(parsed.get("outcome_efficiency", 50))
+            llm_relevancy = int(parsed.get("relevancy", 70))
+
+            # Blend: 40% data-driven anchor + 60% LLM judgment, capped at 92
+            halluc = min(92, int(0.4 * data_halluc + 0.6 * llm_halluc))
+            efficiency = min(92, int(0.4 * data_efficiency + 0.6 * llm_efficiency))
+            # Relevancy is pure LLM (no good data anchor), but capped
+            relevancy = min(95, llm_relevancy)
+
+            logger.info(
+                f"[Evaluator] Metrics — data anchors: halluc={data_halluc:.0f}, eff={data_efficiency:.0f} | "
+                f"LLM raw: halluc={llm_halluc}, eff={llm_efficiency}, rel={llm_relevancy} | "
+                f"Final blended: halluc={halluc}, eff={efficiency}, rel={relevancy}"
+            )
+
             return {
-                "hallucination_reduction": max(0, min(100, int(parsed.get("hallucination_reduction", 0)))),
-                "outcome_efficiency": max(0, min(100, int(parsed.get("outcome_efficiency", 0)))),
-                "relevancy": max(0, min(100, int(parsed.get("relevancy", 0)))),
+                "hallucination_reduction": max(0, halluc),
+                "outcome_efficiency": max(0, efficiency),
+                "relevancy": max(0, relevancy),
             }
     except Exception as e:
         logger.warning(f"[Evaluator] Report metrics LLM call failed: {e}")
+        import traceback
+        logger.warning(traceback.format_exc())
 
     return {"hallucination_reduction": 0, "outcome_efficiency": 0, "relevancy": 0}
 
