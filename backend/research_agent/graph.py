@@ -144,64 +144,80 @@ import re as _re
 def _validate_finding_against_source(finding: str, source_text: str) -> bool:
     """Check that key entities and numbers in a finding appear in the source text.
 
-    Uses simple keyword/number matching — not LLM. Returns True if the finding
+    Uses keyword/number matching — not LLM. Returns True if the finding
     is reasonably grounded in the source, False if it appears to be inferred.
 
-    Rules:
-    - Extract all numbers (digits) from the finding
-    - Extract capitalized proper nouns (2+ words starting with uppercase)
-    - If ≥40% of extracted tokens appear in the source, it's grounded
-    - If no source text is available, return False (unverifiable)
+    Strategy: Split tokens into "specific" (proper nouns, large numbers, acronyms)
+    and "generic" (years, small numbers). Require that at least 1 specific token
+    matches AND overall ratio ≥ 50%. This prevents topic-keyword false positives.
     """
-    if not source_text or len(source_text.strip()) < 20:
+    if not source_text or len(source_text.strip()) < 50:
         return False
 
-    finding_lower = finding.lower()
     source_lower = source_text.lower()
 
-    tokens_to_check = []
+    specific_tokens = []  # Proper nouns, large numbers, acronyms — must match
+    generic_tokens = []   # Years, small numbers — easy to match by coincidence
 
-    # Extract numbers (e.g., "40,000", "2.16", "25%", "$47")
+    # Extract numbers — classify as specific (>= 4 digits or decimal) or generic
     numbers = _re.findall(r'\d[\d,\.]*', finding)
     for n in numbers:
-        # Strip trailing dots/commas
         clean = n.rstrip('.,')
-        if clean:
-            tokens_to_check.append(clean)
+        if not clean:
+            continue
+        # Years (2020-2030) are generic — they appear in any article on the same topic
+        digits_only = clean.replace(',', '').replace('.', '')
+        if _re.match(r'^20[12]\d$', digits_only):
+            generic_tokens.append(clean)
+        # Large numbers (4+ digits) or decimals are specific
+        elif len(digits_only) >= 4 or '.' in clean:
+            specific_tokens.append(clean)
+        else:
+            generic_tokens.append(clean)
 
     # Extract multi-word proper nouns (e.g., "Dixon Technologies", "Tamil Nadu")
     proper_nouns = _re.findall(r'[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+', finding)
     for pn in proper_nouns:
-        tokens_to_check.append(pn.lower())
+        specific_tokens.append(pn.lower())
 
-    # Extract single capitalized words that aren't sentence starters (heuristic)
-    # Look for words like "MeitY", "SPECS", "PLI", "ECMS" (all-caps acronyms)
+    # Extract acronyms (e.g., "BMW", "SPECS", "PLI", "EU")
     acronyms = _re.findall(r'\b[A-Z]{2,}[a-z]*\b', finding)
+    # Filter out very common acronyms that appear in any EV/geopolitics article
+    _COMMON_ACRONYMS = {'EV', 'EVS', 'US', 'EU', 'UK', 'GDP', 'USD', 'CEO', 'AI'}
     for acr in acronyms:
-        tokens_to_check.append(acr.lower())
+        if acr in _COMMON_ACRONYMS:
+            generic_tokens.append(acr.lower())
+        else:
+            specific_tokens.append(acr.lower())
 
-    if not tokens_to_check:
-        # No verifiable tokens — can't validate, assume OK for short generic findings
+    all_tokens = specific_tokens + generic_tokens
+
+    if not all_tokens:
         return len(finding.split()) < 15
 
-    # Count how many tokens appear in source (with word-boundary matching for numbers)
+    # Word-boundary matching for numbers
     def _token_in_source(token: str, source: str) -> bool:
-        # For pure numbers, use word-boundary match to avoid "25" matching inside "22,919"
         if _re.match(r'^\d[\d,\.]*$', token):
-            # Escape dots for regex, match as standalone number
             pattern = r'(?<!\d)' + _re.escape(token) + r'(?!\d)'
             return bool(_re.search(pattern, source))
         return token in source
 
-    matches = sum(1 for t in tokens_to_check if _token_in_source(t, source_lower))
-    ratio = matches / len(tokens_to_check)
+    specific_matches = sum(1 for t in specific_tokens if _token_in_source(t, source_lower))
+    generic_matches = sum(1 for t in generic_tokens if _token_in_source(t, source_lower))
+    total_matches = specific_matches + generic_matches
+    total_ratio = total_matches / len(all_tokens) if all_tokens else 0
 
-    logger.debug(
-        f"[validate_finding] {matches}/{len(tokens_to_check)} tokens matched "
-        f"({ratio:.0%}). Tokens: {tokens_to_check[:8]}"
+    logger.info(
+        f"[validate_finding] specific={specific_matches}/{len(specific_tokens)}, "
+        f"generic={generic_matches}/{len(generic_tokens)}, "
+        f"total={total_ratio:.0%}. "
+        f"Specific: {specific_tokens[:6]}, Generic: {generic_tokens[:4]}"
     )
 
-    return ratio >= 0.4
+    # Must have at least 1 specific token match AND overall ratio >= 50%
+    if specific_tokens and specific_matches == 0:
+        return False
+    return total_ratio >= 0.5
 
 
 # ─── Tool factory ─────────────────────────────────────────────────────────────
