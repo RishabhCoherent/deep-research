@@ -69,9 +69,15 @@ def drain_queue(progress_queue: queue.Queue) -> list:
 # ─── Health ─────────────────────────────────────────────────────────────────
 
 
+_CODE_VERSION = "2026-03-21-v3-metrics-fix"
+
 @app.get("/api/health", response_model=HealthResponse)
 def health():
     return HealthResponse(openai=has_openai(), searxng=has_searxng(), tavily=has_tavily())
+
+@app.get("/api/version")
+def version():
+    return {"version": _CODE_VERSION}
 
 
 # ─── Research History (must be before {job_id} routes) ──────────────────────
@@ -204,4 +210,5 @@ async def research_result(job_id: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("api:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=True)
+    is_dev = os.getenv("ENV", "production") != "production"
+    uvicorn.run("api:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=is_dev)
