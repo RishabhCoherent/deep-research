@@ -166,6 +166,12 @@ def run_research_thread(topic: str, brief: str, max_layer: int,
             }
 
         result_holder["success"] = True
+        logger.info(
+            f"[ResearchManager] Report metrics from pipeline: "
+            f"halluc={report.hallucination_reduction}, "
+            f"eff={report.outcome_efficiency}, "
+            f"rel={report.relevancy}"
+        )
         result_holder["report"] = {
             "topic": report.topic,
             "layers": layers,
@@ -178,6 +184,12 @@ def run_research_thread(topic: str, brief: str, max_layer: int,
             "outcome_efficiency": report.outcome_efficiency,
             "relevancy": report.relevancy,
         }
+        logger.info(
+            f"[ResearchManager] Report dict metrics: "
+            f"halluc={result_holder['report']['hallucination_reduction']}, "
+            f"eff={result_holder['report']['outcome_efficiency']}, "
+            f"rel={result_holder['report']['relevancy']}"
+        )
 
         # Auto-save to persistent history
         try:
