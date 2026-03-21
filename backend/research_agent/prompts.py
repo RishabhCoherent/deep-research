@@ -1925,7 +1925,7 @@ WRITING INSTRUCTIONS:
    - When using UNVERIFIED data, qualify with "according to industry estimates" or similar hedging
    - Prefer T1 and T2 evidence for headline numbers and key statistics
 
-10. TABLE INTEGRITY: Every cell in a comparison table must be traceable to specific evidence. Do NOT fill table cells with subjective ratings ("Very High", "Moderate") unless you define the rating methodology and cite the underlying data.
+10. TABLE INTEGRITY: Only create a table when you have REAL DATA for at least 75% of its cells. Do NOT create tables with mostly empty cells, "—", or "N/A" — use prose instead. Every populated cell must be traceable to specific evidence. Do NOT fill table cells with subjective ratings ("Very High", "Moderate") unless you define the rating methodology and cite the underlying data. If you lack data for a column, DROP that column rather than leaving it empty.
 
 11. FORWARD-LOOKING: End with a section that synthesizes the contrarian risks into a "What to Watch" framework.
 
@@ -1940,7 +1940,7 @@ WRITING STYLE:
 - Be direct and opinionated — state conclusions clearly
 - Short paragraphs (2-3 sentences). Mix bullet points with prose.
 - One idea per sentence. Keep sentences under 25 words.
-- Use tables for comparisons, bullet points for lists of 3+ items
+- Use tables ONLY when you have concrete data for most cells. Prefer bullet points or prose when data is sparse. Never create a table just for structure — tables must add information value.
 
 {topic_rules}
 
@@ -2005,7 +2005,8 @@ INSTRUCTIONS:
    - NEVER change verified claims — keep them exactly as written
    - Preserve the report's structure, headings, tables, and flow
    - Keep the same writing style and tone
-   - If a table cell contains an unverified number, replace it with "N/A" or a hedged estimate
+   - If a table has more than 25% empty or unverified cells, CONVERT it to prose or bullet points instead. Tables with mostly "N/A" or "—" cells look unprofessional — remove the table and state the known facts in sentences.
+   - If only 1-2 cells are unverified, replace them with a hedged estimate or drop that row/column
 
 5. Return the CORRECTED full report text. Start directly with ## headings — no preamble.
 
@@ -2095,7 +2096,9 @@ RULES FOR TABLES:
 - Each column must have proper spacing with ` | ` separators
 - Add a **bold table title** line above: `**Table N: Description**`
 - Leave a blank line before and after the table
-- Use "—" for empty cells
+- If a table has more than 25% empty cells ("—" or "N/A"), CONVERT it to bullet points or prose instead. Tables with mostly empty cells look unprofessional.
+- Drop columns that are entirely empty rather than keeping them with "—" values
+- Only keep tables that add real information value — never create tables just for visual structure
 
 ### 4. PARAGRAPHS — Maximum 3 sentences per paragraph
 Split any paragraph longer than 3 sentences into multiple shorter paragraphs. Each paragraph should cover ONE idea.
