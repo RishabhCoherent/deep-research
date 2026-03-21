@@ -1812,10 +1812,12 @@ You have evidence gathered from targeted research on specific claims. Now connec
 
 3. GAP REPORT: List claim IDs that still have NO evidence after research. These will be either qualified or removed from the final report.
 
-4. INSIGHTS: Generate 5-7 non-obvious insights that emerge from connecting findings across sections. Each insight should:
-   - Connect at least 2 different findings
+4. INSIGHTS: Generate 5-7 insights that are DIRECTLY supported by combining specific evidence entries. Each insight MUST:
+   - Reference the exact evidence IDs or claim IDs it connects (e.g., "Combining [s1_c02] with [s3_c04] reveals...")
+   - Use ONLY language, facts, and causal mechanisms that appear in the evidence — never invent explanations
    - Answer "So what?" — what does this mean for the reader?
    - Be specific and actionable, not generic
+   - NEVER fabricate case studies, company examples, or causal chains not in the evidence
 
 5. CONTRARIAN RISKS: Generate 3-4 ways the consensus view could be wrong. What assumptions might not hold?
 
@@ -1881,12 +1883,14 @@ WRITING INSTRUCTIONS:
    Example: If prior research found "Cursor reached 1 million users in 16 months", keep that fact AND add your deeper analysis of what drives that adoption.
 
 2. DEPTH OVER BREADTH: Your job is NOT to find more data points — it is to go DEEPER on each claim.
-   - Explain the CAUSAL MECHANISM: WHY is this happening? What forces drive it?
-   - Connect CAUSE to EFFECT: "X happened BECAUSE of Y, which in turn leads to Z"
-   - Provide CONTEXT: How does this compare to industry norms, historical precedent, or competitor benchmarks?
+   - Explain WHY using ONLY causal mechanisms that appear in the evidence ledger. If no causal explanation exists in the evidence, state the fact without inventing an explanation.
+   - Connect CAUSE to EFFECT only when BOTH cause and effect appear in the evidence: "X happened BECAUSE of Y" — but ONLY if Y is documented in the evidence.
+   - Provide CONTEXT: How does this compare to industry norms, historical precedent, or competitor benchmarks? Use only comparisons that appear in the evidence.
    - Challenge assumptions: Is the trend sustainable? What could reverse it?
+   - NEVER invent case studies, company examples, or specific events that are not in the evidence ledger.
+   - NEVER fabricate causal mechanisms. If you don't know WHY something happened, just state WHAT happened.
    BAD: "Cursor has 85% Fortune 500 adoption" (just another data point)
-   GOOD: "Cursor reached 1 million users within 16 months — a growth rate 3x faster than GitHub Copilot's early trajectory — driven by its real-time codebase awareness that competing tools lack"
+   GOOD: "Cursor reached 1 million users within 16 months — a growth rate 3x faster than GitHub Copilot's early trajectory — driven by its real-time codebase awareness that competing tools lack" (BUT only if these specific facts appear in the evidence)
 
 3. EVIDENCE-DRIVEN: Every factual claim must trace to evidence in the ledger or prior findings above. If a claim has no evidence, either:
    - Qualify it: "Industry observers suggest..." or "While specific data is unavailable..."
@@ -1957,7 +1961,7 @@ SOURCE CITATION RULES:
   * E-commerce/retail → eMarketer, Euromonitor, Bain & Company
   * Government/regulatory → Name the specific government agency (e.g., "India's MEITY", "Singapore's IMDA")
   * Company-specific data → Name the company's earnings report or filing directly
-- If a data point comes from an UNVERIFIED source, either attribute it to a relevant authoritative source whose published data is consistent with the claim, OR qualify it as "industry estimates suggest" without naming the low-quality source.
+- If a data point comes from an UNVERIFIED source, qualify it as "industry estimates suggest" or "based on available data" without naming the low-quality source. NEVER attribute a claim to a source that did not actually publish it — this is fabrication.
 - For data from DataReportal, Statista, government agencies, or major news outlets — cite them by name. These are credible and readers expect to see them.
 - EVERY data point in the report must have a named, credible source attribution. No orphan statistics.
 
@@ -1967,6 +1971,45 @@ OUTPUT FORMAT:
 - Target 2500-3500 words total — do NOT write a short summary. Write a COMPREHENSIVE report.
 - Include at least one table or structured comparison per report
 - End with "## What to Watch" section with forward-looking analysis and specific indicators"""
+
+
+EXPERT_VERIFY_PROMPT = """You are a fact-verification specialist. Your job is to cross-reference every factual claim in a draft report against the evidence ledger and remove or hedge any claims not supported by evidence.
+
+DRAFT REPORT:
+{draft}
+
+EVIDENCE LEDGER:
+{evidence_text}
+
+INSTRUCTIONS:
+
+1. EXTRACT every factual claim from the draft. A factual claim is any statement containing:
+   - A specific number, percentage, or monetary amount
+   - A specific date or time period
+   - A named company, person, scheme, or government agency
+   - A specific case study or event
+   - A causal mechanism ("X caused Y", "driven by Z")
+
+2. For EACH factual claim, check if it appears in the evidence ledger above. A claim is "verified" if:
+   - The key numbers/entities match evidence entries (exact or close approximation)
+   - The causal mechanism is stated or clearly implied in the evidence
+
+3. For UNVERIFIED claims (not in evidence), apply ONE of these fixes:
+   - ADD HEDGING: Change "X is Y" to "Industry estimates suggest X is Y" or "Based on available data, X appears to be Y"
+   - REMOVE the specific claim if it's a fabricated case study, invented company example, or made-up event
+   - KEEP the claim if it's general knowledge that doesn't need evidence (e.g., "India is the world's most populous country")
+
+4. CRITICAL RULES:
+   - NEVER remove entire sections — only unsourced specific claims within sections
+   - NEVER add new claims or data not in the evidence
+   - NEVER change verified claims — keep them exactly as written
+   - Preserve the report's structure, headings, tables, and flow
+   - Keep the same writing style and tone
+   - If a table cell contains an unverified number, replace it with "N/A" or a hedged estimate
+
+5. Return the CORRECTED full report text. Start directly with ## headings — no preamble.
+
+OUTPUT: The complete corrected report with unverified claims hedged or removed."""
 
 
 REPORT_FORMAT_PROMPT = """You are a senior document formatting specialist. Your ONLY job is to take a research report and AGGRESSIVELY reformat it for maximum readability. You must NOT change any facts, numbers, data, or meaning — but you MUST dramatically improve the visual structure.

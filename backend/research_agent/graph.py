@@ -136,6 +136,74 @@ class AgentState(TypedDict):
     forced_search: bool    # whether we've already forced more research
 
 
+# ─── Source-text validation ───────────────────────────────────────────────────
+
+import re as _re
+
+
+def _validate_finding_against_source(finding: str, source_text: str) -> bool:
+    """Check that key entities and numbers in a finding appear in the source text.
+
+    Uses simple keyword/number matching — not LLM. Returns True if the finding
+    is reasonably grounded in the source, False if it appears to be inferred.
+
+    Rules:
+    - Extract all numbers (digits) from the finding
+    - Extract capitalized proper nouns (2+ words starting with uppercase)
+    - If ≥40% of extracted tokens appear in the source, it's grounded
+    - If no source text is available, return False (unverifiable)
+    """
+    if not source_text or len(source_text.strip()) < 20:
+        return False
+
+    finding_lower = finding.lower()
+    source_lower = source_text.lower()
+
+    tokens_to_check = []
+
+    # Extract numbers (e.g., "40,000", "2.16", "25%", "$47")
+    numbers = _re.findall(r'\d[\d,\.]*', finding)
+    for n in numbers:
+        # Strip trailing dots/commas
+        clean = n.rstrip('.,')
+        if clean:
+            tokens_to_check.append(clean)
+
+    # Extract multi-word proper nouns (e.g., "Dixon Technologies", "Tamil Nadu")
+    proper_nouns = _re.findall(r'[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+', finding)
+    for pn in proper_nouns:
+        tokens_to_check.append(pn.lower())
+
+    # Extract single capitalized words that aren't sentence starters (heuristic)
+    # Look for words like "MeitY", "SPECS", "PLI", "ECMS" (all-caps acronyms)
+    acronyms = _re.findall(r'\b[A-Z]{2,}[a-z]*\b', finding)
+    for acr in acronyms:
+        tokens_to_check.append(acr.lower())
+
+    if not tokens_to_check:
+        # No verifiable tokens — can't validate, assume OK for short generic findings
+        return len(finding.split()) < 15
+
+    # Count how many tokens appear in source (with word-boundary matching for numbers)
+    def _token_in_source(token: str, source: str) -> bool:
+        # For pure numbers, use word-boundary match to avoid "25" matching inside "22,919"
+        if _re.match(r'^\d[\d,\.]*$', token):
+            # Escape dots for regex, match as standalone number
+            pattern = r'(?<!\d)' + _re.escape(token) + r'(?!\d)'
+            return bool(_re.search(pattern, source))
+        return token in source
+
+    matches = sum(1 for t in tokens_to_check if _token_in_source(t, source_lower))
+    ratio = matches / len(tokens_to_check)
+
+    logger.debug(
+        f"[validate_finding] {matches}/{len(tokens_to_check)} tokens matched "
+        f"({ratio:.0%}). Tokens: {tokens_to_check[:8]}"
+    )
+
+    return ratio >= 0.4
+
+
 # ─── Tool factory ─────────────────────────────────────────────────────────────
 
 
@@ -301,6 +369,7 @@ def make_tools(ctx: AgentContext, ledger: EvidenceLedger | None = None, claim_ma
             source_url = ""
             source_title = ""
             source_tier = 3
+            source_text = ""  # The actual text from the source for validation
             for tc in reversed(ctx.tool_calls_log):
                 if tc.get("tool") == "scrape_page":
                     source_url = tc.get("url", "")
@@ -308,6 +377,7 @@ def make_tools(ctx: AgentContext, ledger: EvidenceLedger | None = None, claim_ma
                         if s.url == source_url:
                             source_title = s.title
                             source_tier = s.tier
+                            source_text = s.scraped_content or s.snippet or ""
                             break
                     break
                 elif tc.get("tool") == "search_web":
@@ -315,7 +385,21 @@ def make_tools(ctx: AgentContext, ledger: EvidenceLedger | None = None, claim_ma
                     if hits:
                         source_url = hits[0].get("url", "")
                         source_title = hits[0].get("title", "")
+                        source_text = hits[0].get("snippet", "")
                     break
+
+            # ── Source-text validation ────────────────────────────────────
+            # Check that key entities/numbers in the finding actually appear
+            # in the source text. If not, downgrade confidence and mark as inferred.
+            validated = _validate_finding_against_source(finding, source_text)
+            if not validated:
+                logger.warning(
+                    f"[record_finding] Finding not grounded in source text. "
+                    f"claim={claim_id}, confidence downgraded to 'low', type='inferred'. "
+                    f"Finding: {finding[:120]}..."
+                )
+                confidence = "low"
+                evidence_type = "inferred"
 
             evidence = Evidence(
                 claim_id=claim_id,

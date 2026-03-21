@@ -28,8 +28,8 @@ from research_agent.models import (
 from research_agent.graph import build_agent_graph, build_initial_state, make_tools, _scrub_competitor_mentions
 from research_agent.prompts import (
     EXPERT_DISSECT_PROMPT, EXPERT_PLAN_PROMPT, EXPERT_INVESTIGATE_PROMPT,
-    EXPERT_SYNTHESIZE_PROMPT, EXPERT_COMPOSE_PROMPT, REPORT_FORMAT_PROMPT,
-    get_quality_rules,
+    EXPERT_SYNTHESIZE_PROMPT, EXPERT_COMPOSE_PROMPT, EXPERT_VERIFY_PROMPT,
+    REPORT_FORMAT_PROMPT, get_quality_rules,
 )
 from research_agent.cost import track
 from research_agent.utils import get_content, extract_json, strip_preamble, generate_report_outline, parse_outline_type
@@ -585,6 +585,57 @@ async def _phase_compose(
     return draft
 
 
+# ─── Phase 5.5: VERIFY ───────────────────────────────────────────────────────
+
+
+async def _phase_verify(
+    draft: str,
+    claim_map: ClaimMap,
+    ledger: EvidenceLedger,
+    notify,
+) -> str:
+    """Cross-reference draft against evidence ledger, hedge or remove unsourced claims."""
+    notify("verify", "Verifying factual claims against evidence ledger...")
+
+    evidence_text = ledger.format_all(claim_map)
+
+    set_model_tier("premium")
+    llm = get_llm("reviewer")
+
+    messages = [
+        {"role": "system", "content": (
+            "You are a fact-verification specialist. Your job is to ensure every claim "
+            "in the report is grounded in the evidence ledger. Be precise and conservative — "
+            "when in doubt, hedge the claim rather than leaving it as stated fact."
+        )},
+        {"role": "user", "content": EXPERT_VERIFY_PROMPT.format(
+            draft=draft,
+            evidence_text=evidence_text,
+        )},
+    ]
+
+    try:
+        response = await llm.ainvoke(messages)
+        track("L2 verify", response)
+
+        verified_draft = get_content(response).strip()
+        verified_draft = strip_preamble(verified_draft)
+
+        # Sanity: verified version should be at least 70% of original length
+        if len(verified_draft.split()) >= len(draft.split()) * 0.7:
+            removed_words = len(draft.split()) - len(verified_draft.split())
+            notify("verify", f"Verification complete. {abs(removed_words)} words adjusted.")
+            return verified_draft
+        else:
+            logger.warning("[Expert] Verified draft too short, keeping original")
+            notify("verify", "Verification produced shorter output, keeping original")
+            return draft
+    except Exception as e:
+        logger.warning(f"[Expert] Verify phase failed (non-fatal): {e}")
+        notify("verify", "Verification skipped (non-fatal error)")
+        return draft
+
+
 # ─── Phase 6: FORMAT ─────────────────────────────────────────────────────────
 
 
@@ -720,6 +771,17 @@ async def run(
     phase_timings["compose"] = {
         "word_count": len(draft.split()),
         "elapsed_s": round(time.time() - t5, 1),
+    }
+
+    # ── Phase 5.5: VERIFY ────────────────────────────────────────────────
+    t55 = time.time()
+    try:
+        draft = await _phase_verify(draft, claim_map, ledger, notify)
+    except Exception as e:
+        logger.warning(f"[Expert] Phase 5.5 (Verify) failed (non-fatal): {e}")
+    phase_timings["verify"] = {
+        "word_count": len(draft.split()),
+        "elapsed_s": round(time.time() - t55, 1),
     }
 
     # ── Phase 6: FORMAT ──────────────────────────────────────────────────
