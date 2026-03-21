@@ -256,9 +256,10 @@ async def interpret_topic(topic: str, llm, brief: str = "") -> str:
                 f"(reason: {interpretation[:100]})"
             )
             return clarified
-        elif clarified:
+        else:
+            # Topic was already clear — return ORIGINAL, not the LLM's rephrasing
             logger.info(f"[Interpret] Topic confirmed as clear: '{topic}'")
-            return clarified
+            return topic
 
         logger.warning("[Interpret] Could not parse response, using original topic")
     except Exception as e:

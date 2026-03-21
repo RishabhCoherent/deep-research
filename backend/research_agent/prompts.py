@@ -279,15 +279,16 @@ INTERPRETATION TASK:
    - Do the search results confirm your reading of the topic?
    - Is there a well-known meaning for this phrase in the industry?
 
-3. DETERMINE the true research question. Rewrite the topic as a clear, unambiguous
-   research directive that captures what the client actually wants to know.
+3. DETERMINE the true research question. If the original topic is already clear and professional,
+   keep it EXACTLY as-is — do NOT rephrase, expand, or "improve" clear topics.
+   Only rewrite if the topic is genuinely ambiguous, misspelled, or colloquial.
 
 Output format (EXACTLY as shown — no extra text):
 
 ORIGINAL: [exact original topic]
 INTERPRETATION: [1-2 sentences explaining what the client likely means and why]
-CLARIFIED_TOPIC: [rewritten topic — clear, professional, unambiguous]
-TOPIC_CHANGED: [YES if you changed the meaning, NO if the original was already clear]"""
+CLARIFIED_TOPIC: [if topic is clear, copy ORIGINAL exactly — do NOT rephrase. Only rewrite if genuinely ambiguous.]
+TOPIC_CHANGED: [YES only if you had to fix ambiguity/spelling. NO if original was already clear — in this case CLARIFIED_TOPIC must be identical to ORIGINAL]"""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
