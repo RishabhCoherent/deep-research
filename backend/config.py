@@ -68,7 +68,7 @@ def get_llm(role: str) -> ChatOpenAI:
     """Return the appropriate LLM for each pipeline role."""
     tier = MODEL_TIERS[_model_tier]
     model_name, temperature = tier[role]
-    return ChatOpenAI(model=model_name, temperature=temperature)
+    return ChatOpenAI(model=model_name, temperature=temperature, max_retries=5, timeout=60)
 
 
 # ─── Sub-section Definitions (canonical order) ────────────────────────────────
