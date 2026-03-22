@@ -45,8 +45,8 @@ export function Navigation() {
           }`}
         >
           <a href="#" className="flex flex-col group">
-            <span className={`font-display tracking-tight transition-all duration-500 ${isScrolled ? "text-xl" : "text-2xl"}`}>CoherentBot</span>
-            <span className={`font-mono text-muted-foreground tracking-wide transition-all duration-500 ${isScrolled ? "text-[9px]" : "text-[10px]"}`}>
+            <span className={`font-display tracking-tight transition-all duration-500 ${isScrolled ? "text-2xl" : "text-3xl"}`}>CoherentBot</span>
+            <span className={`font-mono text-muted-foreground tracking-wide transition-all duration-500 ${isScrolled ? "text-[10px]" : "text-[11px]"}`}>
               0 hallucination · 100% validation · 25 year experience
             </span>
           </a>

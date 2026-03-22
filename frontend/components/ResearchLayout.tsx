@@ -31,10 +31,10 @@ export function ResearchLayout({ children, currentStep }: ResearchLayoutProps) {
         <nav className="mx-auto max-w-350 flex items-center justify-between px-6 lg:px-12 h-16">
           {/* Left: Logo */}
           <Link href="/" className="flex flex-col group">
-            <span className="font-display text-xl tracking-tight">
+            <span className="font-display text-3xl tracking-tight">
               CoherentBot
             </span>
-            <span className="text-[10px] font-mono text-muted-foreground tracking-wide">
+            <span className="text-[11px] font-mono text-muted-foreground tracking-wide">
               0 hallucination · 100% validation · 25 year experience
             </span>
           </Link>

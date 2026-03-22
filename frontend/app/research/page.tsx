@@ -159,7 +159,7 @@ export default function ResearchPage() {
                 <span className="w-5 h-px bg-foreground/30" />
               </span>
               <h3 className="text-xl lg:text-2xl font-display tracking-tight">
-                Three layers of analysis
+                Three layers of analysis (CoherentBot)
               </h3>
             </div>
             <WorkflowVisualization />
