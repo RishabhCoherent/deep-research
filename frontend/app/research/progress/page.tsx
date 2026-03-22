@@ -179,7 +179,7 @@ export default function ResearchProgressPage() {
                               isPending && "text-muted-foreground"
                             )}
                           >
-                            Layer {layer}: {LAYER_NAMES[layer]}
+                            {LAYER_NAMES[layer]}
                           </h3>
                           {isRunning && (
                             <span className="rounded-full bg-purple/10 px-2.5 py-0.5 text-[10px] font-mono font-medium text-purple">

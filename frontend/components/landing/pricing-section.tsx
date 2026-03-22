@@ -11,7 +11,7 @@ const plans = [
     price: { monthly: 0, annual: 0 },
     features: [
       "Up to 5 research runs/month",
-      "Layer 0 (Baseline) only",
+      "Layer 1 (Baseline) only",
       "Basic quality scores",
       "Community support",
       "GPT-4o-mini models",

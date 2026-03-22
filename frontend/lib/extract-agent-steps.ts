@@ -85,7 +85,7 @@ function extractToolCalls(m: Record<string, unknown>): AgentToolCall[] {
 // ─── Main extraction ────────────────────────────────────────────────────────
 
 export function extractAgentWorkflow(report: ComparisonReport): AgentWorkflowData {
-  // --- Layer 0: Baseline ---
+  // --- Layer 1: Baseline ---
   const m0 = meta(report, 0);
   const baseline: AgentWorkflowData["baseline"] = {
     wordCount: report.layers?.[0]?.word_count ?? 0,
@@ -93,7 +93,7 @@ export function extractAgentWorkflow(report: ComparisonReport): AgentWorkflowDat
     method: asString(m0.method, "single_prompt"),
   };
 
-  // --- Layer 1: Enhanced (Web Research) ---
+  // --- Layer 2: Enhanced (Web Research) ---
   let enhanced: AgentWorkflowData["enhanced"] = null;
   if (report.layers?.length > 1) {
     const m1 = meta(report, 1);
@@ -111,7 +111,7 @@ export function extractAgentWorkflow(report: ComparisonReport): AgentWorkflowDat
     };
   }
 
-  // --- Layer 2: Expert (5-Phase Pipeline) ---
+  // --- Layer 3: Expert (5-Phase Pipeline) ---
   let expert: AgentWorkflowData["expert"] = null;
   if (report.layers?.length > 2) {
     const m2 = meta(report, 2);

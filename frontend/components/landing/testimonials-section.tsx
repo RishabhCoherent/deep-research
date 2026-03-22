@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 const testimonials = [
   {
-    quote: "The three-layer comparison completely changed how we validate market assumptions. Layer 0 gives the LLM baseline, Layer 1 adds real sources, and Layer 2 challenges everything we thought we knew.",
+    quote: "The three-layer comparison completely changed how we validate market assumptions. Layer 1 gives the LLM baseline, Layer 2 adds real sources, and Layer 3 challenges everything we thought we knew.",
     author: "Research Director",
     role: "Market Intelligence",
     company: "Healthcare Analytics",

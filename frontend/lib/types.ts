@@ -89,9 +89,9 @@ export interface ComparisonReport {
 }
 
 export const LAYER_NAMES: Record<number, string> = {
-  0: "Baseline (Prompt-Driven)",
-  1: "Enhanced (AI Agent)",
-  2: "CMI Expert (Agentic AI)",
+  0: "L1 Baseline (Prompt-Driven)",
+  1: "L2 Enhanced (AI Agent)",
+  2: "L3 CMI Expert (Agentic AI)",
 };
 
 export const LAYER_DESCRIPTIONS: Record<number, string> = {

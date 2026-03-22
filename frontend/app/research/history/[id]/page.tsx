@@ -165,7 +165,7 @@ export default function HistoryDetailPage({
   return (
     <ResearchLayout>
       {/* ── Header ──────────────────────────────────────── */}
-      <div className="mb-12 flex items-start justify-between">
+      <div className="mb-10 flex items-start justify-between">
         <div
           className={`transition-all duration-700 ${
             isVisible
@@ -173,19 +173,19 @@ export default function HistoryDetailPage({
               : "opacity-0 translate-y-8"
           }`}
         >
-          <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-4">
-            <span className="w-8 h-px bg-foreground/30" />
-            Research History
+          <span className="inline-flex items-center gap-3 text-xl lg:text-2xl font-mono uppercase tracking-wider text-muted-foreground mb-2">
+            <span className="w-6 h-px bg-foreground/30" />
+            Query
           </span>
-          <h1 className="text-3xl lg:text-4xl font-display leading-[1.1] tracking-tight">
-            Research Results
-          </h1>
-          <p className="mt-3 text-lg text-muted-foreground max-w-xl">
+          <p className="text-2xl lg:text-3xl font-display text-foreground/80 max-w-2xl mb-4 leading-snug">
             {report.topic}
           </p>
+          <h1 className="text-xl lg:text-2xl font-display leading-[1.1] tracking-tight text-muted-foreground">
+            Research Results
+          </h1>
         </div>
         <div
-          className={`flex gap-3 transition-all duration-700 delay-100 ${
+          className={`flex gap-3 shrink-0 transition-all duration-700 delay-100 ${
             isVisible
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-4"
@@ -427,7 +427,7 @@ export default function HistoryDetailPage({
                 : "rgba(0, 0, 0, 0.08)"
             }
           >
-            <LayerPopupContent result={layer} evaluation={evaluation} />
+            <LayerPopupContent result={layer} evaluation={evaluation} report={report} />
           </ResultsPopup>
         );
       })}

@@ -1030,7 +1030,7 @@ function MissionCard({ layer, evaluation }: { layer: LayerResult; evaluation?: L
             </div>
             <div className="min-w-0">
               <div className="text-sm font-bold text-foreground mb-0.5">
-                L{layer.layer}: {LAYER_NAMES[layer.layer] ?? `Layer ${layer.layer}`}
+                {LAYER_NAMES[layer.layer] ?? `Layer ${layer.layer + 1}`}
               </div>
               <p className="text-[11px] text-muted-foreground leading-snug">{cfg.description}</p>
               <div className="flex flex-wrap items-center gap-3 mt-2 text-[10px] text-muted-foreground">

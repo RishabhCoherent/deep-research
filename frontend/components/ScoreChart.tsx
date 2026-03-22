@@ -147,7 +147,7 @@ export function ScoreChart({ evaluations }: ScoreChartProps) {
               );
             })}
 
-            {/* Layer polygons (draw L0 first so L2 is on top) */}
+            {/* Layer polygons (draw L1 first so L3 is on top) */}
             {evaluations
               .slice()
               .sort((a, b) => a.layer - b.layer)

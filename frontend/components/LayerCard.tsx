@@ -78,7 +78,7 @@ function AssumptionAuditPanel({ metadata }: { metadata: Record<string, unknown> 
       {open && (
         <div className="border-t border-foreground/10 px-5 py-3 space-y-2">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-            Assumptions extracted from L2 and stress-tested
+            Assumptions extracted from L3 and stress-tested
           </p>
           {assumptions.map((assumption, i) => (
             <div

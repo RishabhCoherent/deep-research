@@ -5,23 +5,23 @@ import { useEffect, useRef, useState } from "react";
 const steps = [
   {
     number: "I",
-    title: "Layer 0 — Baseline Analysis",
+    title: "Layer 1 — Baseline Analysis",
     description: "Pure LLM reasoning with no external research. GPT-4o-mini generates a structured report from model knowledge alone — establishing a quality baseline for comparison. Fast, affordable, and surprisingly capable.",
     code: `import { coherentBot } from '@cmi/research'
 
 const baseline = await coherentBot.run({
   topic: 'Global EV Battery Market',
-  layer: 0,  // Baseline — no tools
+  layer: 1,  // Baseline — no tools
   model: 'budget'
 })`,
   },
   {
     number: "II",
-    title: "Layer 1 — Enhanced Research",
+    title: "Layer 2 — Enhanced Research",
     description: "A ReAct agent with web search, page scraping, and source assessment tools. Iterates up to 3 times with self-review scoring, converging when quality reaches 7.5/10. Typically 15–25 tool calls per run.",
     code: `const enhanced = await coherentBot.run({
   topic: 'Global EV Battery Market',
-  layer: 1,  // ReAct agent + search
+  layer: 2,  // ReAct agent + search
   tools: [
     'search_web',
     'scrape_page',
@@ -32,11 +32,11 @@ const baseline = await coherentBot.run({
   },
   {
     number: "III",
-    title: "Layer 2 — CMI Expert Pipeline",
+    title: "Layer 3 — CMI Expert Pipeline",
     description: "Full four-phase knowledge pipeline: Plan → Research → Analyze → Write. Cross-verifies facts, resolves source conflicts, identifies contrarian risks, and produces expert-grade analysis with reasoning models.",
     code: `const expert = await coherentBot.run({
   topic: 'Global EV Battery Market',
-  layer: 2,  // Full CMI pipeline
+  layer: 3,  // Full CMI pipeline
   phases: [
     'understand',  // → Research Plan
     'research',    // → Knowledge Base

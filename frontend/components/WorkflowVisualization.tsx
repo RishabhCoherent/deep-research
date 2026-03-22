@@ -67,11 +67,11 @@ interface WGroup {
    ──────────────────────────────────────────────────────────── */
 
 const VB_W = 1400;
-const VB_H = 530;
+const VB_H = 590;
 const CX = VB_W / 2;
 
 /* — Row 1: Pre-processing ——————————————————————————————————— */
-const R1 = 22;
+const R1 = 34;
 const ROW1_NODES: WNode[] = [
   {
     id: "input",
@@ -80,22 +80,22 @@ const ROW1_NODES: WNode[] = [
     description: "User enters a research topic and brief",
     Icon: MessageSquareText,
     type: "start",
-    x: CX - 310,
+    x: CX - 365,
     y: R1,
-    w: 160,
-    h: 66,
+    w: 215,
+    h: 70,
   },
   {
     id: "interpret",
-    label: "Interpret",
+    label: "Interpretation",
     sublabel: "Disambiguate",
     description: "Interpret and disambiguate the research topic",
     Icon: ScanSearch,
     type: "process",
-    x: CX - 80,
+    x: CX - 108,
     y: R1,
-    w: 160,
-    h: 66,
+    w: 230,
+    h: 70,
   },
   {
     id: "scope",
@@ -104,60 +104,61 @@ const ROW1_NODES: WNode[] = [
     description: "Auto-generate research boundaries and scope",
     Icon: Crosshair,
     type: "process",
-    x: CX + 150,
+    x: CX + 165,
     y: R1,
-    w: 160,
-    h: 66,
+    w: 215,
+    h: 70,
   },
 ];
 
 /* — Row 2: Three layers ————————————————————————————————————— */
-const R2 = 150;
+const R2 = 168;
 const ROW2_NODES: WNode[] = [
   {
     id: "baseline",
     label: "Baseline",
-    sublabel: "L0  ·  No tools",
+    sublabel: "Prompt-Driven",
     description: "Single LLM prompt — model knowledge only, no web research",
     Icon: FileText,
     type: "layer",
-    x: CX - 340,
+    x: CX - 365,
     y: R2,
-    w: 195,
-    h: 78,
+    w: 220,
+    h: 82,
   },
   {
     id: "enhanced",
     label: "Enhanced",
-    sublabel: "L1  ·  Agent loop",
+    sublabel: "AI Agent",
     description:
       "ReAct agent with web search, page scraping, and source assessment. Loops until quality threshold met.",
     Icon: Bot,
     type: "layer",
-    x: CX - 98,
+    x: CX - 110,
     y: R2,
-    w: 195,
-    h: 78,
+    w: 220,
+    h: 82,
   },
   {
     id: "expert",
-    label: "Expert",
-    sublabel: "L2  ·  6 phases",
+    label: "CMI Expert",
+    sublabel: "Agentic AI",
     description:
       "Full agentic pipeline with claim analysis, evidence gathering, synthesis, and composition",
     Icon: BrainCircuit,
     type: "layer",
     x: CX + 145,
     y: R2,
-    w: 195,
-    h: 78,
+    w: 220,
+    h: 82,
   },
 ];
 
 /* — Row 3: Expert phases ———————————————————————————————————— */
-const R3 = 300;
-const R3_GAP = 178;
-const R3_X0 = (VB_W - R3_GAP * 5 - 155) / 2;
+const R3 = 322;
+const R3_W = 190;
+const R3_GAP = 210;
+const R3_X0 = (VB_W - R3_GAP * 5 - R3_W) / 2;
 
 const PHASE_NODES: WNode[] = [
   {
@@ -168,8 +169,8 @@ const PHASE_NODES: WNode[] = [
     type: "phase",
     x: R3_X0,
     y: R3,
-    w: 155,
-    h: 60,
+    w: R3_W,
+    h: 66,
     description: "Extract and grade every claim from the prior report",
   },
   {
@@ -180,8 +181,8 @@ const PHASE_NODES: WNode[] = [
     type: "phase",
     x: R3_X0 + R3_GAP,
     y: R3,
-    w: 155,
-    h: 60,
+    w: R3_W,
+    h: 66,
     description: "Generate targeted research queries per weak claim",
   },
   {
@@ -192,8 +193,8 @@ const PHASE_NODES: WNode[] = [
     type: "phase",
     x: R3_X0 + R3_GAP * 2,
     y: R3,
-    w: 155,
-    h: 60,
+    w: R3_W,
+    h: 66,
     description: "Agent with evidence tracking — search, scrape, record findings",
   },
   {
@@ -204,8 +205,8 @@ const PHASE_NODES: WNode[] = [
     type: "phase",
     x: R3_X0 + R3_GAP * 3,
     y: R3,
-    w: 155,
-    h: 60,
+    w: R3_W,
+    h: 66,
     description: "Cross-reference findings, resolve contradictions, surface insights",
   },
   {
@@ -216,8 +217,8 @@ const PHASE_NODES: WNode[] = [
     type: "phase",
     x: R3_X0 + R3_GAP * 4,
     y: R3,
-    w: 155,
-    h: 60,
+    w: R3_W,
+    h: 66,
     description: "Write the final report with evidence anchoring",
   },
   {
@@ -228,14 +229,14 @@ const PHASE_NODES: WNode[] = [
     type: "phase",
     x: R3_X0 + R3_GAP * 5,
     y: R3,
-    w: 155,
-    h: 60,
+    w: R3_W,
+    h: 66,
     description: "Reformat for readability — tables, bullets, structure",
   },
 ];
 
 /* — Row 4: Output ——————————————————————————————————————————— */
-const R4 = 438;
+const R4 = 472;
 const ROW4_NODES: WNode[] = [
   {
     id: "evaluate",
@@ -244,10 +245,10 @@ const ROW4_NODES: WNode[] = [
     description: "Score all layers on factual density, analytical depth, specificity and more",
     Icon: BarChart3,
     type: "process",
-    x: CX - 230,
+    x: CX - 250,
     y: R4,
-    w: 170,
-    h: 66,
+    w: 195,
+    h: 70,
   },
   {
     id: "report",
@@ -256,10 +257,10 @@ const ROW4_NODES: WNode[] = [
     description: "Comparative report with evaluations, claim journeys, and executive summary",
     Icon: FileCheck,
     type: "end",
-    x: CX + 60,
+    x: CX + 55,
     y: R4,
-    w: 170,
-    h: 66,
+    w: 220,
+    h: 70,
   },
 ];
 
@@ -290,34 +291,34 @@ const GROUPS: WGroup[] = [
   {
     id: "g-pre",
     label: "Pre-processing",
-    x: CX - 330,
-    y: R1 - 20,
-    w: 660,
-    h: 106,
+    x: CX - 395,
+    y: R1 - 32,
+    w: 810,
+    h: 124,
   },
   {
     id: "g-layers",
     label: "Research Layers",
-    x: CX - 360,
-    y: R2 - 22,
-    w: 720,
-    h: 122,
+    x: CX - 395,
+    y: R2 - 32,
+    w: 790,
+    h: 136,
   },
   {
     id: "g-phases",
-    label: "Expert Pipeline  ·  Layer 2",
-    x: R3_X0 - 16,
-    y: R3 - 22,
-    w: R3_GAP * 5 + 155 + 32,
-    h: 104,
+    label: "Expert Pipeline  ·  Layer 3",
+    x: R3_X0 - 24,
+    y: R3 - 32,
+    w: R3_GAP * 5 + R3_W + 48,
+    h: 120,
   },
   {
     id: "g-output",
     label: "Output",
-    x: CX - 250,
-    y: R4 - 20,
-    w: 500,
-    h: 106,
+    x: CX - 280,
+    y: R4 - 32,
+    w: 585,
+    h: 124,
   },
 ];
 
@@ -425,18 +426,18 @@ const WorkflowNode = React.memo(function WorkflowNode({
           }}
         />
 
-        <div className="flex items-center gap-3 h-full px-4">
+        <div className="flex items-center gap-2 h-full px-3 overflow-hidden">
           <node.Icon
-            className={`shrink-0 ${isLayer ? "h-5 w-5" : "h-4.5 w-4.5"}`}
+            className={`shrink-0 ${isLayer ? "h-5 w-5" : "h-4 w-4"}`}
             style={{ opacity: isActive ? 0.9 : 0.55, transition: "opacity 0.3s" }}
           />
-          <div className="min-w-0 flex-1">
-            <div className={`font-medium leading-tight ${isLayer ? "text-[15px]" : isPhase ? "text-[13px]" : "text-sm"}`}>
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <div className={`font-medium leading-tight truncate ${isLayer ? "text-[14px]" : isPhase ? "text-[12px]" : "text-[13px]"}`}>
               {node.label}
             </div>
             {node.sublabel && (
-              <div className={`font-mono leading-tight mt-0.5 ${
-                isLayer ? "text-[11px] text-foreground/50" : "text-[10px] text-foreground/45"
+              <div className={`font-mono leading-tight mt-0.5 truncate ${
+                isLayer ? "text-[10px] text-foreground/50" : "text-[9px] text-foreground/45"
               }`}>
                 {node.sublabel}
               </div>
