@@ -63,7 +63,7 @@ async def scrape_url_basic(url: str) -> Optional[dict]:
             if len(text) > 50:  # Skip tiny fragments
                 text_parts.append(text)
 
-        content = "\n\n".join(text_parts)[:15000]
+        content = "\n\n".join(text_parts)[:20000]
 
         if len(content) < 100:
             return None

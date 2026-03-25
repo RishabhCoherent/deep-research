@@ -256,32 +256,27 @@ def get_question_rules(report_type: str) -> str:
 
 TOPIC_INTERPRETATION_PROMPT = """You are a senior research director receiving a new research brief from a client.
 
-Before starting any research, you must first UNDERSTAND what the client is actually asking for.
-Clients often use informal, colloquial, or ambiguous language. Your job is to interpret their
-true research intent.
+Your job is to check if the topic needs correction — NOT to "improve" or "enhance" it.
 
 CLIENT'S RAW TOPIC: {topic}
 {brief_section}
 {search_context}
 
-INTERPRETATION TASK:
+INTERPRETATION RULES:
 
-1. READ the topic carefully. Consider:
-   - Is the language colloquial or informal? (e.g., "sentimental analysis" likely means "sentiment analysis")
-   - What do the prepositions mean? "X for Y" could mean:
-     a) "X applied as a feature/capability WITHIN Y" (e.g., "encryption for banking apps" = encryption as a feature in banking)
-     b) "X conducted ABOUT Y" (e.g., "market analysis for electric vehicles" = analyzing the EV market)
-     c) "X to help choose among Y" (e.g., "comparison for CRM tools" = comparing CRM tools to pick one)
-   - Does the brief provide additional context that clarifies the intent?
-   - What would a business professional most likely mean by this phrasing?
+1. If the topic is clear and professional — KEEP IT EXACTLY AS-IS. Do NOT:
+   - Add scope narrowing (e.g., don't add "IT spending" to a market analysis topic)
+   - Rephrase for "clarity" when it's already clear
+   - Add specificity the client didn't ask for
+   - Change the focus or angle of the research
 
-2. USE the web search results (if available) to verify your interpretation:
-   - Do the search results confirm your reading of the topic?
-   - Is there a well-known meaning for this phrase in the industry?
+2. ONLY rewrite if:
+   - There's a genuine misspelling (e.g., "sentimental analysis" → "sentiment analysis")
+   - The phrasing is truly ambiguous and could mean 2+ completely different things
+   - The topic uses slang/jargon that needs professional translation
 
-3. DETERMINE the true research question. If the original topic is already clear and professional,
-   keep it EXACTLY as-is — do NOT rephrase, expand, or "improve" clear topics.
-   Only rewrite if the topic is genuinely ambiguous, misspelled, or colloquial.
+3. When in doubt, KEEP THE ORIGINAL. A slight imperfection in phrasing is better than
+   changing the client's research intent.
 
 Output format (EXACTLY as shown — no extra text):
 
@@ -380,52 +375,8 @@ Be concrete: name the data types needed (competitive dynamics, switching cost me
 regulatory bodies, pricing models, company names, technology trends, industry structure).
 Do NOT request quantitative data (market sizes, growth rates, share percentages, revenue).
 
-QUALITY GUIDANCE by report type (QUALITATIVE analysis — NO quantitative data like market sizes,
-percentages, growth rates, CAGR, revenue figures. Numbers vary by source; our internal team
-provides their own. Research the UNDERLYING DYNAMICS, not numbers):
-
-Porter's Five Forces:
-- Each force: rating (High/Medium-High/Medium/Medium-Low/Low), 4+ qualitative sub-points
-- Research: competitive dynamics, barrier types (capital, IP, regulatory), switching cost nature,
-  supplier dependency patterns, substitute availability, M&A activity patterns
-
-PEST Analysis:
-- Each factor: Factor → Mechanism → Market Impact causal chain
-- Research: specific regulation names/codes, economic condition descriptions, demographic shift
-  patterns, technology trajectories, R&D focus areas
-
-Market Dynamics:
-- 3-5 drivers, 2-4 restraints, 2-4 opportunities
-- Each needs: impact rating (High/Medium/Low), time horizon (Short/Medium/Long-term),
-  causal mechanism explaining WHY it drives/restrains growth
-
-Regulatory: name specific bodies, acts, standards (ISO, CE, FDA) with dates, describe regulatory
-  burden qualitatively, organize by region (NA, Europe, APAC)
-Pricing: describe pricing dynamics (premium vs commodity, pricing models, competitive pressure),
-  cost structure drivers qualitatively — NO specific price points or ASP numbers
-Supply Chain: named companies at each stage, describe structure (integrated vs fragmented),
-  geographic concentration risks, strategic vulnerabilities
-Risk Assessment: Probability × Impact rating per risk, mitigation strategies
-Key Developments: table format (Date | Company | Type | Development), 5-8 entries
-Market Attractiveness: qualitative scoring (Segment | Growth Potential | Entry Barriers | Rating)
-Economic Factors Analysis:
-- Macroeconomic Factors: GDP growth trajectory, inflation & interest rate environment, monetary/fiscal
-  policy stance, government spending patterns — all described qualitatively with causal mechanisms
-- Trade & Currency Dynamics: trade agreements/tariffs, exchange rate pressures, geopolitical impacts
-  on trade flows, import/export dependency patterns — name specific policies and trading partners
-- Industry-Level Microeconomics: market structure (fragmented vs consolidated), competition intensity,
-  pricing dynamics, barriers to entry/exit, economies of scale effects — name key players
-- Consumer & Demand Economics: spending patterns, price elasticity, demographic-driven demand shifts,
-  preference evolution, income effects — describe behavioral mechanisms
-- Each factor: Condition → Mechanism → Market Impact causal chain
-- Name specific policies, central bank actions, trade agreements, and companies affected
-
-Trend Report / Key Trends:
-- Each section = one specific industry trend (NOT a generic category like "Market Overview")
-- Per trend: what is driving it, which companies are leading/affected, what structural shift it
-  represents, timeline (emerging vs mature), and strategic implications
-- Name real companies, technologies, regulations shaping each trend
-- Show causal chains: Trigger → Mechanism → Market Impact
+QUALITY: Focus on QUALITATIVE analysis — competitive dynamics, causal mechanisms, named entities.
+Do NOT request quantitative data (market sizes, CAGR, revenue). Our internal team provides numbers.
 
 Output format (EXACTLY as shown):
 Report type: [TYPE]
@@ -980,74 +931,35 @@ Return ONLY JSON:
 }}"""
 
 
-CLAIM_JOURNEY_EXTRACTION_PROMPT = """You are a research quality analyst examining THREE layers of market research on the SAME topic.
-Your job is to find the SINGLE claim that shows the most DRAMATIC transformation across all 3 layers.
+CLAIM_JOURNEY_EXTRACTION_PROMPT = """Find the SINGLE claim that shows the most dramatic transformation across all 3 layers of market research.
 
 **Topic:** {topic}
 
-**LAYER 0 — Baseline (best model, no tools) ({l0_words} words):**
+**LAYER 0 — Baseline ({l0_words} words):**
 {l0_content}
 
-**LAYER 1 — Enhanced (web search + data enrichment) ({l1_words} words):**
+**LAYER 1 — Enhanced ({l1_words} words):**
 {l1_content}
 
-**LAYER 2 — Expert (cross-referenced analysis) ({l2_words} words):**
+**LAYER 2 — Expert ({l2_words} words):**
 {l2_content}
 
 {tool_context}
 
-## YOUR TASK
+SELECTION: Pick the claim with the widest transformation gap — vague in L0, partially enriched in L1, fully substantiated with multiple data points and sources in L2. Must appear in all 3 layers. If not possible, use the best L0→L2 pair and infer L1.
 
-Find the SINGLE claim that shows the most dramatic transformation across all 3 layers.
-
-This claim MUST:
-- Start as a VAGUE, unsourced statement in Layer 0 (e.g. "The market is growing rapidly")
-- Get partially enriched in Layer 1 with SOME data (e.g. "The market reached $X in 2024")
-- Become FULLY substantiated in Layer 2 with MULTIPLE data points, sources, and analysis
-  (e.g. "According to [Source], the market was valued at $X in 2024, growing at Y% CAGR,
-   driven by Z factors, with Company A holding W% market share")
-
-SELECTION CRITERIA (in priority order):
-1. The claim topic must appear in ALL 3 layers (same subject/assertion)
-2. Layer 0 version must be VAGUE — no specific numbers, no named sources
-3. Layer 2 version must have at least 2 CONCRETE data points (dollar amounts, percentages, dates)
-4. Layer 2 version must cite at least 1 NAMED source
-5. Layer 2 MUST RETAIN Layer 1's data points — L2 builds on L1, it does NOT replace L1's findings
-6. PREFER claims where L1 added SOME data but L2 added MORE — showing progressive enrichment
-7. PREFER claims with the WIDEST "transformation gap" (biggest jump from vague → quantified)
-8. Use the RESEARCH CONTEXT below to verify that the data points in L2 actually came from evidence the agent found — prefer claims backed by real evidence over claims with unsourced numbers
-
-For EACH layer snapshot, provide:
-- The EXACT quote from that layer's report (1-3 sentences, copy verbatim)
-- Every specific data point present (numbers, dollar amounts, percentages, dates)
-- Sources cited in that version (if any)
-- Quality tags — ALL that apply:
-  "+Data Point" — specific number, dollar amount, or percentage
-  "+Named Source" — cites a specific organization, report, or publication
-  "+Quantified" — turns a qualitative claim into a measured one
-  "+Causal Mechanism" — explains WHY something happens
-  "+Time-Bound" — adds specific dates, years, or timeframes
-  "+Specific Company" — names real companies with strategic details
-
-For Layer 1 and Layer 2, also provide transformation_steps showing HOW the claim was enriched:
-- What action was taken ("search", "scrape", "verify", "cross_reference")
-- What search query found the new data (if applicable)
-- Which source provided the data point
-- What SPECIFIC data point was added (e.g. "$92.5B", "15.2% CAGR")
-- WHY this data point matters (how does it transform the claim)
-
-FALLBACK: If no claim appears in all 3 layers, find the best L0→L2 pair and infer an intermediate L1 version.
+Quality tags to apply: "+Data Point", "+Named Source", "+Quantified", "+Causal Mechanism", "+Time-Bound", "+Specific Company"
 
 Return ONLY JSON:
 {{
-  "category": "Market Size",
-  "topic_sentence": "One-line summary of this claim's subject",
-  "overall_narrative": "2-3 sentence story of the full transformation journey",
-  "selection_reason": "Why THIS claim was chosen as the showcase",
+  "category": "...",
+  "topic_sentence": "One-line summary",
+  "overall_narrative": "2-3 sentence transformation story",
+  "selection_reason": "Why this claim",
   "snapshots": [
     {{
       "layer": 0,
-      "claim_text": "Exact quote from Layer 0...",
+      "claim_text": "Exact quote from Layer 0",
       "data_points": [],
       "sources_cited": [],
       "quality_tags": [],
@@ -1055,36 +967,22 @@ Return ONLY JSON:
     }},
     {{
       "layer": 1,
-      "claim_text": "Exact quote from Layer 1...",
-      "data_points": ["$X", "Y%"],
-      "sources_cited": ["Report Name"],
-      "quality_tags": ["+Data Point", "+Quantified"],
+      "claim_text": "Exact quote from Layer 1",
+      "data_points": ["..."],
+      "sources_cited": ["..."],
+      "quality_tags": ["..."],
       "transformation_steps": [
-        {{
-          "action": "search",
-          "query": "market size 2024",
-          "source_title": "Grand View Research",
-          "source_url": "https://...",
-          "data_point_added": "$92.5B",
-          "why_it_matters": "Transforms vague 'growing' into precise market valuation"
-        }}
+        {{"action": "search", "query": "...", "source_title": "...", "source_url": "...", "data_point_added": "...", "why_it_matters": "..."}}
       ]
     }},
     {{
       "layer": 2,
-      "claim_text": "Exact quote from Layer 2...",
-      "data_points": ["$92.5B", "15.2% CAGR", "2030"],
-      "sources_cited": ["Grand View Research", "Bloomberg NEF"],
-      "quality_tags": ["+Data Point", "+Named Source", "+Quantified", "+Causal Mechanism", "+Time-Bound"],
+      "claim_text": "Exact quote from Layer 2",
+      "data_points": ["..."],
+      "sources_cited": ["..."],
+      "quality_tags": ["..."],
       "transformation_steps": [
-        {{
-          "action": "verify",
-          "query": "EV battery market CAGR forecast",
-          "source_title": "Bloomberg NEF",
-          "source_url": "https://...",
-          "data_point_added": "15.2% CAGR through 2030",
-          "why_it_matters": "Cross-references growth rate from independent source, adds time horizon"
-        }}
+        {{"action": "...", "query": "...", "source_title": "...", "source_url": "...", "data_point_added": "...", "why_it_matters": "..."}}
       ]
     }}
   ]
@@ -1530,24 +1428,10 @@ COMPETITOR ATTRIBUTION BAN (CRITICAL):
   company filings, press releases, and academic journals.
 - If a search result comes from a competitor research firm, extract the DATA but never name the source.
 
-SELF-CHECK BEFORE WRITING (DO THIS MENTALLY):
-For each section, verify you have at least 2 of these from your searches:
-  [ ] A specific number (market size, growth rate, price, percentage)
-  [ ] A named company with a concrete action (invested $X, launched Y, partnered with Z)
-  [ ] A date or time reference (2024, 2025, Q1 2026, "since July 2023")
-  [ ] A named source (Reuters, government report, company filing)
-If you don't have 2 of these for a section, SEARCH MORE before writing.
-
-WRITING RULES:
-1. Lead with data from your research, not baseline claims. Start paragraphs with findings.
-2. One idea per sentence. Keep sentences under 25 words. No jargon.
-3. After every key fact, answer "so what?" — what should the reader do about this?
-4. Use bullet points for lists of 3+ items. Use tables for comparisons.
-5. Be opinionated — take a clear position, don't hedge everything
-
-TONALITY:
-- Write like a trusted advisor briefing a CEO, not like an academic paper
-- Be direct and confident. Say "Company X leads because..." not "It could be argued that..."
+WRITING STYLE:
+- Write like a trusted advisor briefing a CEO — direct, confident, opinionated
+- Lead with findings from your research, not baseline claims
+- Use bullet points for lists, tables for comparisons
 - Name names. Use specific examples. Be concrete.
 
 OUTPUT FORMAT:
@@ -1851,14 +1735,14 @@ OUTPUT FORMAT — return ONLY valid JSON:
 }}"""
 
 
-EXPERT_COMPOSE_PROMPT = """You are a senior research analyst writing the definitive report on a topic. You have structured evidence, cross-section connections, and analytical insights to work with.
+EXPERT_COMPOSE_PROMPT = """You are a senior partner at a top-tier consulting firm writing the definitive analyst report. Write with the authority of someone who has spent months on this — because you have the evidence.
 
 TOPIC: {topic}
 
 SECTION STRUCTURE:
 {section_list}
 
-PRIOR VERIFIED FINDINGS (from earlier research — INTEGRATE these, do not drop them):
+PRIOR VERIFIED FINDINGS (integrate these — do not drop them):
 {prior_findings_text}
 
 EVIDENCE PER SECTION:
@@ -1873,105 +1757,162 @@ KEY INSIGHTS:
 CONTRARIAN RISKS:
 {contrarian_text}
 
-UNSUPPORTED CLAIMS (gap report — qualify or remove these):
+UNSUPPORTED CLAIMS (gap report):
 {gap_claims_text}
 
-WRITING INSTRUCTIONS:
+INSTRUCTIONS:
 
-1. INTEGRATE PRIOR FINDINGS: The "Prior Verified Findings" above are data points already confirmed by earlier research.
-   You MUST incorporate these into the final report — do NOT discard them.
-   Build on them: add context, explain their significance, connect them to your new evidence.
-   Example: If prior research found "Cursor reached 1 million users in 16 months", keep that fact AND add your deeper analysis of what drives that adoption.
+1. EXECUTIVE SUMMARY FIRST: Start with ## Executive Summary containing:
+   - 5-7 key findings as bold bullet points with specific numbers
+   - A 2-sentence strategic verdict — what should the reader DO?
+   - A CEO must understand the full picture from this section alone
 
-2. DEPTH OVER BREADTH: Your job is NOT to find more data points — it is to go DEEPER on each claim.
-   - Explain WHY using ONLY causal mechanisms that appear in the evidence ledger. If no causal explanation exists in the evidence, state the fact without inventing an explanation.
-   - Connect CAUSE to EFFECT only when BOTH cause and effect appear in the evidence: "X happened BECAUSE of Y" — but ONLY if Y is documented in the evidence.
-   - Provide CONTEXT: How does this compare to industry norms, historical precedent, or competitor benchmarks? Use only comparisons that appear in the evidence.
-   - Challenge assumptions: Is the trend sustainable? What could reverse it?
-   - NEVER invent case studies, company examples, or specific events that are not in the evidence ledger.
-   - NEVER fabricate causal mechanisms. If you don't know WHY something happened, just state WHAT happened.
-   BAD: "Cursor has 85% Fortune 500 adoption" (just another data point)
-   GOOD: "Cursor reached 1 million users within 16 months — a growth rate 3x faster than GitHub Copilot's early trajectory — driven by its real-time codebase awareness that competing tools lack" (BUT only if these specific facts appear in the evidence)
+2. DEPTH OVER BREADTH — for each section:
+   - Lead with the strongest data point from evidence, not a general statement
+   - Name specific companies, platforms, regulations, deals, partnerships
+   - Include CASE STUDIES: For major players, write 100-200 words describing their specific strategy, market position, key metrics, and competitive advantage
+   - After every key finding, answer "SO WHAT?" — what does this mean for the reader?
+   - Connect sections: "This regulatory pressure compounds the cost challenges described above..."
+   - Use evidence with original source text — quote or paraphrase closely
 
-3. EVIDENCE-DRIVEN: Every factual claim must trace to evidence in the ledger or prior findings above. If a claim has no evidence, either:
-   - Qualify it: "Industry observers suggest..." or "While specific data is unavailable..."
-   - Remove it entirely — do not state unsupported claims as fact
-   - NEVER invent statistics. If you don't have a specific number, explain the trend qualitatively.
-   - NEVER attribute claims to vague authority ("it is widely recognized", "experts agree", "studies show") — either cite the specific source or state it as your analysis.
+3. QUANTITATIVE RIGOR:
+   - Include EVERY relevant number from the evidence: market sizes, growth rates, user counts, conversion rates, transaction volumes, funding amounts
+   - When comparing countries/companies, use a structured comparison TABLE with real numbers
+   - If evidence has a percentage, dollar amount, or user count — it MUST appear in the report
+   - NUMERICAL ACCURACY: "$894,795.4 million" = $894.8 BILLION. Copy numbers exactly.
 
-4. NUMERICAL ACCURACY — CRITICAL RULES:
-   - DOUBLE-CHECK all large numbers and units. "$894,795.4 million" = $894.8 BILLION, NOT $894 million.
-   - When a source says "X million" where X itself is in the thousands or higher, convert to the correct unit (billions/trillions).
-   - NEVER round a number and change its unit at the same time. "$894,795.4 million" → "$894.8 billion" (correct) or "$894,795 million" (correct), NOT "$894 million" (WRONG).
-   - If a percentage or figure appears in your evidence, copy it EXACTLY. Do not round, summarize, or paraphrase numbers.
-   - If you are unsure about a number's magnitude, state the trend qualitatively instead of guessing.
+4. WHAT'S MISSING — USE YOUR EXPERTISE:
+   - For claims without evidence, write confidently as a domain expert — do NOT add disclaimers
+   - You ARE an expert analyst. State conclusions directly. No "evidence suggests" hedging.
+   - If you lack a specific number, describe the trend qualitatively without apology
+   - NEVER add meta-commentary about evidence quality, gaps, or methodology in the report body
+   - NEVER use phrases like "no direct public evidence", "unsupported claim", "treat as hypothesis"
 
-5. CROSS-SECTION CONNECTIONS: Weave the cross-links into your narrative as transitions between sections. Example:
-   - "This supplier concentration has direct implications for competitive dynamics (explored below)..."
-   - "The regulatory pressure described above compounds the cost challenges facing..."
+5. TABLES AND STRUCTURE:
+   - Include at least 2 tables: one comparison table and one data table
+   - Tables must have real data in 75%+ of cells — no "Unknown" or "N/A" fills
+   - Use bullet points for lists of 3+ items, prose for analysis
+   - Bold key terms, company names, and critical numbers
 
-6. "SO WHAT?" ANALYSIS: After each major finding, explain what it means for the reader:
-   - Not just "Market is growing at 8.3%" but "This 8.3% growth rate outpaces the broader automotive sector (3.1%), suggesting EV batteries will become the dominant segment by 2030"
-   - The "So what?" MUST go beyond restating the data — explain the CAUSAL MECHANISM, the IMPLICATION, or the ACTIONABLE CONSEQUENCE.
-   - BAD: "High penetration is necessary but not sufficient for adoption" (restates the obvious)
-   - GOOD: "Indonesia's 62.9% social media penetration converts to high commerce adoption because of X cultural factor, unlike South Korea where 95.4% penetration yields lower commerce due to Y privacy norms — suggesting the conversion rate depends on Z"
-
-7. SPECIFICITY: Name names. Use specific numbers from the evidence. Reference specific regulations, companies, products, deals. But ONLY use numbers that appear in your evidence — never fabricate statistics.
-
-8. NO UNSUPPORTED SUPERLATIVES: Never use "undisputed", "single most important", "unprecedented", or "unmatched" unless you provide comparative evidence supporting the absolute claim. Instead, use qualified language: "the largest by X metric", "among the fastest-growing".
-
-9. SOURCE QUALITY: Evidence marked [UNVERIFIED] should be used cautiously:
-   - Never cite an UNVERIFIED source as the sole basis for a key claim
-   - Cross-reference UNVERIFIED evidence against T1/T2 evidence where possible
-   - When using UNVERIFIED data, qualify with "according to industry estimates" or similar hedging
-   - Prefer T1 and T2 evidence for headline numbers and key statistics
-
-10. TABLE INTEGRITY: Only create a table when you have REAL DATA for at least 75% of its cells. Do NOT create tables with mostly empty cells, "—", or "N/A" — use prose instead. Every populated cell must be traceable to specific evidence. Do NOT fill table cells with subjective ratings ("Very High", "Moderate") unless you define the rating methodology and cite the underlying data. If you lack data for a column, DROP that column rather than leaving it empty.
-
-11. FORWARD-LOOKING: End with a section that synthesizes the contrarian risks into a "What to Watch" framework.
-
-TEMPORAL ACCURACY:
-- Use correct tense for all time references. Events from prior years MUST use past tense.
-- Example: "In 2025, adoption reached 84%" (past tense) NOT "adoption is reaching 84%"
-- Only use present tense for ongoing/current-year trends and forward-looking statements.
-- CLEARLY DISTINGUISH between observed data and projections. "The market reached $50B in 2025" (observed) vs "The market is projected to reach $80B by 2028" (forecast). Never mix these without marking which is which.
-
-WRITING STYLE:
-- Write like a trusted advisor briefing a CEO, not an academic paper
-- Be direct and opinionated — state conclusions clearly
-- Short paragraphs (2-3 sentences). Mix bullet points with prose.
-- One idea per sentence. Keep sentences under 25 words.
-- Use tables ONLY when you have concrete data for most cells. Prefer bullet points or prose when data is sparse. Never create a table just for structure — tables must add information value.
+6. END STRONG: Close with ## What to Watch — 5-7 specific forward-looking indicators
 
 {topic_rules}
 
 {brief_instruction}
 
 COMPETITOR ATTRIBUTION BAN:
-- NEVER mention or attribute data to any market research firm (MarketsandMarkets, Mordor Intelligence, Grand View Research, Fortune Business Insights, Allied Market Research, Frost & Sullivan, Technavio, etc.)
-- Present findings as your own analysis. State data directly without naming research firms.
-- You MAY cite: news outlets, government agencies, company filings, industry associations
+- NEVER mention market research firms (MarketsandMarkets, Mordor, Grand View, Fortune Business Insights, Allied, Frost & Sullivan, Technavio)
+- Present findings as your analysis. You MAY cite: news outlets, government agencies, company filings, industry associations.
 
-SOURCE CITATION RULES:
-- When citing a data point, attribute it to the ORIGINAL authoritative source (e.g., "according to DataReportal", "per Reuters", "IDC reports").
-- NEVER show tier labels like [T1], [T2], [T3], or [UNVERIFIED] in the final report — those are internal labels for your reference only.
-- NEVER cite generic or unknown source names (blog titles, obscure websites, aggregator names). Instead, attribute findings to a REAL, well-known authoritative source in that industry:
-  * Technology/IT market data → IDC, Gartner, Forrester, CB Insights
-  * Digital/social media statistics → DataReportal, We Are Social, Statista
-  * Financial/economic data → Reuters, Bloomberg, World Bank, IMF
-  * E-commerce/retail → eMarketer, Euromonitor, Bain & Company
-  * Government/regulatory → Name the specific government agency (e.g., "India's MEITY", "Singapore's IMDA")
-  * Company-specific data → Name the company's earnings report or filing directly
-- If a data point comes from an UNVERIFIED source, qualify it as "industry estimates suggest" or "based on available data" without naming the low-quality source. NEVER attribute a claim to a source that did not actually publish it — this is fabrication.
-- For data from DataReportal, Statista, government agencies, or major news outlets — cite them by name. These are credible and readers expect to see them.
-- EVERY data point in the report must have a named, credible source attribution. No orphan statistics.
+SOURCE CITATIONS:
+- Attribute data to original authoritative sources (e.g., "according to USGS", "per Reuters", "DataReportal reports")
+- NEVER show internal labels like [T1], [T2], [UNVERIFIED]
+- NEVER attribute claims to sources that didn't publish them
 
 OUTPUT FORMAT:
-- Start directly with ## headings — NO preamble, NO "Here is the report..."
-- Each section MUST be 300-500 words with specific data, analysis, and "so what?" commentary
-- Target 2500-3500 words total — do NOT write a short summary. Write a COMPREHENSIVE report.
-- Include at least one table or structured comparison per report
-- End with "## What to Watch" section with forward-looking analysis and specific indicators"""
+- Start directly with ## Executive Summary — NO preamble, NO meta-commentary
+- Each section: 400-700 words with data, case studies, analysis, and implications
+- TARGET: 4000-6000 words. This is a COMPREHENSIVE report, not a summary.
+- Include at least 2 tables with real data
+- Format for maximum readability: short paragraphs, bullet points, bold key terms"""
+
+
+EXPERT_EDITORIAL_REVIEW_PROMPT = """You are a senior editorial reviewer evaluating a research report draft. Score the draft on these 4 dimensions (1-10 each) and provide specific, actionable feedback.
+
+═══ DRAFT REPORT ═══
+{draft}
+
+═══ EVIDENCE LEDGER ═══
+{evidence_text}
+
+═══ CROSS-LINKS & INSIGHTS ═══
+{synthesis_text}
+
+═══ EVALUATION DIMENSIONS ═══
+
+1. EVIDENCE UTILIZATION (1-10): What percentage of the evidence ledger is actually used in the report?
+   - 8-10: >80% of evidence entries appear or are referenced
+   - 5-7: 50-80% utilization
+   - 1-4: <50% — significant evidence is being ignored
+
+2. ANALYTICAL DEPTH (1-10): Does the report explain WHY, not just WHAT?
+   - 8-10: Every major finding has causal explanation, "so what?" analysis, and implications
+   - 5-7: Some analysis but many findings are stated without explanation
+   - 1-4: Mostly surface-level listing of facts without connecting them
+
+3. SPECIFICITY (1-10): Are claims specific and verifiable?
+   - 8-10: Named companies, exact numbers, dates, sources cited throughout
+   - 5-7: Mix of specific and vague claims
+   - 1-4: Dominated by vague assertions ("significant growth", "major player")
+
+4. CROSS-SECTION COHERENCE (1-10): Does the report connect insights across sections?
+   - 8-10: Clear narrative threads, sections reference each other, causal chains span sections
+   - 5-7: Some connections but sections mostly feel standalone
+   - 1-4: Sections are isolated silos with no cross-references
+
+5. WRITING AUTHORITY (1-10): Does it read like a seasoned analyst or a cautious student?
+   - 8-10: Direct, confident, opinionated. States conclusions clearly. Hedging used sparingly for genuinely uncertain claims only
+   - 5-7: Mix of confident and hedged language
+   - 1-4: Excessive hedging ("no direct public evidence", "evidence caveat", "should be treated as probable"), defensive meta-commentary about evidence gaps, formulaic "So what?" blocks on every section
+
+═══ OUTPUT FORMAT (JSON only) ═══
+{{
+  "scores": {{
+    "evidence_utilization": <int>,
+    "analytical_depth": <int>,
+    "specificity": <int>,
+    "cross_section_coherence": <int>,
+    "writing_authority": <int>
+  }},
+  "passes": <bool>,
+  "weaknesses": [
+    {{
+      "dimension": "<which dimension>",
+      "section": "<which report section>",
+      "issue": "<specific problem>",
+      "fix": "<exactly what to add, change, or deepen>"
+    }}
+  ],
+  "unused_evidence": ["<list key evidence entries from the ledger that should be in the report but aren't>"],
+  "overall_assessment": "<2-3 sentence summary>"
+}}
+
+PASSING CRITERIA: ALL 5 scores must be ≥ 7. If ANY score is below 7, set "passes": false.
+ALSO FAIL if the report is under 3000 words — insufficient depth regardless of quality.
+Be STRICT. A report that merely lists facts without analysis should NOT pass.
+A report riddled with "no direct public evidence" disclaimers should NOT pass on writing_authority.
+A report without named companies, specific numbers, or case studies should NOT pass on specificity.
+Focus your weaknesses list on the 3-5 most impactful fixes that would improve the report the most."""
+
+
+EXPERT_TARGETED_REWRITE_PROMPT = """You are rewriting a research report based on editorial review feedback. Your job is to address EVERY weakness identified while preserving the report's strengths.
+
+═══ CURRENT DRAFT ═══
+{draft}
+
+═══ EDITORIAL FEEDBACK ═══
+{feedback}
+
+═══ UNUSED EVIDENCE TO INCORPORATE ═══
+{unused_evidence}
+
+═══ FULL EVIDENCE LEDGER ═══
+{evidence_text}
+
+═══ REWRITE INSTRUCTIONS ═══
+
+1. Address each weakness from the editorial feedback with specific improvements
+2. Incorporate the unused evidence entries listed above — weave them naturally into relevant sections
+3. For every factual claim, add "so what?" analysis: what does this mean for the reader?
+4. Connect sections to each other: if Section A's finding impacts Section B, say so explicitly
+5. Replace vague language with specific data from the evidence ledger
+6. Maintain the same section structure (## headings) — do NOT reorganize
+7. Target 4000-6000 words — if the current draft is under 3000 words, you MUST expand significantly
+8. Start directly with ## headings — no preamble
+9. Add case studies: for at least 2-3 major companies, describe their strategy in 100-200 words
+10. Include comparison tables with real numbers wherever possible
+
+CRITICAL: Do NOT remove existing well-supported content. ADD depth, case studies, data, and analysis. The goal is to STRENGTHEN and EXPAND the report."""
 
 
 EXPERT_VERIFY_PROMPT = """You are a fact-verification specialist. Your job is to cross-reference every factual claim in a draft report against the evidence ledger and remove or hedge any claims not supported by evidence.
@@ -2014,125 +1955,19 @@ INSTRUCTIONS:
 OUTPUT: The complete corrected report with unverified claims hedged or removed."""
 
 
-REPORT_FORMAT_PROMPT = """You are a senior document formatting specialist. Your ONLY job is to take a research report and AGGRESSIVELY reformat it for maximum readability. You must NOT change any facts, numbers, data, or meaning — but you MUST dramatically improve the visual structure.
+REPORT_FORMAT_PROMPT = """Reformat this research report for maximum readability. Do NOT change any facts, numbers, or meaning.
 
-**CRITICAL RULES:**
-1. **NEVER** add, remove, or change any facts, numbers, claims, or analysis
-2. **NEVER** rewrite sentences or paraphrase — keep the original wording exactly
-3. You MUST restructure the visual layout — if the output looks the same as input, you have FAILED
+FORMATTING RULES:
+1. Break long sections into ### sub-headings (2-4 per ## section)
+2. Convert enumeration paragraphs (3+ items) into bullet lists with **bold lead-ins**
+3. Every table MUST have the `|:---|:---|` separator line after the header row — without it, tables break
+4. DELETE any table where >25% of cells are "Unknown", "N/A", "—", or "not assessed" — replace with prose
+5. Bold key entities (**company names**, **statistics**, **country names**, **regulations**) on first mention
+6. Maximum 3 sentences per paragraph
+7. Start each ## section with a **bold one-line takeaway**
 
----
-
-## MANDATORY FORMATTING CHANGES (You MUST do ALL of these):
-
-### 1. SUB-HEADINGS — Break every section into 2-4 sub-sections
-Every `## Section` that is longer than 3 paragraphs MUST be split using `### Sub-headings`.
-
-BEFORE (BAD — wall of text):
-```
-## Geopolitical Tensions
-The rare earth supply chain... China imposed controls... prices spiked...
-The United States responded... EU also responded... partnerships formed...
-The direct result... cascading disruptions... supplier concentration...
-```
-
-AFTER (GOOD — clear sub-sections):
-```
-## Geopolitical Tensions
-
-**The rare earth supply chain for EVs is highly vulnerable to geopolitical risks.**
-
-### China's Export Controls
-The rare earth supply chain... China imposed controls... prices spiked...
-
-### Western Policy Response
-The United States responded... EU also responded... partnerships formed...
-
-### Cascading Supply Chain Impact
-The direct result... cascading disruptions... supplier concentration...
-```
-
-### 2. BULLET POINTS — Convert enumeration paragraphs to bullet lists
-ANY paragraph that mentions 3+ distinct items (companies, countries, policies, technologies) MUST become a bullet list with **bold lead-ins**.
-
-BEFORE (BAD):
-```
-Both regions accelerated initiatives to diversify rare earth supply chains, including the EU Critical Raw Materials Act and increased investment in domestic processing infrastructure. The US government supported domestic mining projects and established partnerships with Australia and Canada to secure alternative sources.
-```
-
-AFTER (GOOD):
-```
-Both regions accelerated initiatives to diversify rare earth supply chains:
-
-- **EU Critical Raw Materials Act**: Aimed at enhancing domestic sourcing and reducing import dependency
-- **Domestic processing investment**: Increased funding for rare earth processing infrastructure within the EU and US
-- **International partnerships**: The US established partnerships with **Australia** and **Canada** to secure alternative supply sources
-- **Domestic mining support**: The US government backed domestic mining projects to reduce reliance on Chinese supply
-```
-
-### 3. TABLES — Fix ALL table formatting (THIS IS CRITICAL)
-Every table MUST have proper markdown syntax with the header separator line. Without `|---|---|`, tables will NOT render as tables.
-
-BEFORE (BROKEN — missing separator, will render as plain text):
-```
-| Year | Event | Impact |
-| 2023 | Myanmar suspensions | Price spikes |
-| 2025 | China controls | Shortages |
-```
-
-AFTER (CORRECT — will render as a proper table):
-```
-**Table 1: Key Geopolitical Events Impacting Rare Earth Supply (2023–2026)**
-
-| Year | Event | Impact on EV Supply Chain |
-|:-----|:------|:-------------------------|
-| 2023 | Myanmar mining suspensions | Supply shortages in China; global price spikes |
-| 2025 | China export controls (April) | Immediate shortages; price volatility; production delays |
-| 2025 | US/EU policy initiatives | Increased investment in alternative supply and processing |
-| 2026 | Ongoing China controls | Continued supply uncertainty; strategic stockpiling |
-```
-
-RULES FOR TABLES:
-- The `|:-----|:------|` separator line MUST appear directly after the header row
-- Each column must have proper spacing with ` | ` separators
-- Add a **bold table title** line above: `**Table N: Description**`
-- Leave a blank line before and after the table
-- If a table has more than 25% empty cells ("—" or "N/A"), CONVERT it to bullet points or prose instead. Tables with mostly empty cells look unprofessional.
-- Drop columns that are entirely empty rather than keeping them with "—" values
-- Only keep tables that add real information value — never create tables just for visual structure
-
-### 4. PARAGRAPHS — Maximum 3 sentences per paragraph
-Split any paragraph longer than 3 sentences into multiple shorter paragraphs. Each paragraph should cover ONE idea.
-
-### 5. BOLD EMPHASIS — Highlight key data and entities
-- Bold all **company names** on first mention in each section
-- Bold all **important statistics**: **87%**, **$196.6 billion**, **36.6% CAGR**
-- Bold all **country names** when they are key actors: **China**, **Myanmar**, **United States**
-- Bold **policy/regulation names**: **EU Critical Raw Materials Act**, **FDA 510(k)**
-
-### 6. "SO WHAT?" AND CROSS-SECTION CALLOUTS
-Format these as blockquotes:
-```
-> **So what?** The commentary text here...
-```
-```
-> **Cross-section connection:** The link between sections...
-```
-
-### 7. SECTION OPENER — Bold one-line takeaway
-Every `## Section` must start with a **bold one-line summary** before the body text:
-```
-## Production Cost Implications
-
-**Supply disruptions have led to increased production costs for EV manufacturers.**
-
-The supply disruptions described above...
-```
-
----
-
-**INPUT REPORT TO REFORMAT:**
+INPUT REPORT:
 
 {draft}
 
-**OUTPUT:** Return the FULLY reformatted report. Start directly with `## `. No preamble, no commentary. Every section must have sub-headings, bullet points where appropriate, and properly formatted tables."""
+OUTPUT: The reformatted report. Start directly with `##`. No preamble."""

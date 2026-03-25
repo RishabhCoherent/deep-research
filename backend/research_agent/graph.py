@@ -327,12 +327,12 @@ def make_tools(ctx: AgentContext, ledger: EvidenceLedger | None = None, claim_ma
         if not page or not page.get("content"):
             return "Could not extract content (paywall or JS required)."
 
-        content = page["content"][:3000]
+        content = page["content"][:6000]
 
         # Update existing source or create new one
         for s in ctx.sources:
             if s.url == url:
-                s.scraped_content = page["content"][:5000]
+                s.scraped_content = page["content"][:8000]
                 break
         else:
             if url not in ctx.urls_seen:
@@ -340,7 +340,7 @@ def make_tools(ctx: AgentContext, ledger: EvidenceLedger | None = None, claim_ma
                 ctx.sources.append(Source(
                     url=url, title=page.get("title", ""),
                     snippet=content[:200],
-                    scraped_content=page["content"][:5000],
+                    scraped_content=page["content"][:8000],
                     publisher=infer_publisher(url),
                     tier=get_source_tier(url),
                 ))

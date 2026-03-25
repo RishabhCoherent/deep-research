@@ -29,8 +29,10 @@ from research_agent.graph import build_agent_graph, build_initial_state, make_to
 from research_agent.prompts import (
     EXPERT_DISSECT_PROMPT, EXPERT_PLAN_PROMPT, EXPERT_INVESTIGATE_PROMPT,
     EXPERT_SYNTHESIZE_PROMPT, EXPERT_COMPOSE_PROMPT, EXPERT_VERIFY_PROMPT,
+    EXPERT_EDITORIAL_REVIEW_PROMPT, EXPERT_TARGETED_REWRITE_PROMPT,
     REPORT_FORMAT_PROMPT, get_quality_rules,
 )
+from config import MAX_EDITORIAL_REVIEWS
 from research_agent.cost import track
 from research_agent.utils import get_content, extract_json, strip_preamble, generate_report_outline, parse_outline_type
 
@@ -44,7 +46,7 @@ async def _phase_dissect(topic: str, prior_report: str, notify) -> ClaimMap:
     """Extract and grade every claim from the prior report."""
     notify("dissect", "Extracting and grading claims from prior report...")
 
-    set_model_tier("budget")
+    set_model_tier("standard")
     llm = get_llm("planner")
 
     messages = [
@@ -162,7 +164,7 @@ async def _phase_plan(topic: str, claim_map: ClaimMap, notify) -> ExpertResearch
         for c in weak_claims
     ], indent=2)
 
-    set_model_tier("budget")
+    set_model_tier("standard")
     llm = get_llm("planner")
 
     messages = [
@@ -246,7 +248,7 @@ async def _phase_investigate(
         llm=llm,
         tools=tools,
         system_prompt=system_prompt,
-        max_tool_calls=50,   # Bounded — coverage gates are the real stopping condition
+        max_tool_calls=70,   # Bounded — coverage gates are the real stopping condition
         min_word_count=1,    # Accept any output — this phase gathers evidence, not a report
         max_retries=0,       # Don't retry — just accept and move to next phase
         progress_callback=progress_callback,
@@ -262,7 +264,7 @@ async def _phase_investigate(
         system_prompt=system_prompt,
         prior_report=f"Investigate the claims listed in your research plan. Use record_finding after each discovery.\n\nTopic: {topic}",
         brief=brief,
-        max_tool_calls=50,
+        max_tool_calls=70,
         min_word_count=1,
         max_retries=0,
     )
@@ -354,7 +356,7 @@ async def _gap_fill(
         llm=llm,
         tools=tools,
         system_prompt=system_prompt,
-        max_tool_calls=25,
+        max_tool_calls=30,
         min_word_count=1,
         max_retries=0,
         progress_callback=progress_callback,
@@ -402,8 +404,8 @@ async def _phase_synthesize(
             claims_lines.append(f"  [{c.id}] {c.text} {status}")
     claims_summary = "\n".join(claims_lines)
 
-    set_model_tier("premium")
-    llm = get_llm("writer")
+    set_model_tier("reasoning")
+    llm = get_llm("analyst")
 
     messages = [
         {"role": "system", "content": "You output only valid JSON. No explanation, no markdown fences."},
@@ -459,6 +461,7 @@ async def _phase_compose(
     brief: str,
     notify,
     prior_report: str = "",
+    coverage: float = 1.0,
 ) -> str:
     """Write the final report using all structured evidence."""
     notify("compose", "Writing final report with evidence...")
@@ -522,6 +525,16 @@ async def _phase_compose(
             f"structure, and focus of this report):\n\n{brief}\n"
         )
 
+    # Low-coverage warning — tell the LLM to write qualitatively for unsupported sections
+    if coverage < 0.50:
+        brief_instruction += (
+            "\n\nLOW EVIDENCE COVERAGE WARNING: Less than 50% of claims have supporting evidence. "
+            "For sections with no evidence, provide qualitative analysis based on general knowledge "
+            "and the prior report findings. Clearly state when claims are analytical inference "
+            "rather than sourced data. Use hedging language like 'based on industry patterns' or "
+            "'available evidence suggests'. Do NOT invent statistics or fabricate data points."
+        )
+
     set_model_tier("premium")
     llm = get_llm("writer")
 
@@ -531,12 +544,13 @@ async def _phase_compose(
 
     messages = [
         {"role": "system", "content": (
-            f"You are a senior research analyst writing a definitive report. "
+            f"You are a senior partner at McKinsey writing a client-ready research report. "
             f"Today's date is {current_date}. Write from a {current_year} perspective — "
-            f"events from {current_year - 1} and earlier should use PAST TENSE "
-            f"(e.g. 'In {current_year - 1}, adoption reached 60%' NOT 'adoption is reaching 60%'). "
-            f"Write with authority — every claim must trace to evidence. "
-            f"Be direct, opinionated, and specific. Name names."
+            f"events from {current_year - 1} and earlier use PAST TENSE. "
+            f"Your reports are known for: specific data points in every paragraph, "
+            f"named companies with concrete examples, clear 'so what?' implications, "
+            f"and actionable recommendations. You never hedge unnecessarily. "
+            f"Write 4000-6000 words. Every section needs case studies and numbers."
         )},
         {"role": "user", "content": EXPERT_COMPOSE_PROMPT.format(
             topic=topic,
@@ -562,20 +576,26 @@ async def _phase_compose(
     word_count = len(draft.split())
     notify("compose", f"Report written: {word_count} words")
 
-    # Quality check — if too short, rewrite
-    if word_count < 1500:
-        notify("compose", "Report too short, requesting expansion...")
+    # Quality check — if too short, rewrite with stronger demands
+    if word_count < 2500:
+        notify("compose", f"Report too short ({word_count} words), requesting expansion...")
         expand_messages = messages + [
             {"role": "assistant", "content": draft},
             {"role": "user", "content": (
-                f"This report is only {word_count} words. It needs to be at least 2500 words. "
-                "Expand EVERY section with more detail from the evidence ledger. "
-                "Add more analysis, more specific data points, more 'so what?' commentary. "
-                "Add a comparison table. Start directly with ## headings."
+                f"This report is only {word_count} words. It MUST be at least 4000 words. "
+                "Expand EVERY section with:\n"
+                "- More specific data points from the evidence ledger\n"
+                "- Named companies with concrete actions, investments, partnerships\n"
+                "- Case studies: pick 2-3 real companies and describe their strategy in detail\n"
+                "- Unit economics: CAC, conversion rates, logistics costs where available\n"
+                "- Comparison tables with real data (not qualitative ratings)\n"
+                "- 'So what?' analysis after every major finding\n"
+                "Do NOT add disclaimers about evidence gaps. Write with authority. "
+                "Start directly with ## headings."
             )},
         ]
         response2 = await llm.ainvoke(expand_messages)
-        track("L2 compose rewrite", response2)
+        track("L2 compose expansion", response2)
         draft = get_content(response2).strip()
         draft = strip_preamble(draft)
         draft = _scrub_competitor_mentions(draft)
@@ -583,6 +603,145 @@ async def _phase_compose(
         notify("compose", f"Expanded report: {word_count} words")
 
     return draft
+
+
+# ─── Phase 5.25: EDITORIAL REVIEW ────────────────────────────────────────────
+
+
+async def _phase_editorial_review(
+    draft: str,
+    claim_map: ClaimMap,
+    ledger: EvidenceLedger,
+    synthesis: SynthesisResult,
+    notify,
+) -> tuple:
+    """Review draft quality and return (passes, feedback_json, unused_evidence)."""
+    notify("editorial_review", "Editorial review — evaluating report quality...")
+
+    evidence_text = ledger.format_all(claim_map)
+
+    # Build synthesis summary
+    synthesis_parts = []
+    if synthesis.cross_links:
+        synthesis_parts.append("Cross-links:")
+        for cl in synthesis.cross_links:
+            synthesis_parts.append(f"  {cl.from_section} → {cl.to_section}: {cl.relationship}")
+    if synthesis.insights:
+        synthesis_parts.append("\nInsights:")
+        for ins in synthesis.insights:
+            synthesis_parts.append(f"  - {ins}")
+    synthesis_text = "\n".join(synthesis_parts) if synthesis_parts else "(none)"
+
+    set_model_tier("reasoning")
+    llm = get_llm("reviewer")
+
+    messages = [
+        {"role": "system", "content": "You output only valid JSON. No explanation, no markdown fences."},
+        {"role": "user", "content": EXPERT_EDITORIAL_REVIEW_PROMPT.format(
+            draft=draft,
+            evidence_text=evidence_text,
+            synthesis_text=synthesis_text,
+        )},
+    ]
+
+    try:
+        response = await llm.ainvoke(messages)
+        track("L2 editorial review", response)
+
+        raw = get_content(response).strip()
+        data = extract_json(raw)
+
+        if not data or "passes" not in data:
+            logger.warning("[Expert] Editorial review failed to parse, skipping")
+            notify("editorial_review", "Review parse failed — skipping")
+            return True, {}, []
+
+        passes = data.get("passes", True)
+        scores = data.get("scores", {})
+        weaknesses = data.get("weaknesses", [])
+        unused = data.get("unused_evidence", [])
+        assessment = data.get("overall_assessment", "")
+
+        score_summary = ", ".join(f"{k}: {v}" for k, v in scores.items())
+        notify("editorial_review", f"Scores: {score_summary}. {'PASS' if passes else 'NEEDS REVISION'}")
+        if assessment:
+            logger.info(f"[Expert] Editorial assessment: {assessment}")
+
+        return passes, data, unused
+
+    except Exception as e:
+        logger.warning(f"[Expert] Editorial review failed (non-fatal): {e}")
+        notify("editorial_review", "Review failed — skipping")
+        return True, {}, []
+
+
+async def _phase_targeted_rewrite(
+    draft: str,
+    feedback: dict,
+    unused_evidence: list,
+    ledger: EvidenceLedger,
+    claim_map: ClaimMap,
+    notify,
+) -> str:
+    """Rewrite the draft addressing editorial feedback."""
+    notify("editorial_rewrite", "Rewriting report based on editorial feedback...")
+
+    evidence_text = ledger.format_all(claim_map)
+
+    # Format feedback for the LLM
+    feedback_lines = []
+    for w in feedback.get("weaknesses", []):
+        feedback_lines.append(f"- [{w.get('dimension', '')}] Section: {w.get('section', '')}")
+        feedback_lines.append(f"  Issue: {w.get('issue', '')}")
+        feedback_lines.append(f"  Fix: {w.get('fix', '')}")
+    feedback_text = "\n".join(feedback_lines) if feedback_lines else "(no specific weaknesses)"
+
+    unused_text = "\n".join(f"- {e}" for e in unused_evidence) if unused_evidence else "(none)"
+
+    set_model_tier("premium")
+    llm = get_llm("writer")
+
+    from datetime import datetime
+    current_date = datetime.now().strftime("%B %Y")
+    current_year = datetime.now().year
+
+    messages = [
+        {"role": "system", "content": (
+            f"You are a senior research analyst improving a report based on editorial feedback. "
+            f"Today's date is {current_date}. Write from a {current_year} perspective. "
+            f"Be direct, opinionated, and specific. Name names."
+        )},
+        {"role": "user", "content": EXPERT_TARGETED_REWRITE_PROMPT.format(
+            draft=draft,
+            feedback=feedback_text,
+            unused_evidence=unused_text,
+            evidence_text=evidence_text,
+        )},
+    ]
+
+    try:
+        response = await llm.ainvoke(messages)
+        track("L2 editorial rewrite", response)
+
+        rewritten = get_content(response).strip()
+        rewritten = strip_preamble(rewritten)
+        rewritten = _scrub_competitor_mentions(rewritten)
+
+        word_count = len(rewritten.split())
+        notify("editorial_rewrite", f"Rewrite complete: {word_count} words")
+
+        # Sanity: rewritten version should be at least 80% of original
+        if word_count >= len(draft.split()) * 0.8:
+            return rewritten
+        else:
+            logger.warning("[Expert] Rewrite too short, keeping original")
+            notify("editorial_rewrite", "Rewrite too short — keeping original")
+            return draft
+
+    except Exception as e:
+        logger.warning(f"[Expert] Targeted rewrite failed (non-fatal): {e}")
+        notify("editorial_rewrite", "Rewrite failed — keeping original")
+        return draft
 
 
 # ─── Phase 5.5: VERIFY ───────────────────────────────────────────────────────
@@ -712,7 +871,7 @@ async def run(
         "elapsed_s": round(time.time() - t1, 1),
     }
 
-    # ── Phase 2: PLAN ─────────────────────────────────────────────────────
+    # ─�� Phase 2: PLAN ─────────────────────────────────────────────────────
     t2 = time.time()
     try:
         research_plan = await _phase_plan(topic, claim_map, notify)
@@ -764,7 +923,8 @@ async def run(
     # ── Phase 5: COMPOSE ──────────────────────────────────────────────────
     t5 = time.time()
     try:
-        draft = await _phase_compose(topic, claim_map, ledger, synthesis, brief, notify, prior_report=prior_report)
+        final_coverage = ledger.coverage_score(claim_map)
+        draft = await _phase_compose(topic, claim_map, ledger, synthesis, brief, notify, prior_report=prior_report, coverage=final_coverage)
     except Exception as e:
         logger.error(f"[Expert] Phase 5 (Compose) failed: {e}")
         draft = "## Error\n\nExpert pipeline composition failed."
@@ -773,27 +933,36 @@ async def run(
         "elapsed_s": round(time.time() - t5, 1),
     }
 
-    # ── Phase 5.5: VERIFY ────────────────────────────────────────────────
-    t55 = time.time()
+    # ── Phase 5.25: EDITORIAL REVIEW LOOP ────────────────────────────────
+    t525 = time.time()
+    editorial_rounds = 0
     try:
-        draft = await _phase_verify(draft, claim_map, ledger, notify)
+        for review_round in range(MAX_EDITORIAL_REVIEWS):
+            passes, feedback, unused = await _phase_editorial_review(
+                draft, claim_map, ledger, synthesis, notify
+            )
+            editorial_rounds = review_round + 1
+            if passes:
+                break
+            notify("editorial_review", f"Round {review_round + 1}: rewriting to address weaknesses...")
+            draft = await _phase_targeted_rewrite(
+                draft, feedback, unused, ledger, claim_map, notify
+            )
     except Exception as e:
-        logger.warning(f"[Expert] Phase 5.5 (Verify) failed (non-fatal): {e}")
-    phase_timings["verify"] = {
+        logger.warning(f"[Expert] Editorial review failed (non-fatal): {e}")
+    phase_timings["editorial_review"] = {
+        "rounds": editorial_rounds,
         "word_count": len(draft.split()),
-        "elapsed_s": round(time.time() - t55, 1),
+        "elapsed_s": round(time.time() - t525, 1),
     }
 
-    # ── Phase 6: FORMAT ──────────────────────────────────────────────────
-    t6 = time.time()
-    try:
-        draft = await _phase_format(draft, notify)
-    except Exception as e:
-        logger.warning(f"[Expert] Phase 6 (Format) failed (non-fatal): {e}")
-    phase_timings["format"] = {
-        "word_count": len(draft.split()),
-        "elapsed_s": round(time.time() - t6, 1),
-    }
+    # ── Phase 5.5: VERIFY — REMOVED ──────────────────────────────────────
+    # Verify phase was removed because it systematically over-hedged well-known
+    # facts with "no direct public evidence" disclaimers, degrading report quality.
+
+    # ── Phase 6: FORMAT — REMOVED ─────────────────────────────────────────
+    # Format was a separate LLM call just for cosmetic reformatting (~10s).
+    # Now handled directly in the compose prompt to save time.
 
     elapsed = time.time() - start
     sources_inherited = len(prior_sources) if prior_sources else 0

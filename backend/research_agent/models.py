@@ -446,9 +446,17 @@ class EvidenceLedger:
                             tier_label = "T2"
                         else:
                             tier_label = "UNVERIFIED"
-                    line = f"- [{tier_label}] [{e.evidence_type}] {e.fact}"
+                    type_label = "[INFERRED - USE CAUTIOUSLY]" if e.evidence_type == "inferred" else f"[{e.evidence_type}]"
+                    conf_label = f" | {e.confidence} confidence" if e.confidence else ""
+                    line = f"- [{tier_label}{conf_label}] {type_label} {e.fact}"
                     if e.source_title:
-                        line += f" (Source: {e.source_title})"
+                        src = e.source_title
+                        if e.source_url:
+                            src += f" ({e.source_url})"
+                        line += f"\n  Source: {src}"
+                    if e.raw_snippet and e.raw_snippet != e.fact and len(e.raw_snippet) > 20:
+                        snippet = e.raw_snippet[:300].replace("\n", " ")
+                        line += f'\n  Original text: "{snippet}"'
                     lines.append(line)
             else:
                 lines.append(f"- [NO EVIDENCE] {c.text}")

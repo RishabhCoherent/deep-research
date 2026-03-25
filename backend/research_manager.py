@@ -86,6 +86,17 @@ def run_research_thread(topic: str, brief: str, max_layer: int,
                 "layer": r.layer,
                 "word_count": r.word_count,
                 "source_count": len(r.sources),
+                "sources": [
+                    {
+                        "url": s.url,
+                        "title": s.title,
+                        "snippet": s.snippet,
+                        "publisher": s.publisher,
+                        "date": s.date,
+                        "tier": s.tier,
+                    }
+                    for s in r.sources
+                ],
                 "elapsed_seconds": round(r.elapsed_seconds, 1),
                 "content": r.content,
                 "metadata": r.metadata,

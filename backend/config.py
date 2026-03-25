@@ -98,6 +98,7 @@ RESEARCH_MAX_ITERATIONS = 3
 SEARCH_RESULTS_PER_QUERY = 8
 MIN_CITATIONS_PER_SUBSECTION = 4
 MAX_REWRITE_ATTEMPTS = 1
+MAX_EDITORIAL_REVIEWS = 1
 
 
 # ─── API Keys Check ──────────────────────────────────────────────────────────
