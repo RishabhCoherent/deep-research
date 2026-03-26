@@ -14,6 +14,9 @@ import {
   ArrowUp,
   ArrowRight,
   ArrowDown,
+  BookOpen,
+  HelpCircle,
+  Target,
 } from "lucide-react";
 
 /* ── Section accent colours (cycle through these) ──────────────── */
@@ -247,12 +250,60 @@ function CalloutCard({
   );
 }
 
+/* ── Inline callout patterns for paragraphs ────────────────────── */
+const PARAGRAPH_CALLOUTS = [
+  {
+    pattern: /^case\s+study[:\s]/i,
+    label: "Case Study",
+    Icon: BookOpen,
+    border: "border-l-purple",
+    bg: "bg-purple/6",
+    header: "text-purple",
+  },
+  {
+    pattern: /^so\s+what\??/i,
+    label: "So What?",
+    Icon: Target,
+    border: "border-l-warning",
+    bg: "bg-warning/6",
+    header: "text-warning",
+  },
+  {
+    pattern: /^strategic\s+(verdict|implication|insight)[:\s]/i,
+    label: "Strategic Insight",
+    Icon: Lightbulb,
+    border: "border-l-success",
+    bg: "bg-success/6",
+    header: "text-success",
+  },
+  {
+    pattern: /^conclusion[:\s]/i,
+    label: "Conclusion",
+    Icon: Target,
+    border: "border-l-foreground",
+    bg: "bg-foreground/6",
+    header: "text-foreground",
+  },
+];
+
+function extractParagraphText(children: React.ReactNode): string {
+  const parts: string[] = [];
+  React.Children.forEach(children, (child) => {
+    if (typeof child === "string") parts.push(child);
+    else if (React.isValidElement(child)) {
+      const props = child.props as { children?: React.ReactNode };
+      if (props.children) parts.push(extractParagraphText(props.children));
+    }
+  });
+  return parts.join("");
+}
+
 /* ── Custom ReactMarkdown components ────────────────────────────── */
 function makeMarkdownComponents() {
   return {
     h3: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
       <h3
-        className="text-base font-semibold text-foreground mt-6 mb-2 pb-1.5 border-b border-foreground/10"
+        className="text-[15px] font-bold text-foreground mt-7 mb-2.5 pb-2 border-b border-foreground/12 tracking-tight"
         {...props}
       >
         {children}
@@ -261,29 +312,90 @@ function makeMarkdownComponents() {
 
     h4: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
       <h4
-        className="text-sm font-medium text-foreground/80 mt-4 mb-1.5"
+        className="text-[13px] font-semibold text-foreground/85 mt-5 mb-1.5 uppercase tracking-wide"
         {...props}
       >
         {children}
       </h4>
     ),
 
+    p: ({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => {
+      const text = extractParagraphText(children);
+
+      // Check for "Case Study:", "So what?", etc.
+      for (const callout of PARAGRAPH_CALLOUTS) {
+        if (callout.pattern.test(text)) {
+          return (
+            <div
+              className={cn(
+                "rounded-xl border-l-[3px] px-4 py-3 my-3 not-prose",
+                callout.border,
+                callout.bg,
+              )}
+            >
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 mb-1.5 text-[10px] font-bold uppercase tracking-widest",
+                  callout.header,
+                )}
+              >
+                <callout.Icon size={11} />
+                {callout.label}
+              </div>
+              <p className="text-[13px] text-foreground/85 leading-relaxed m-0" {...props}>
+                {children}
+              </p>
+            </div>
+          );
+        }
+      }
+
+      // Bold lead paragraph: if the first child is <strong> and it's long (>40 chars),
+      // render it as a highlighted lead sentence
+      const kids = React.Children.toArray(children);
+      const firstChild = kids[0];
+      if (
+        kids.length <= 3 &&
+        React.isValidElement(firstChild) &&
+        firstChild.type === "strong"
+      ) {
+        const strongText = extractParagraphText((firstChild.props as { children?: React.ReactNode }).children);
+        if (strongText.length > 40) {
+          return (
+            <p
+              className="text-[14px] text-foreground font-medium leading-relaxed my-3 pl-3 border-l-2 border-foreground/20"
+              {...props}
+            >
+              {children}
+            </p>
+          );
+        }
+      }
+
+      // Default paragraph
+      return (
+        <p className="text-muted-foreground leading-relaxed my-2 text-[13px]" {...props}>
+          {children}
+        </p>
+      );
+    },
+
     table: ({
       children,
       ...props
     }: React.HTMLAttributes<HTMLTableElement>) => (
-      <div className="overflow-x-auto rounded-lg border border-foreground/15 my-4">
+      <div className="overflow-x-auto rounded-lg border border-foreground/15 my-5 shadow-sm">
         <table className="w-full text-sm border-collapse" {...props}>{children}</table>
       </div>
     ),
 
     thead: ({ children, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) => (
-      <thead className="bg-foreground/5" {...props}>{children}</thead>
+      <thead className="bg-foreground/8" {...props}>{children}</thead>
     ),
 
     th: ({ children, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
       <th
-        className="px-4 py-2.5 text-left text-foreground font-semibold border border-foreground/15 whitespace-nowrap"
+        className="px-4 py-2.5 text-left text-foreground font-semibold border border-foreground/15 whitespace-nowrap text-[12px] uppercase tracking-wide"
         {...props}
       >
         {children}
@@ -292,7 +404,7 @@ function makeMarkdownComponents() {
 
     td: ({ children, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
       <td
-        className="px-4 py-2 text-muted-foreground border border-foreground/10"
+        className="px-4 py-2.5 text-muted-foreground border border-foreground/10 text-[13px]"
         {...props}
       >
         {children}
@@ -300,22 +412,48 @@ function makeMarkdownComponents() {
     ),
 
     ul: ({ children, ...props }: React.HTMLAttributes<HTMLUListElement>) => (
-      <ul className="list-disc pl-6 my-2 space-y-1 text-[13px] text-muted-foreground" {...props}>
+      <ul className="list-disc pl-6 my-2.5 space-y-1.5 text-[13px] text-muted-foreground" {...props}>
         {children}
       </ul>
     ),
 
     ol: ({ children, ...props }: React.HTMLAttributes<HTMLOListElement>) => (
-      <ol className="list-decimal pl-6 my-2 space-y-1 text-[13px] text-muted-foreground" {...props}>
+      <ol className="list-decimal pl-6 my-2.5 space-y-1.5 text-[13px] text-muted-foreground" {...props}>
         {children}
       </ol>
     ),
 
-    li: ({ children, ...props }: React.HTMLAttributes<HTMLLIElement>) => (
-      <li className="leading-relaxed" {...props}>
-        {children}
-      </li>
-    ),
+    li: ({ children, ...props }: React.HTMLAttributes<HTMLLIElement>) => {
+      // If the entire li content is a single <strong> block, unwrap it
+      // to prevent fully-bold bullet points (common in exec summaries)
+      const kids = React.Children.toArray(children);
+      if (kids.length === 1 && React.isValidElement(kids[0]) && kids[0].type === "strong") {
+        const strongProps = kids[0].props as { children?: React.ReactNode };
+        return (
+          <li className="leading-relaxed" {...props}>
+            {strongProps.children}
+          </li>
+        );
+      }
+      // If first child is <strong> and covers >80% of text, unwrap
+      if (kids.length >= 1 && React.isValidElement(kids[0]) && kids[0].type === "strong") {
+        const strongText = extractParagraphText((kids[0].props as { children?: React.ReactNode }).children);
+        const fullText = extractParagraphText(children);
+        if (strongText.length > fullText.length * 0.8) {
+          return (
+            <li className="leading-relaxed" {...props}>
+              {(kids[0].props as { children?: React.ReactNode }).children}
+              {kids.slice(1)}
+            </li>
+          );
+        }
+      }
+      return (
+        <li className="leading-relaxed" {...props}>
+          {children}
+        </li>
+      );
+    },
 
     blockquote: ({ children }: { children?: React.ReactNode }) => {
       // Try to detect callout type from first child paragraph
@@ -338,9 +476,7 @@ function makeMarkdownComponents() {
             .trim() as CalloutType;
 
           if (tag in CALLOUT_CONFIG) {
-            // Remaining content after the [TAG] token
             const rest = pKids.slice(1);
-            // Strip leading whitespace/dash from rest
             const restClean = rest.map((node, i) =>
               i === 0 && typeof node === "string"
                 ? node.replace(/^\s*[-–—]\s*/, "")
@@ -351,9 +487,9 @@ function makeMarkdownComponents() {
         }
       }
 
-      // Default plain blockquote
+      // Default blockquote — styled as a subtle callout
       return (
-        <blockquote className="border-l-2 border-foreground/10 pl-4 text-muted-foreground italic my-2">
+        <blockquote className="border-l-2 border-purple/30 pl-4 py-1 text-foreground/80 my-3 bg-purple/4 rounded-r-lg">
           {children}
         </blockquote>
       );
@@ -497,16 +633,16 @@ export function MarkdownReport({ content, className, sectionImpacts }: MarkdownR
             )}
           >
             {/* Section header */}
-            <div className="flex items-center gap-2.5 px-5 pt-4 pb-2">
+            <div className="flex items-center gap-3 px-5 pt-5 pb-3">
               <span
                 className={cn(
-                  "inline-flex h-6 min-w-6 items-center justify-center rounded-md text-[10px] font-bold",
+                  "inline-flex h-7 min-w-7 items-center justify-center rounded-lg text-[11px] font-bold shrink-0",
                   accent.badge,
                 )}
               >
                 {tocSections.findIndex((s) => s.id === section.id) + 1}
               </span>
-              <h2 className="text-sm font-bold text-foreground">
+              <h2 className="text-base font-bold text-foreground tracking-tight leading-snug">
                 {section.title}
               </h2>
               {(() => {
@@ -516,7 +652,7 @@ export function MarkdownReport({ content, className, sectionImpacts }: MarkdownR
             </div>
 
             {/* Section content */}
-            <div className="px-5 pb-4">
+            <div className="px-5 pb-5">
               <div className={PROSE_CLASSES}>
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                   {section.body}

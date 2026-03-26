@@ -89,7 +89,14 @@ async def search_tavily(query: str, max_results: int = 5,
     try:
         return await asyncio.get_event_loop().run_in_executor(_executor, _sync_search)
     except Exception as e:
-        logger.warning(f"Tavily search failed: {e}")
+        error_str = str(e).lower()
+        # If account is deactivated/over limit, disable Tavily for this session
+        if "deactivated" in error_str or "usage limit" in error_str or "exceeded" in error_str:
+            logger.warning(f"Tavily account issue — disabling for this session: {e}")
+            global _tavily_keys
+            _tavily_keys = []  # Clear keys so _tavily_available() returns False
+        else:
+            logger.warning(f"Tavily search failed: {e}")
         return []
 
 

@@ -1,13 +1,10 @@
 """
-Layer 2 — CMI EXPERT: 6-phase deep research pipeline.
+Layer 2 — CMI EXPERT: Section-driven deep research pipeline.
 
-Receives Layer 1's enhanced report and produces the definitive analysis via:
-  Phase 1 (DISSECT)      → Extract and grade every claim
-  Phase 2 (PLAN)         → Generate targeted research queries per claim
-  Phase 3 (INVESTIGATE)  → Execute research plan, track evidence per claim
-  Phase 4 (SYNTHESIZE)   → Cross-reference, find connections, generate insights
-  Phase 5 (COMPOSE)      → Write final report with all structured evidence
-  Phase 6 (FORMAT)       → Reformat for readability (tables, bullets, structure)
+Receives L1's sources (not report) and researches the topic independently:
+  Phase 1 (PLAN)         → Generate sections + research queries from topic
+  Phase 2 (INVESTIGATE)  → Execute research plan, record findings per section
+  Phase 3 (COMPOSE)      → Write final report from all evidence
 """
 
 from __future__ import annotations
@@ -20,21 +17,16 @@ from dataclasses import asdict
 from config import get_llm, set_model_tier
 from research_agent.models import (
     ResearchResult, Source, AgentContext,
-    Claim, SectionAnnotation, ClaimMap,
-    ResearchTask, ExpertResearchPlan,
     Evidence, EvidenceLedger,
-    CrossLink, SynthesisResult,
+    SynthesisResult,
 )
 from research_agent.graph import build_agent_graph, build_initial_state, make_tools, _scrub_competitor_mentions
 from research_agent.prompts import (
-    EXPERT_DISSECT_PROMPT, EXPERT_PLAN_PROMPT, EXPERT_INVESTIGATE_PROMPT,
-    EXPERT_SYNTHESIZE_PROMPT, EXPERT_COMPOSE_PROMPT, EXPERT_VERIFY_PROMPT,
-    EXPERT_EDITORIAL_REVIEW_PROMPT, EXPERT_TARGETED_REWRITE_PROMPT,
-    REPORT_FORMAT_PROMPT, get_quality_rules,
+    EXPERT_TOPIC_PLAN_PROMPT, EXPERT_SECTION_INVESTIGATE_PROMPT,
+    EXPERT_COMPOSE_PROMPT, get_quality_rules,
 )
-from config import MAX_EDITORIAL_REVIEWS
 from research_agent.cost import track
-from research_agent.utils import get_content, extract_json, strip_preamble, generate_report_outline, parse_outline_type
+from research_agent.utils import get_content, extract_json, strip_preamble
 
 logger = logging.getLogger(__name__)
 
@@ -462,6 +454,7 @@ async def _phase_compose(
     notify,
     prior_report: str = "",
     coverage: float = 1.0,
+    depth: dict | None = None,
 ) -> str:
     """Write the final report using all structured evidence."""
     notify("compose", "Writing final report with evidence...")
@@ -508,14 +501,18 @@ async def _phase_compose(
         gap_claims_text = "None — all claims have supporting evidence."
 
     # Get topic-specific quality rules
-    report_type = ""
-    try:
-        set_model_tier("budget")
-        outline_llm = get_llm("planner")
-        outline = await generate_report_outline(topic, outline_llm, brief=brief)
-        report_type = parse_outline_type(outline) if outline else ""
-    except Exception:
-        pass
+    # Detect report type from section names (no LLM call needed)
+    section_names = " ".join(sa.section.lower() for sa in claim_map.sections)
+    if "swot" in section_names or ("strength" in section_names and "weakness" in section_names):
+        report_type = "SWOT Analysis"
+    elif "porter" in section_names or "five forces" in section_names:
+        report_type = "Porter's Five Forces"
+    elif "pest" in section_names or ("political" in section_names and "economic" in section_names):
+        report_type = "PEST Analysis"
+    elif "trend" in section_names:
+        report_type = "Trend Report"
+    else:
+        report_type = ""
     topic_rules = get_quality_rules(report_type)
 
     brief_instruction = ""
@@ -542,6 +539,9 @@ async def _phase_compose(
     current_date = datetime.now().strftime("%B %Y")
     current_year = datetime.now().year
 
+    target_words = depth["target_words"] if depth else 3000
+    per_section = depth["per_section_words"] if depth else 400
+
     messages = [
         {"role": "system", "content": (
             f"You are a senior partner at McKinsey writing a client-ready research report. "
@@ -550,7 +550,7 @@ async def _phase_compose(
             f"Your reports are known for: specific data points in every paragraph, "
             f"named companies with concrete examples, clear 'so what?' implications, "
             f"and actionable recommendations. You never hedge unnecessarily. "
-            f"Write 4000-6000 words. Every section needs case studies and numbers."
+            f"Write approximately {target_words} words. Every section needs data and analysis."
         )},
         {"role": "user", "content": EXPERT_COMPOSE_PROMPT.format(
             topic=topic,
@@ -563,6 +563,8 @@ async def _phase_compose(
             prior_findings_text=prior_findings_text,
             topic_rules=topic_rules,
             brief_instruction=brief_instruction,
+            target_words=target_words,
+            per_section_words=per_section,
         )},
     ]
 
@@ -577,12 +579,13 @@ async def _phase_compose(
     notify("compose", f"Report written: {word_count} words")
 
     # Quality check — if too short, rewrite with stronger demands
-    if word_count < 2500:
-        notify("compose", f"Report too short ({word_count} words), requesting expansion...")
+    expand_threshold = depth["expand_threshold"] if depth else 1500
+    if word_count < expand_threshold:
+        notify("compose", f"Report too short ({word_count} words, need {target_words}), requesting expansion...")
         expand_messages = messages + [
             {"role": "assistant", "content": draft},
             {"role": "user", "content": (
-                f"This report is only {word_count} words. It MUST be at least 4000 words. "
+                f"This report is only {word_count} words. It MUST be at least {target_words} words. "
                 "Expand EVERY section with:\n"
                 "- More specific data points from the evidence ledger\n"
                 "- Named companies with concrete actions, investments, partnerships\n"
@@ -838,7 +841,11 @@ async def run(
     prior_sources: list[Source] | None = None,
     brief: str = "",
 ) -> ResearchResult:
-    """Run Layer 2: 5-phase expert pipeline."""
+    """Run Layer 2: Section-driven expert research pipeline.
+
+    New architecture: Plans from topic directly (no claim dissection).
+    Uses L1's sources as a head start, not L1's report.
+    """
     start = time.time()
     phase_timings = {}
 
@@ -847,128 +854,337 @@ async def run(
             progress_callback(2, status, msg)
         logger.info(f"[Expert] {status}: {msg}")
 
-    notify("start", "Starting CMI Expert pipeline (5 phases)...")
+    notify("start", "Starting Expert pipeline (Plan → Investigate → Compose)...")
 
     # Create shared agent context
-    ctx = AgentContext(max_tool_calls=30)
+    ctx = AgentContext(max_tool_calls=80)
 
-    # Seed with prior sources
+    # Seed with L1's sources (URLs already scraped — avoid re-scraping)
     if prior_sources:
         for s in prior_sources:
             ctx.sources.append(s)
             ctx.urls_seen.add(s.url)
 
-    # ── Phase 1: DISSECT ──────────────────────────────────────────────────
+    # ── Phase 1: PLAN FROM TOPIC ──────────────────────────────────────────
     t1 = time.time()
+    sections = []
+    all_queries = []
     try:
-        claim_map = await _phase_dissect(topic, prior_report, notify)
+        set_model_tier("standard")
+        llm = get_llm("planner")
+
+        messages = [
+            {"role": "system", "content": "You output only valid JSON. No explanation, no markdown fences."},
+            {"role": "user", "content": EXPERT_TOPIC_PLAN_PROMPT.format(
+                topic=topic,
+                brief=brief or "(no additional brief)",
+            )},
+        ]
+        response = await llm.ainvoke(messages)
+        track("L2 plan", response)
+
+        raw = get_content(response).strip()
+        data = extract_json(raw)
+
+        if data and "sections" in data:
+            for s in data["sections"]:
+                section_name = str(s.get("section", ""))
+                queries = s.get("queries", [])
+                if isinstance(queries, list):
+                    queries = [str(q) for q in queries]
+                else:
+                    queries = []
+                sections.append({
+                    "section": section_name,
+                    "description": str(s.get("description", "")),
+                    "queries": queries,
+                    "priority": int(s.get("priority", 2)),
+                })
+                all_queries.extend(queries)
+
+        notify("plan", f"Planned {len(sections)} sections with {len(all_queries)} queries")
     except Exception as e:
-        logger.error(f"[Expert] Phase 1 (Dissect) failed: {e}")
-        claim_map = _fallback_claim_map(prior_report)
-    phase_timings["dissect"] = {
-        "claims_total": claim_map.total_claims,
-        "claims_weak": claim_map.claims_needing_research,
+        logger.error(f"[Expert] Phase 1 (Plan) failed: {e}")
+
+    # Compute dynamic depth targets
+    from research_agent.utils import compute_depth_targets
+    depth = compute_depth_targets(
+        section_count=len(sections),
+        total_claims=len(all_queries),  # Use query count as complexity proxy
+    )
+    logger.info(f"[Expert] Depth targets: {depth}")
+
+    phase_timings["plan"] = {
+        "sections": len(sections),
+        "queries_planned": len(all_queries),
         "elapsed_s": round(time.time() - t1, 1),
     }
 
-    # ─�� Phase 2: PLAN ─────────────────────────────────────────────────────
+    # ── Phase 2: INVESTIGATE ──────────────────────────────────────────────
     t2 = time.time()
+    ledger = EvidenceLedger()
     try:
-        research_plan = await _phase_plan(topic, claim_map, notify)
-    except Exception as e:
-        logger.error(f"[Expert] Phase 2 (Plan) failed: {e}")
-        research_plan = ExpertResearchPlan(tasks=[])
-    phase_timings["plan"] = {
-        "tasks": len(research_plan.tasks),
-        "queries_planned": research_plan.total_queries,
-        "elapsed_s": round(time.time() - t2, 1),
-    }
+        # Format the plan for the agent
+        plan_text_parts = []
+        for s in sections:
+            plan_text_parts.append(f"## {s['section']}")
+            plan_text_parts.append(f"Goal: {s['description']}")
+            plan_text_parts.append("Queries:")
+            for q in s["queries"]:
+                plan_text_parts.append(f"  - {q}")
+            plan_text_parts.append("")
+        plan_text = "\n".join(plan_text_parts)
 
-    # ── Phase 3: INVESTIGATE ──────────────────────────────────────────────
-    t3 = time.time()
-    try:
-        ledger, coverage_before_gap_fill, gap_fill_passes = await _phase_investigate(
-            topic, research_plan, claim_map, ctx, notify, progress_callback, brief
+        system_prompt = EXPERT_SECTION_INVESTIGATE_PROMPT.format(
+            topic=topic,
+            research_plan=plan_text,
         )
+
+        set_model_tier("standard")  # gpt-4o — must reliably call record_finding(); mini fails at this
+        llm = get_llm("writer")
+        tools = make_tools(ctx, ledger=ledger)
+
+        graph = build_agent_graph(
+            llm=llm,
+            tools=tools,
+            system_prompt=system_prompt,
+            max_tool_calls=80,
+            min_word_count=1,
+            max_retries=0,
+            progress_callback=progress_callback,
+            layer=2,
+            ctx=ctx,
+        )
+
+        initial_state = build_initial_state(
+            topic=topic,
+            layer=2,
+            system_prompt=system_prompt,
+            prior_report=f"Research all sections in the plan. Use record_finding after each discovery.\n\nTopic: {topic}",
+            brief=brief,
+            max_tool_calls=80,
+            min_word_count=1,
+            max_retries=0,
+        )
+
+        await graph.ainvoke(initial_state)
+
+        notify("investigate", f"Found {len(ledger.entries)} findings across "
+                              f"{len({e.claim_id for e in ledger.entries})} sections")
     except Exception as e:
-        logger.error(f"[Expert] Phase 3 (Investigate) failed: {e}")
-        ledger = EvidenceLedger()
-        coverage_before_gap_fill = 0.0
-        gap_fill_passes = 0
+        logger.error(f"[Expert] Phase 2 (Investigate) failed: {e}")
 
     searches = [tc for tc in ctx.tool_calls_log if tc.get("tool") == "search_web"]
     scrapes = [tc for tc in ctx.tool_calls_log if tc.get("tool") == "scrape_page"]
+    findings_count = len(ledger.entries)
+    sections_with_evidence = len({e.claim_id for e in ledger.entries})
+
     phase_timings["investigate"] = {
         "searches": len(searches),
         "scrapes": len(scrapes),
-        "findings": len(ledger.entries),
-        "coverage": round(ledger.coverage_score(claim_map), 2),
-        "elapsed_s": round(time.time() - t3, 1),
+        "findings": findings_count,
+        "sections_covered": sections_with_evidence,
+        "elapsed_s": round(time.time() - t2, 1),
     }
 
-    # ── Phase 4: SYNTHESIZE ───────────────────────────────────────────────
-    t4 = time.time()
+    # ── Phase 3: COMPOSE ──────────────────────────────────────────────────
+    t3 = time.time()
     try:
-        synthesis = await _phase_synthesize(topic, claim_map, ledger, notify)
-    except Exception as e:
-        logger.error(f"[Expert] Phase 4 (Synthesize) failed: {e}")
-        synthesis = SynthesisResult()
-    phase_timings["synthesize"] = {
-        "cross_links": len(synthesis.cross_links),
-        "insights": len(synthesis.insights),
-        "gaps": len(synthesis.gap_report),
-        "elapsed_s": round(time.time() - t4, 1),
-    }
+        # Build query→section mapping so auto-recorded evidence can be matched
+        query_to_section = {}
+        for s in sections:
+            for q in s.get("queries", []):
+                query_to_section[q.lower()] = s["section"]
 
-    # ── Phase 5: COMPOSE ──────────────────────────────────────────────────
-    t5 = time.time()
-    try:
-        final_coverage = ledger.coverage_score(claim_map)
-        draft = await _phase_compose(topic, claim_map, ledger, synthesis, brief, notify, prior_report=prior_report, coverage=final_coverage)
+        def match_evidence_to_section(evidence, section_name):
+            """Check if an evidence entry belongs to a section by name or query match."""
+            cid = evidence.claim_id.lower()
+            sname = section_name.lower()
+            # Direct match
+            if cid == sname:
+                return True
+            # Section name in claim_id or vice versa
+            if sname in cid or cid in sname:
+                return True
+            # claim_id is a query — check if it maps to this section
+            mapped = query_to_section.get(cid, "")
+            if mapped.lower() == sname:
+                return True
+            # Keyword overlap: section name words appear in claim_id
+            section_words = set(sname.split()) - {"and", "the", "of", "in", "for", "a", "an"}
+            if len(section_words) >= 2:
+                matches = sum(1 for w in section_words if w in cid)
+                if matches >= 2:
+                    return True
+            return False
+
+        # Build evidence text grouped by section
+        used_evidence_ids = set()
+        evidence_by_section_parts = []
+        for s in sections:
+            section_name = s["section"]
+            section_evidence = [e for e in ledger.entries if match_evidence_to_section(e, section_name)]
+            # Deduplicate
+            unique_evidence = []
+            for e in section_evidence:
+                eid = (e.fact[:100], e.source_url)
+                if eid not in used_evidence_ids:
+                    used_evidence_ids.add(eid)
+                    unique_evidence.append(e)
+            evidence_by_section_parts.append(f"## {section_name}")
+            if unique_evidence:
+                for e in unique_evidence:
+                    tier_label = {1: "T1", 2: "T2"}.get(e.source_tier, "")
+                    if not tier_label:
+                        tier_label = "T2" if e.source_title and len(e.source_title) > 3 else "UNVERIFIED"
+                    type_label = "[INFERRED]" if e.evidence_type == "inferred" else f"[{e.evidence_type}]"
+                    line = f"- [{tier_label}] {type_label} {e.fact}"
+                    if e.source_title:
+                        src = e.source_title
+                        if e.source_url:
+                            src += f" ({e.source_url})"
+                        line += f"\n  Source: {src}"
+                    evidence_by_section_parts.append(line)
+            else:
+                evidence_by_section_parts.append("- (no evidence found — write from expert knowledge)")
+            evidence_by_section_parts.append("")
+
+        # Add unmatched evidence as "Additional Research Findings"
+        unmatched = [e for e in ledger.entries if (e.fact[:100], e.source_url) not in used_evidence_ids]
+        if unmatched:
+            evidence_by_section_parts.append("## Additional Research Findings")
+            for e in unmatched[:30]:  # Cap to avoid prompt bloat
+                line = f"- {e.fact}"
+                if e.source_title:
+                    line += f"\n  Source: {e.source_title}"
+                    if e.source_url:
+                        line += f" ({e.source_url})"
+                evidence_by_section_parts.append(line)
+            evidence_by_section_parts.append("")
+
+        # Append deduplicated T1/T2 source list for bibliography
+        seen_urls = set()
+        source_list_parts = ["\n## AVAILABLE SOURCES FOR BIBLIOGRAPHY (T1 and T2 only)"]
+        for src in ctx.sources:
+            if src.url in seen_urls or not src.url:
+                continue
+            seen_urls.add(src.url)
+            if src.tier <= 2:  # T1 or T2 only
+                label = f"[T{src.tier}]"
+                title = src.title or src.publisher or src.url
+                source_list_parts.append(f"- {label} {title} — {src.url}")
+        if len(source_list_parts) > 1:
+            evidence_by_section_parts.extend(source_list_parts)
+            evidence_by_section_parts.append("")
+
+        evidence_by_section = "\n".join(evidence_by_section_parts)
+
+        # Detect report type from section names
+        section_names_lower = " ".join(s["section"].lower() for s in sections)
+        if "swot" in section_names_lower or ("strength" in section_names_lower and "weakness" in section_names_lower):
+            report_type = "SWOT Analysis"
+        elif "porter" in section_names_lower or "five forces" in section_names_lower:
+            report_type = "Porter's Five Forces"
+        elif "pest" in section_names_lower or ("political" in section_names_lower and "economic" in section_names_lower):
+            report_type = "PEST Analysis"
+        else:
+            report_type = ""
+        topic_rules = get_quality_rules(report_type)
+
+        brief_instruction = ""
+        if brief:
+            brief_instruction = (
+                f"\n\nCLIENT BRIEF:\n\n{brief}\n"
+            )
+
+        target_words = depth["target_words"]
+        per_section = depth["per_section_words"]
+
+        section_list = "\n".join(f"## {s['section']}" for s in sections)
+
+        from datetime import datetime
+        current_date = datetime.now().strftime("%B %Y")
+        current_year = datetime.now().year
+
+        set_model_tier("premium")
+        llm = get_llm("writer")
+
+        messages = [
+            {"role": "system", "content": (
+                f"You are a senior partner at McKinsey writing a client-ready research report. "
+                f"Today's date is {current_date}. Write from a {current_year} perspective — "
+                f"events from {current_year - 1} and earlier use PAST TENSE. "
+                f"Your reports are known for: specific data points in every paragraph, "
+                f"named companies with concrete examples, clear 'so what?' implications, "
+                f"and actionable recommendations. You never hedge unnecessarily. "
+                f"Write approximately {target_words} words. Every section needs data and analysis."
+            )},
+            {"role": "user", "content": EXPERT_COMPOSE_PROMPT.format(
+                topic=topic,
+                section_list=section_list,
+                evidence_by_section=evidence_by_section,
+                cross_links_text="(identify cross-section connections yourself from the evidence)",
+                insights_text="(generate insights from the evidence)",
+                contrarian_text="(identify contrarian risks from the evidence)",
+                gap_claims_text="None",
+                prior_findings_text="(use evidence above — integrate L1 findings where relevant)",
+                topic_rules=topic_rules,
+                brief_instruction=brief_instruction,
+                target_words=target_words,
+                per_section_words=per_section,
+            )},
+        ]
+
+        response = await llm.ainvoke(messages)
+        track("L2 compose", response)
+
+        draft = get_content(response).strip()
+        draft = strip_preamble(draft)
+        draft = _scrub_competitor_mentions(draft)
+
+        word_count = len(draft.split())
+        notify("compose", f"Report written: {word_count} words")
+
+        # Expand if too short
+        expand_threshold = depth["expand_threshold"]
+        if word_count < expand_threshold:
+            notify("compose", f"Report too short ({word_count} words, need {target_words}), expanding...")
+            expand_messages = messages + [
+                {"role": "assistant", "content": draft},
+                {"role": "user", "content": (
+                    f"This report is only {word_count} words. It MUST be at least {target_words} words. "
+                    "Expand EVERY section with:\n"
+                    "- More specific data points from the evidence\n"
+                    "- Named companies with concrete actions and metrics\n"
+                    "- Case studies: 2-3 real companies described in detail\n"
+                    "- Comparison tables with real numbers\n"
+                    "- 'So what?' analysis after every major finding\n"
+                    "Start directly with ## headings."
+                )},
+            ]
+            response2 = await llm.ainvoke(expand_messages)
+            track("L2 compose expansion", response2)
+            draft = get_content(response2).strip()
+            draft = strip_preamble(draft)
+            draft = _scrub_competitor_mentions(draft)
+            word_count = len(draft.split())
+            notify("compose", f"Expanded report: {word_count} words")
+
     except Exception as e:
-        logger.error(f"[Expert] Phase 5 (Compose) failed: {e}")
+        import traceback
+        logger.error(f"[Expert] Phase 3 (Compose) failed: {e}\n{traceback.format_exc()}")
         draft = "## Error\n\nExpert pipeline composition failed."
+
     phase_timings["compose"] = {
         "word_count": len(draft.split()),
-        "elapsed_s": round(time.time() - t5, 1),
+        "elapsed_s": round(time.time() - t3, 1),
     }
-
-    # ── Phase 5.25: EDITORIAL REVIEW LOOP ────────────────────────────────
-    t525 = time.time()
-    editorial_rounds = 0
-    try:
-        for review_round in range(MAX_EDITORIAL_REVIEWS):
-            passes, feedback, unused = await _phase_editorial_review(
-                draft, claim_map, ledger, synthesis, notify
-            )
-            editorial_rounds = review_round + 1
-            if passes:
-                break
-            notify("editorial_review", f"Round {review_round + 1}: rewriting to address weaknesses...")
-            draft = await _phase_targeted_rewrite(
-                draft, feedback, unused, ledger, claim_map, notify
-            )
-    except Exception as e:
-        logger.warning(f"[Expert] Editorial review failed (non-fatal): {e}")
-    phase_timings["editorial_review"] = {
-        "rounds": editorial_rounds,
-        "word_count": len(draft.split()),
-        "elapsed_s": round(time.time() - t525, 1),
-    }
-
-    # ── Phase 5.5: VERIFY — REMOVED ──────────────────────────────────────
-    # Verify phase was removed because it systematically over-hedged well-known
-    # facts with "no direct public evidence" disclaimers, degrading report quality.
-
-    # ── Phase 6: FORMAT — REMOVED ─────────────────────────────────────────
-    # Format was a separate LLM call just for cosmetic reformatting (~10s).
-    # Now handled directly in the compose prompt to save time.
 
     elapsed = time.time() - start
     sources_inherited = len(prior_sources) if prior_sources else 0
     sources_new = len(ctx.sources) - sources_inherited
 
-    # Build iteration_history for frontend compatibility
+    # Build frontend-compatible metadata
     iteration_history = [{
         "iteration": 0,
         "score": 0,
@@ -978,10 +1194,9 @@ async def run(
     }]
 
     notify("done", f"Expert pipeline complete: {len(draft.split())} words, "
-                    f"{len(ctx.sources)} sources, {ledger.coverage_score(claim_map):.0%} coverage "
+                    f"{len(ctx.sources)} sources, {findings_count} findings "
                     f"in {elapsed:.1f}s")
 
-    # Serialize evidence and cross-links for metadata
     evidence_data = [
         {
             "claim_id": e.claim_id, "fact": e.fact,
@@ -990,80 +1205,35 @@ async def run(
         }
         for e in ledger.entries
     ]
-    cross_link_data = [
-        {
-            "from_section": cl.from_section, "to_section": cl.to_section,
-            "from_claim_id": cl.from_claim_id, "to_claim_id": cl.to_claim_id,
-            "relationship": cl.relationship, "narrative": cl.narrative,
-        }
-        for cl in synthesis.cross_links
-    ]
-
-    # Serialize claim map and research tasks for frontend Overview
-    claim_map_data = [
-        {
-            "section": sa.section,
-            "thesis": sa.thesis,
-            "overall_quality": sa.overall_quality,
-            "missing_angles": sa.missing_angles,
-            "claims": [
-                {
-                    "id": c.id,
-                    "text": c.text,
-                    "evidence_quality": c.evidence_quality,
-                    "data_type": c.data_type,
-                    "needs_research": c.needs_research,
-                    "reasoning": c.reasoning,
-                }
-                for c in sa.claims
-            ],
-        }
-        for sa in claim_map.sections
-    ]
 
     research_tasks_data = [
         {
-            "claim_id": t.claim_id,
-            "section": t.section,
-            "rationale": t.rationale,
-            "queries": t.queries,
-            "expected_evidence": t.expected_evidence,
-            "priority": t.priority,
-            "target_sources": t.target_sources,
+            "claim_id": "",
+            "section": s["section"],
+            "rationale": s["description"],
+            "queries": s["queries"],
+            "expected_evidence": "",
+            "priority": s["priority"],
+            "target_sources": [],
         }
-        for t in research_plan.tasks
+        for s in sections
     ]
 
-    # Build phase_details in the format the frontend CmiPipelineFlow expects
     phase_details = [
         {
-            "phase": "dissect",
-            "claims_total": phase_timings.get("dissect", {}).get("claims_total", 0),
-            "claims_weak": phase_timings.get("dissect", {}).get("claims_weak", 0),
-            "elapsed": phase_timings.get("dissect", {}).get("elapsed_s", 0),
-        },
-        {
             "phase": "plan",
-            "sections": len(research_plan.sections_covered()),
-            "questions": research_plan.total_queries,
+            "sections": len(sections),
+            "questions": len(all_queries),
             "elapsed": phase_timings.get("plan", {}).get("elapsed_s", 0),
         },
         {
             "phase": "investigate",
-            "facts": len(ledger.entries),
+            "facts": findings_count,
             "sources": len(ctx.sources),
-            "coverage": round(ledger.coverage_score(claim_map), 2),
+            "coverage": round(sections_with_evidence / max(len(sections), 1), 2),
             "searches": len(searches),
             "scrapes": len(scrapes),
             "elapsed": phase_timings.get("investigate", {}).get("elapsed_s", 0),
-        },
-        {
-            "phase": "synthesize",
-            "insights": len(synthesis.insights),
-            "cross_links": len(synthesis.cross_links),
-            "risks": len(synthesis.contrarian_risks),
-            "gaps": len(synthesis.gap_report),
-            "elapsed": phase_timings.get("synthesize", {}).get("elapsed_s", 0),
         },
         {
             "phase": "compose",
@@ -1081,10 +1251,7 @@ async def run(
             "method": "cmi_expert",
             "phases": phase_timings,
             "phase_details": phase_details,
-            "claim_coverage": round(ledger.coverage_score(claim_map), 2),
             "evidence_ledger": evidence_data,
-            "cross_links": cross_link_data,
-            "insights": synthesis.insights,
             "iterations": 1,
             "final_score": 0,
             "tool_calls": ctx.tool_call_count,
@@ -1095,21 +1262,11 @@ async def run(
             "sources_inherited": sources_inherited,
             "sources_new": sources_new,
             "iteration_history": iteration_history,
-            "plan_sections": research_plan.sections_covered(),
-            "plan_questions": research_plan.total_queries,
-            "facts_collected": len(ledger.entries),
+            "plan_sections": [s["section"] for s in sections],
+            "plan_questions": len(all_queries),
+            "facts_collected": findings_count,
             "facts_verified": sum(1 for e in ledger.entries if e.confidence == "high"),
-            "insights_generated": len(synthesis.insights),
-            "contrarian_risks": len(synthesis.contrarian_risks),
-            "review_score": 0,
-            # Enriched data for Overview narrative
-            "claim_map": claim_map_data,
             "research_tasks": research_tasks_data,
-            "contrarian_risks_detail": synthesis.contrarian_risks,
-            "resolved_contradictions": synthesis.resolved_contradictions,
-            "gap_report": synthesis.gap_report,
-            "coverage_before_gap_fill": coverage_before_gap_fill,
-            "gap_fill_passes": gap_fill_passes,
         },
         elapsed_seconds=elapsed,
     )

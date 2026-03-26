@@ -1,0 +1,336 @@
+INFO research_agent.pipeline: [Pipeline] L-1: start — Starting sequential pipeline: Baseline → Enhancement → Deep Dive...
+INFO research_agent.pipeline: [Pipeline] L-1: interpreting — Interpreting research brief...
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=Impact+of+AI+on+healthcare+diagnostics&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=Impact%20of%20AI%20on%20healthcare%20diagnostics 200
+INFO primp: response: https://grokipedia.com/api/typeahead?query=Impact+of+AI+on+healthcare+diagnostics&limit=1 200
+INFO primp: response: https://www.google.com/search?q=Impact+of+AI+on+healthcare+diagnostics&filter=1&start=0&hl=en-US&lr=lang_en&cr=countryUS 403
+INFO httpx: HTTP Request: POST https://html.duckduckgo.com/html/ "HTTP/2 200 OK"
+INFO tools.search: DuckDuckGo returned 3 relevant results
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.utils: [Interpret] Topic confirmed as clear: 'Impact of AI on healthcare diagnostics'
+INFO research_agent.pipeline: [Pipeline] Using topic: An analysis of the effects of artificial intelligence on the accuracy and efficiency of healthcare diagnostics.
+INFO research_agent.pipeline: [Pipeline] L-1: scoping — Defining topic scope boundaries...
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=An+analysis+of+the+effects+of+artificial+intelligence+on+the+accuracy+and+efficiency+of+healthcare+diagnostics.&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://grokipedia.com/api/typeahead?query=An+analysis+of+the+effects+of+artificial+intelligence+on+the+accuracy+and+efficiency+of+healthcare+diagnostics.&limit=1 200
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=An%20analysis%20of%20the%20effects%20of%20artificial%20intelligence%20on%20the%20accuracy%20and%20efficiency%20of%20healthcare%20diagnostics. 200
+INFO primp: response: https://search.brave.com/search?q=An+analysis+of+the+effects+of+artificial+intelligence+on+the+accuracy+and+efficiency+of+healthcare+diagnostics.&source=web 429
+INFO primp: response: https://www.mojeek.com/search?q=An+analysis+of+the+effects+of+artificial+intelligence+on+the+accuracy+and+efficiency+of+healthcare+diagnostics. 403
+INFO ddgs.ddgs: Error in engine yandex: DDGSException("RuntimeError: RuntimeError('error sending request for url (https://yandex.com/search/site/?text=An+analysis+of+the+effects+of+artificial+intelligence+on+the+accuracy+and+efficiency+of+healthcare+diagnostics.&web=1&searchid=7800507): client error (Connect)\\n\\nCaused by:\\n    0: client error (Connect)\\n    1: TLS handshake failed An existing connection was forcibly closed by the remote host. (os error 10054)\\n    2: An existing connection was forcibly closed by the remote host. (os error 10054)\\n    3: An existing connection was forcibly closed by the remote host. (os error 10054)')")
+INFO primp: response: https://search.yahoo.com/search;_ylt=WroSl7noGY7suNQs6LIqDLL-;_ylu=lRIKJ8y-tvc2zqDQLh48YNquQlSHS0Z4uOUz_T97_givH1E?p=An+analysis+of+the+effects+of+artificial+intelligence+on+the+accuracy+and+efficiency+of+healthcare+diagnostics. 200
+INFO tools.search: DuckDuckGo returned 5 relevant results
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.utils: [Scope] Generated for: An analysis of the effects of artificial intelligence on the
+INFO research_agent.pipeline: [Pipeline] Scope generated and prepended to brief
+INFO research_agent.pipeline: [Pipeline] L0: start — Layer 0: Generating baseline report...
+INFO research_agent.layers.baseline: [Baseline] start: Generating baseline report from model knowledge...
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=An+analysis+of+the+effects+of+artificial+intelligence+on+the+accuracy+and+efficiency+of+healthcare+diagnostics.&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=An%20analysis%20of%20the%20effects%20of%20artificial%20intelligence%20on%20the%20accuracy%20and%20efficiency%20of%20healthcare%20diagnostics. 200
+INFO primp: response: https://grokipedia.com/api/typeahead?query=An+analysis+of+the+effects+of+artificial+intelligence+on+the+accuracy+and+efficiency+of+healthcare+diagnostics.&limit=1 200
+INFO primp: response: https://search.brave.com/search?q=An+analysis+of+the+effects+of+artificial+intelligence+on+the+accuracy+and+efficiency+of+healthcare+diagnostics.&source=web 429
+INFO httpx: HTTP Request: POST https://html.duckduckgo.com/html/ "HTTP/2 200 OK"
+INFO tools.search: DuckDuckGo returned 3 relevant results
+INFO research_agent.utils: [Outline] Topic context from 3 search results
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.utils: [Outline] Generated for: An analysis of the effects of artificial intelligence on the
+INFO research_agent.layers.baseline: [Baseline] planning: Planned 7 sections
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.layers.baseline: [Baseline] done: Baseline complete: 974 words in 30.1s
+INFO research_agent.pipeline: [Pipeline] L1: start — Layer 1: Enhancing report with web research...
+INFO research_agent.layers.enhanced: [Enhanced] start: Starting enhanced research with web search...
+INFO research_agent.graph: [Agent L1] researching: Agent working... (0 tool calls so far)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+algorithms+healthcare+diagnostics+accuracy+efficiency+2026&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 2 relevant results (from 5 raw)
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+algorithms+healthcare+diagnostics+accuracy+efficiency+2026&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+impact+efficiency+diagnostic+processes+2026&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20impact%20efficiency%20diagnostic%20processes%202026 200
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+impact+efficiency+diagnostic+processes+2026&limit=1 200
+INFO primp: response: https://www.mojeek.com/search?q=AI+impact+efficiency+diagnostic+processes+2026 403
+INFO primp: response: https://search.brave.com/search?q=AI+impact+efficiency+diagnostic+processes+2026&source=web 429
+INFO httpx: HTTP Request: POST https://html.duckduckgo.com/html/ "HTTP/2 200 OK"
+INFO tools.search: DuckDuckGo returned 3 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+impact+efficiency+diagnostic+processes+2026&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+applications+radiology+pathology+diagnostics+2026&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 1 relevant results (from 5 raw)
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20applications%20radiology%20pathology%20diagnostics%202026 200
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+applications+radiology+pathology+diagnostics+2026&limit=1 200
+INFO httpx: HTTP Request: POST https://html.duckduckgo.com/html/ "HTTP/2 200 OK"
+INFO tools.search: DuckDuckGo returned 3 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+applications+radiology+pathology+diagnostics+2026&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+vs+traditional+diagnostic+methods+2026&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+vs+traditional+diagnostic+methods+2026&limit=1 200
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20vs%20traditional%20diagnostic%20methods%202026 200
+INFO primp: response: https://search.brave.com/search?q=AI+vs+traditional+diagnostic+methods+2026&source=web 429
+INFO primp: response: https://search.yahoo.com/search;_ylt=FO4-sZJYO77ToaIUC1wI_OMR;_ylu=VY4v6qgteHDAt2Fbr30N6xsPOFT8Ic4kUZ33QXIrnsybQ6c?p=AI+vs+traditional+diagnostic+methods+2026 200
+INFO tools.search: DuckDuckGo returned 4 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+vs+traditional+diagnostic+methods+2026&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+integration+clinical+workflows+2026&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 2 relevant results (from 5 raw)
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+integration+clinical+workflows+2026&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=regulatory+considerations+AI+healthcare+diagnostics+2026&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=regulatory%20considerations%20AI%20healthcare%20diagnostics%202026 200
+INFO primp: response: https://grokipedia.com/api/typeahead?query=regulatory+considerations+AI+healthcare+diagnostics+2026&limit=1 200
+INFO ddgs.ddgs: Error in engine yandex: DDGSException("RuntimeError: RuntimeError('error sending request for url (https://yandex.com/search/site/?text=regulatory+considerations+AI+healthcare+diagnostics+2026&web=1&searchid=3662183): client error (Connect)\\n\\nCaused by:\\n    0: client error (Connect)\\n    1: TLS handshake failed An existing connection was forcibly closed by the remote host. (os error 10054)\\n    2: An existing connection was forcibly closed by the remote host. (os error 10054)\\n    3: An existing connection was forcibly closed by the remote host. (os error 10054)')")
+INFO httpx: HTTP Request: POST https://html.duckduckgo.com/html/ "HTTP/2 200 OK"
+INFO tools.search: DuckDuckGo returned 3 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=regulatory+considerations+AI+healthcare+diagnostics+2026&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+patient+outcomes+cost-effectiveness+diagnostics+2026&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 2 relevant results (from 5 raw)
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+patient+outcomes+cost-effectiveness+diagnostics+2026&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+INFO research_agent.graph: [Agent L1] researching: Agent working... (7 tool calls so far)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.graph: [Agent L1] researching: Agent working... (10 tool calls so far)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.graph: [Agent L1] researching: Agent working... (10 tool calls so far)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+algorithms+healthcare+diagnostics+accuracy+efficiency+2026&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 4 relevant results (from 5 raw)
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+algorithms+healthcare+diagnostics+accuracy+efficiency+2026&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+impact+efficiency+diagnostic+processes+2026&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+impact+efficiency+diagnostic+processes+2026&limit=1 200
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20impact%20efficiency%20diagnostic%20processes%202026 200
+INFO primp: response: https://www.mojeek.com/search?q=AI+impact+efficiency+diagnostic+processes+2026 403
+INFO primp: response: https://search.yahoo.com/search;_ylt=VTo41TPRneR_ytmK5e54KoxJ;_ylu=MvRkuk4TngW2xTejtdgB27xgEY0LGe1snX3e177O4DzD_8g?p=AI+impact+efficiency+diagnostic+processes+2026 200
+INFO tools.search: DuckDuckGo returned 3 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+impact+efficiency+diagnostic+processes+2026&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+applications+radiology+pathology+diagnostics+2026&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 2 relevant results (from 5 raw)
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+applications+radiology+pathology+diagnostics+2026&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+vs+traditional+diagnostic+methods+2026&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20vs%20traditional%20diagnostic%20methods%202026 200
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+vs+traditional+diagnostic+methods+2026&limit=1 200
+INFO primp: response: https://www.google.com/search?q=AI+vs+traditional+diagnostic+methods+2026&filter=1&start=0&hl=en-US&lr=lang_en&cr=countryUS 403
+INFO primp: response: https://search.yahoo.com/search;_ylt=cRkZK1p2GrTx5537Ab9zpxdG;_ylu=z048Ak2Sc_iKnnjtPJ1pkKQlhiEW5EJGKf9UcAzfLMfsJ0g?p=AI+vs+traditional+diagnostic+methods+2026 200
+INFO tools.search: DuckDuckGo returned 4 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+vs+traditional+diagnostic+methods+2026&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+integration+clinical+workflows+2026&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 2 relevant results (from 5 raw)
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+integration+clinical+workflows+2026&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=regulatory+considerations+AI+healthcare+diagnostics+2026&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 3 relevant results (from 5 raw)
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=regulatory+considerations+AI+healthcare+diagnostics+2026&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+patient+outcomes+cost-effectiveness+diagnostics+2026&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 3 relevant results (from 5 raw)
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+patient+outcomes+cost-effectiveness+diagnostics+2026&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+INFO research_agent.graph: [Agent L1] researching: Agent working... (17 tool calls so far)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.graph: [Agent L1] researching: Agent working... (20 tool calls so far)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.graph: [Agent L1] researching: Agent working... (20 tool calls so far)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.graph: [Agent L1] researching: Agent working... (20 tool calls so far)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.graph: [Agent L1] drafted: Report: 1532 words
+INFO research_agent.layers.enhanced: [Enhanced] done: Enhanced complete: 1532 words, 26 sources in 209.6s
+INFO research_agent.pipeline: [Pipeline] L2: start — Layer 2: Deep-dive analysis...
+INFO research_agent.layers.expert: [Expert] start: Starting CMI Expert pipeline (5 phases)...
+INFO research_agent.layers.expert: [Expert] dissect: Extracting and grading claims from prior report...
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.layers.expert: [Expert] dissect: Extracted 27 claims, 17 need research
+INFO research_agent.layers.expert: [Expert] plan: Planning targeted research queries...
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.layers.expert: [Expert] plan: Generated 34 search queries for 17 claims across 7 sections
+INFO research_agent.layers.expert: [Expert] investigate: Starting structured investigation...
+INFO research_agent.graph: [Agent L2] researching: Agent working... (0 tool calls so far)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=CNNs+accuracy+in+healthcare+diagnostics+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=CNNs%20accuracy%20in%20healthcare%20diagnostics%202025 200
+INFO primp: response: https://grokipedia.com/api/typeahead?query=CNNs+accuracy+in+healthcare+diagnostics+2025&limit=1 200
+INFO ddgs.ddgs: Error in engine yandex: DDGSException("RuntimeError: RuntimeError('error sending request for url (https://yandex.com/search/site/?text=CNNs+accuracy+in+healthcare+diagnostics+2025&web=1&searchid=4068068): client error (Connect)\\n\\nCaused by:\\n    0: client error (Connect)\\n    1: TLS handshake failed An existing connection was forcibly closed by the remote host. (os error 10054)\\n    2: An existing connection was forcibly closed by the remote host. (os error 10054)\\n    3: An existing connection was forcibly closed by the remote host. (os error 10054)')")
+INFO primp: response: https://www.google.com/search?q=CNNs+accuracy+in+healthcare+diagnostics+2025&filter=1&start=0&hl=en-US&lr=lang_en&cr=countryUS 403
+INFO httpx: HTTP Request: POST https://html.duckduckgo.com/html/ "HTTP/2 200 OK"
+INFO tools.search: DuckDuckGo returned 2 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=CNNs+accuracy+in+healthcare+diagnostics+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+INFO primp: response: https://news.search.yahoo.com/search?p=CNNs+accuracy+in+healthcare+diagnostics+2025 200
+INFO primp: response: https://www.bing.com/news/infinitescrollajax?q=CNNs+accuracy+in+healthcare+diagnostics+2025&InfiniteScroll=1&first=11&SFX=1&cc=us&setlang=en 200
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+data+processing+speed+healthcare+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+data+processing+speed+healthcare+2025&limit=1 200
+INFO ddgs.ddgs: Error in engine yahoo: TimeoutException("Request timed out: RuntimeError('error sending request for url (https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20data%20processing%20speed%20healthcare%202025): operation timed out\\n\\nCaused by:\\n    operation timed out')")
+INFO primp: response: https://search.brave.com/search?q=AI+data+processing+speed+healthcare+2025&source=web 429
+INFO primp: response: https://search.yahoo.com/search;_ylt=Q4yxKEss8bhPZRNuoReXnouo;_ylu=cpCiSVpp0NoXKouLVE1lWZrp-rR1aDFg9IrWu6Z3YB1JhBM?p=AI+data+processing+speed+healthcare+2025 200
+INFO tools.search: DuckDuckGo returned 2 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+data+processing+speed+healthcare+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+pre-screening+medical+images+case+studies+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 2 relevant results (from 5 raw)
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+pre-screening+medical+images+case+studies+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+radiology+turnaround+time+reduction+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+radiology+turnaround+time+reduction+2025&limit=1 200
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20radiology%20turnaround%20time%20reduction%202025 200
+INFO primp: response: https://search.yahoo.com/search;_ylt=jMdc6tAdJWAGmr-3GKieH8T8;_ylu=KcwblvjJvywDKy2MQgg-dROEO2wi1kU_cXTsLhBXa42LqQI?p=AI+radiology+turnaround+time+reduction+2025 200
+INFO tools.search: DuckDuckGo returned 5 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+radiology+turnaround+time+reduction+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+tumor+grading+algorithms+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+tumor+grading+algorithms+2025&limit=1 200
+INFO ddgs.ddgs: Error in engine google: TimeoutException("Request timed out: RuntimeError('error sending request for url (https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20tumor%20grading%20algorithms%202025): operation timed out\\n\\nCaused by:\\n    operation timed out')")
+INFO primp: response: https://www.google.com/search?q=AI+tumor+grading+algorithms+2025&filter=1&start=0&hl=en-US&lr=lang_en&cr=countryUS 403
+INFO primp: response: https://www.mojeek.com/search?q=AI+tumor+grading+algorithms+2025 403
+INFO ddgs.ddgs: Error in engine yandex: DDGSException("RuntimeError: RuntimeError('error sending request for url (https://yandex.com/search/site/?text=AI+tumor+grading+algorithms+2025&web=1&searchid=3494448): client error (Connect)\\n\\nCaused by:\\n    0: client error (Connect)\\n    1: TLS handshake failed An existing connection was forcibly closed by the remote host. (os error 10054)\\n    2: An existing connection was forcibly closed by the remote host. (os error 10054)\\n    3: An existing connection was forcibly closed by the remote host. (os error 10054)')")
+INFO httpx: HTTP Request: POST https://html.duckduckgo.com/html/ "HTTP/2 200 OK"
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+tumor+grading+algorithms+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+diagnostic+accuracy+over+time+studies+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 2 relevant results (from 5 raw)
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+diagnostic+accuracy+over+time+studies+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+limitations+atypical+cases+healthcare+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20limitations%20atypical%20cases%20healthcare%202025 200
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+limitations+atypical+cases+healthcare+2025&limit=1 200
+INFO primp: response: https://www.google.com/search?q=AI+limitations+atypical+cases+healthcare+2025&filter=1&start=0&hl=en-US&lr=lang_en&cr=countryUS 403
+INFO ddgs.ddgs: Error in engine yandex: DDGSException("RuntimeError: RuntimeError('error sending request for url (https://yandex.com/search/site/?text=AI+limitations+atypical+cases+healthcare+2025&web=1&searchid=8868775): client error (Connect)\\n\\nCaused by:\\n    0: client error (Connect)\\n    1: TLS handshake failed An existing connection was forcibly closed by the remote host. (os error 10054)\\n    2: An existing connection was forcibly closed by the remote host. (os error 10054)\\n    3: An existing connection was forcibly closed by the remote host. (os error 10054)')")
+INFO primp: response: https://www.mojeek.com/search?q=AI+limitations+atypical+cases+healthcare+2025 403
+INFO primp: response: https://search.brave.com/search?q=AI+limitations+atypical+cases+healthcare+2025&source=web 429
+INFO primp: response: https://search.yahoo.com/search;_ylt=LbM7tywnUGwZYl6AfjpOWNXe;_ylu=OREwFmtvEZ4WlBUkrZzDPWo5jlHTWuANbzp5WpEtyJjrjpA?p=AI+limitations+atypical+cases+healthcare+2025 200
+INFO tools.search: DuckDuckGo returned 3 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+limitations+atypical+cases+healthcare+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+false+positives+diagnostics+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 2 relevant results (from 5 raw)
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+false+positives+diagnostics+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+integration+challenges+EHRs+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+integration+challenges+EHRs+2025&limit=1 200
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20integration%20challenges%20EHRs%202025 200
+INFO ddgs.ddgs: Error in engine yandex: DDGSException("RuntimeError: RuntimeError('error sending request for url (https://yandex.com/search/site/?text=AI+integration+challenges+EHRs+2025&web=1&searchid=7383363): client error (Connect)\\n\\nCaused by:\\n    0: client error (Connect)\\n    1: TLS handshake failed An existing connection was forcibly closed by the remote host. (os error 10054)\\n    2: An existing connection was forcibly closed by the remote host. (os error 10054)\\n    3: An existing connection was forcibly closed by the remote host. (os error 10054)')")
+INFO primp: response: https://search.brave.com/search?q=AI+integration+challenges+EHRs+2025&source=web 429
+INFO httpx: HTTP Request: POST https://html.duckduckgo.com/html/ "HTTP/2 200 OK"
+INFO tools.search: DuckDuckGo returned 4 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+integration+challenges+EHRs+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+faster+diagnoses+cancer+cardiovascular+outcomes+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 2 relevant results (from 5 raw)
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+faster+diagnoses+cancer+cardiovascular+outcomes+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+reducing+unnecessary+tests+imaging+costs+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20reducing%20unnecessary%20tests%20imaging%20costs%202025 200
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+reducing+unnecessary+tests+imaging+costs+2025&limit=1 200
+INFO primp: response: https://search.yahoo.com/search;_ylt=-5yELssTVwsuYazNT4jOlwTc;_ylu=pkmQm-T5s9zC4ggN92VUp14FOE4vo-cqlxTUI6NFKR_Rjko?p=AI+reducing+unnecessary+tests+imaging+costs+2025 200
+INFO tools.search: DuckDuckGo returned 2 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+reducing+unnecessary+tests+imaging+costs+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=smaller+hospitals+AI+ROI+challenges+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 2 relevant results (from 5 raw)
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=smaller+hospitals+AI+ROI+challenges+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+INFO research_agent.graph: [Agent L2] researching: Agent working... (12 tool calls so far)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.graph: [Agent L2] researching: Agent working... (26 tool calls so far)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+case+prioritization+in+radiology+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20case%20prioritization%20in%20radiology%202025 200
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+case+prioritization+in+radiology+2025&limit=1 200
+INFO httpx: HTTP Request: POST https://html.duckduckgo.com/html/ "HTTP/2 200 OK"
+INFO tools.search: DuckDuckGo returned 1 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+case+prioritization+in+radiology+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+improving+diagnostic+throughput+pathology+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20improving%20diagnostic%20throughput%20pathology%202025 200
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+improving+diagnostic+throughput+pathology+2025&limit=1 200
+INFO httpx: HTTP Request: POST https://html.duckduckgo.com/html/ "HTTP/2 202 Accepted"
+INFO primp: response: https://www.mojeek.com/search?q=AI+improving+diagnostic+throughput+pathology+2025 403
+INFO primp: response: https://search.yahoo.com/search;_ylt=c4KuFf2Z9OT9b2pkijbliLyG;_ylu=F-hwPz63yYP48SdNPLzqRo2sj7WL-VDH7lhw5FhWPOcGHI8?p=AI+improving+diagnostic+throughput+pathology+2025 200
+INFO tools.search: DuckDuckGo returned 3 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+improving+diagnostic+throughput+pathology+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+integration+delays+healthcare+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 1 relevant results (from 5 raw)
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20integration%20delays%20healthcare%202025 200
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+integration+delays+healthcare+2025&limit=1 200
+INFO primp: response: https://search.yahoo.com/search;_ylt=BJzsZNGvzz07AT5LtRys4CHI;_ylu=CXLLmMqryUYWugfQC1mxRH9481lIyBsx_gnJ5SZdey5abIE?p=AI+integration+delays+healthcare+2025 200
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+integration+delays+healthcare+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+user-friendly+interfaces+healthcare+adoption+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=AI%20user-friendly%20interfaces%20healthcare%20adoption%202025 200
+INFO primp: response: https://grokipedia.com/api/typeahead?query=AI+user-friendly+interfaces+healthcare+adoption+2025&limit=1 200
+INFO primp: response: https://search.yahoo.com/search;_ylt=LkZkI4ugOn0EA9Sz43YcCNly;_ylu=1mRd_Qwrbn_W8ShU6UH-glLs0bew-owz_Vb5u66gnfpHOW8?p=AI+user-friendly+interfaces+healthcare+adoption+2025 200
+INFO tools.search: DuckDuckGo returned 4 relevant results
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=AI+user-friendly+interfaces+healthcare+adoption+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=adaptive+AI+systems+regulatory+scrutiny+2025&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 2 relevant results (from 5 raw)
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=adaptive+AI+systems+regulatory+scrutiny+2025&format=json&categories=news&language=en&pageno=1 "HTTP/1.1 200 OK"
+INFO research_agent.graph: [Agent L2] researching: Agent working... (31 tool calls so far)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.graph: [Agent L2] researching: Agent working... (36 tool calls so far)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.graph: [Agent L2] forcing: Requesting final report...
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.graph: [Agent L2] drafted: Report: 594 words
+INFO research_agent.layers.expert: [Expert] investigate: Investigation complete. Coverage: 100% (19 findings)
+INFO research_agent.layers.expert: [Expert] synthesize: Cross-referencing findings and generating insights...
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.layers.expert: [Expert] synthesize: Found 6 cross-links, 7 insights
+INFO research_agent.layers.expert: [Expert] compose: Writing final report with evidence...
+WARNING tools.search: Tavily search failed: The account associated with this API key has been deactivated. If you wish to reactivate your subscription, please contact our team at support@tavily.com.
+INFO httpx: HTTP Request: GET http://localhost:8888/search?q=An+analysis+of+the+effects+of+artificial+intelligence+on+the+accuracy+and+efficiency+of+healthcare+diagnostics.&format=json&categories=general&language=en&pageno=1&time_range=year "HTTP/1.1 200 OK"
+INFO tools.search: SearXNG returned 1 relevant results (from 3 raw)
+INFO primp: response: https://en.wikipedia.org/w/api.php?action=opensearch&profile=fuzzy&limit=1&search=An%20analysis%20of%20the%20effects%20of%20artificial%20intelligence%20on%20the%20accuracy%20and%20efficiency%20of%20healthcare%20diagnostics. 200
+INFO primp: response: https://grokipedia.com/api/typeahead?query=An+analysis+of+the+effects+of+artificial+intelligence+on+the+accuracy+and+efficiency+of+healthcare+diagnostics.&limit=1 200
+INFO primp: response: https://search.brave.com/search?q=An+analysis+of+the+effects+of+artificial+intelligence+on+the+accuracy+and+efficiency+of+healthcare+diagnostics.&source=web 429
+INFO ddgs.ddgs: Error in engine yandex: DDGSException("RuntimeError: RuntimeError('error sending request for url (https://yandex.com/search/site/?text=An+analysis+of+the+effects+of+artificial+intelligence+on+the+accuracy+and+efficiency+of+healthcare+diagnostics.&web=1&searchid=3786520): client error (Connect)\\n\\nCaused by:\\n    0: client error (Connect)\\n    1: TLS handshake failed An existing connection was forcibly closed by the remote host. (os error 10054)\\n    2: An existing connection was forcibly closed by the remote host. (os error 10054)\\n    3: An existing connection was forcibly closed by the remote host. (os error 10054)')")
+INFO httpx: HTTP Request: POST https://html.duckduckgo.com/html/ "HTTP/2 200 OK"
+INFO tools.search: DuckDuckGo returned 3 relevant results
+INFO research_agent.utils: [Outline] Topic context from 3 search results
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.utils: [Outline] Generated for: An analysis of the effects of artificial intelligence on the
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.layers.expert: [Expert] compose: Report written: 3047 words
+INFO research_agent.layers.expert: [Expert] format: Formatting report for readability...
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.layers.expert: [Expert] format: Report formatted successfully
+INFO research_agent.layers.expert: [Expert] done: Expert pipeline complete: 3292 words, 76 sources, 100% coverage in 470.0s
+INFO research_agent.pipeline: [Pipeline] L-1: evaluating — Evaluating and comparing all 3 layers...
+INFO research_agent.evaluator: [Evaluator] Comparative evaluation of 3 layers
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.evaluator: [Evaluator] Extracted 5 claim pairs for L0→L1 (filtered from 5 raw)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.evaluator: [Evaluator] Extracted 4 claim pairs for L0→L2 (filtered from 4 raw)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.evaluator: [Evaluator] Extracted 4 claim pairs for L1→L2 (filtered from 4 raw)
+INFO research_agent.evaluator: [Evaluator] Completed 3 pairwise comparisons
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.evaluator: [Evaluator] Claim journey prompt length: 32273 chars
+INFO research_agent.evaluator: [Evaluator] Calling LLM for claim journey extraction...
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.evaluator: [Evaluator] Claim journey response: 3065 chars
+INFO research_agent.evaluator: [Evaluator] Response starts: ```json
+{
+  "category": "AI in Healthcare Diagnostics",
+  "topic_sentence": "AI algorithms have significantly improved diagnostic accuracy and efficiency in healthcare.",
+  "overall_narrative": "The c
+INFO research_agent.evaluator: [Evaluator] Response ends: 20–30% higher accuracy",
+          "why_it_matters": "Adds a comparative accuracy improvement figure, supported by a named source, enhancing the claim's credibility."
+        }
+      ]
+    }
+  ]
+}
+```
+INFO research_agent.evaluator: [Evaluator] Extracted claim journey: AI in Healthcare Diagnostics (3 snapshots)
+INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO research_agent.pipeline: [Pipeline] L-1: complete — Pipeline complete in 783.1s

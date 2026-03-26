@@ -17,12 +17,10 @@ import asyncio
 import logging
 import time
 
-from config import get_llm, set_model_tier
 from research_agent.models import ResearchResult, ComparisonReport
 from research_agent.layers import baseline, enhanced, expert
 from research_agent.evaluator import evaluate_all_layers, compare_layers
 from research_agent.cost import reset_tracker
-from research_agent.utils import generate_topic_scope, interpret_topic
 
 logger = logging.getLogger(__name__)
 
@@ -48,27 +46,9 @@ async def run_pipeline(
 
     notify(-1, "start", "Starting pipeline: L0+L1 parallel → L2 deep dive...")
 
-    # ── Interpret topic (disambiguate colloquial/ambiguous briefs) ──────
-    notify(-1, "interpreting", "Interpreting research brief...")
-    try:
-        set_model_tier("budget")
-        interpret_llm = get_llm("planner")
-        topic = await interpret_topic(topic, interpret_llm, brief=brief)
-        logger.info(f"[Pipeline] Using topic: {topic}")
-    except Exception as e:
-        logger.warning(f"[Pipeline] Topic interpretation failed (non-fatal): {e}")
-
-    # ── Auto-generate scope boundaries ───────────────────────────────────
-    notify(-1, "scoping", "Defining topic scope boundaries...")
-    try:
-        set_model_tier("budget")
-        scope_llm = get_llm("planner")
-        scope = await generate_topic_scope(topic, scope_llm)
-        if scope:
-            brief = f"TOPIC SCOPE (auto-generated — stay within these boundaries):\n\n{scope}\n\n{brief}" if brief else f"TOPIC SCOPE (auto-generated — stay within these boundaries):\n\n{scope}"
-            logger.info(f"[Pipeline] Scope generated and prepended to brief")
-    except Exception as e:
-        logger.warning(f"[Pipeline] Scope generation failed (non-fatal): {e}")
+    # Topic interpret and scope generation removed — they added ~15s overhead
+    # and often rewrote clear topics badly (e.g., adding "IT spending").
+    # The research prompts already handle scope and disambiguation.
 
     results: list[ResearchResult] = []
 

@@ -302,6 +302,30 @@ def make_tools(ctx: AgentContext, ledger: EvidenceLedger | None = None, claim_ma
             "tool": "search_web", "query": query,
             "results": len(results), "hits": hit_data,
         })
+
+        # Auto-record search snippets as evidence (if ledger available).
+        # This ensures evidence accumulates even if the agent forgets to call record_finding.
+        if ledger is not None:
+            from research_agent.models import Evidence
+            for r in results:
+                snippet = r.get("snippet", "").strip()
+                url = r.get("url", "")
+                title = r.get("title", "")
+                # Only record snippets with substantial content (>80 chars)
+                if len(snippet) > 80:
+                    # Infer section from query — the plan prompt names sections in queries
+                    section = query  # Will be matched fuzzy in compose
+                    ledger.add(Evidence(
+                        claim_id=section,
+                        fact=snippet[:500],
+                        source_url=url,
+                        source_title=title,
+                        source_tier=get_source_tier(url),
+                        evidence_type="confirms",
+                        confidence="medium",
+                        raw_snippet=snippet[:300],
+                    ))
+
         return f"{len(results)} results ({new_count} new):\n\n" + "\n\n".join(parts)
 
     @tool
@@ -367,17 +391,17 @@ def make_tools(ctx: AgentContext, ledger: EvidenceLedger | None = None, claim_ma
     tools_list = [search_web, scrape_page, assess_source]
 
     # Add record_finding tool for expert pipeline (evidence tracking)
-    if ledger is not None and claim_map is not None:
+    if ledger is not None:
         from research_agent.models import Evidence
 
         @tool
-        async def record_finding(claim_id: str, finding: str, evidence_type: str, confidence: str) -> str:
-            """Record a research finding and map it to a specific claim. Use this after
-            finding relevant data from search or scrape to explicitly link evidence to claims.
+        async def record_finding(section: str, finding: str, evidence_type: str, confidence: str) -> str:
+            """Record a research finding for a report section. Call this after every
+            useful data point you find from search or scrape.
 
             Args:
-                claim_id: The claim ID this evidence supports (e.g., "s1_c01")
-                finding: What you found (the factual content)
+                section: Which report section this supports (e.g., "Market Overview")
+                finding: What you found — specific data, numbers, facts
                 evidence_type: "confirms", "contradicts", "extends", or "quantifies"
                 confidence: "high", "medium", or "low"
             """
@@ -385,7 +409,7 @@ def make_tools(ctx: AgentContext, ledger: EvidenceLedger | None = None, claim_ma
             source_url = ""
             source_title = ""
             source_tier = 3
-            source_text = ""  # The actual text from the source for validation
+            source_text = ""
             for tc in reversed(ctx.tool_calls_log):
                 if tc.get("tool") == "scrape_page":
                     source_url = tc.get("url", "")
@@ -404,21 +428,21 @@ def make_tools(ctx: AgentContext, ledger: EvidenceLedger | None = None, claim_ma
                         source_text = hits[0].get("snippet", "")
                     break
 
-            # ── Source-text validation ────────────────────────────────────
-            # Check that key entities/numbers in the finding actually appear
-            # in the source text. If not, downgrade confidence and mark as inferred.
-            validated = _validate_finding_against_source(finding, source_text)
-            if not validated:
-                logger.warning(
-                    f"[record_finding] Finding not grounded in source text. "
-                    f"claim={claim_id}, confidence downgraded to 'low', type='inferred'. "
-                    f"Finding: {finding[:120]}..."
-                )
-                confidence = "low"
-                evidence_type = "inferred"
+            # Source-text validation — only strict for scraped pages (long text).
+            # Search snippets are too short for reliable token matching.
+            if len(source_text) > 500:
+                validated = _validate_finding_against_source(finding, source_text)
+                if not validated:
+                    logger.info(
+                        f"[record_finding] Finding not fully grounded in scraped text. "
+                        f"section={section}, confidence='medium', type='inferred'. "
+                        f"Finding: {finding[:100]}..."
+                    )
+                    confidence = "medium"
+                    evidence_type = "inferred"
 
             evidence = Evidence(
-                claim_id=claim_id,
+                claim_id=section,  # Use section name as the grouping key
                 fact=finding,
                 source_url=source_url,
                 source_title=source_title,
@@ -429,19 +453,18 @@ def make_tools(ctx: AgentContext, ledger: EvidenceLedger | None = None, claim_ma
             ledger.add(evidence)
 
             # NOTE: record_finding does NOT increment tool_call_count — it's bookkeeping
-            coverage = ledger.coverage_score(claim_map)
-            uncovered = ledger.uncovered_claims(claim_map)
-            remaining = len(uncovered)
+            total_findings = len(ledger.entries)
+            sections_with_evidence = len({e.claim_id for e in ledger.entries})
 
             ctx.tool_calls_log.append({
                 "tool": "record_finding",
-                "claim_id": claim_id,
+                "section": section,
                 "evidence_type": evidence_type,
             })
 
             return (
-                f"Recorded. Coverage: {coverage:.0%}. "
-                f"{remaining} claims still need evidence."
+                f"Recorded. Total findings: {total_findings}. "
+                f"Sections with evidence: {sections_with_evidence}."
             )
 
         tools_list.append(record_finding)

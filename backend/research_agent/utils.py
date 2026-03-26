@@ -420,3 +420,45 @@ def parse_outline_sections(outline: str) -> list[str]:
         if m:
             sections.append(m.group(1).strip())
     return sections
+
+
+def compute_depth_targets(
+    section_count: int,
+    total_claims: int,
+) -> dict:
+    """Compute word count targets based on topic complexity.
+
+    Uses section count and claim density to dynamically set targets
+    instead of hardcoding word counts in prompts.
+
+    Note: section_count is from dissect (the prior report), but compose
+    typically generates 1.5-2x more sections (adds exec summary, Porter's,
+    What to Watch, etc). We account for this expansion.
+    """
+    # Compose generates ~1.5x the dissected sections
+    effective_sections = max(section_count + 3, int(section_count * 1.5))
+
+    # Base: 500 words per effective section
+    base_total = effective_sections * 500
+
+    # Claim density multiplier — more claims = more depth needed
+    if total_claims > 30:
+        claim_mult = 1.2
+    elif total_claims > 15:
+        claim_mult = 1.0
+    else:
+        claim_mult = 0.9
+
+    target = int(base_total * claim_mult)
+
+    # Floor: 2500 (any report needs substance), ceiling: 6000
+    target = max(2500, min(target, 6000))
+
+    per_section = target // max(effective_sections, 1)
+
+    return {
+        "target_words": target,
+        "per_section_words": per_section,
+        "expand_threshold": int(target * 0.75),
+        "editorial_min": int(target * 0.5),
+    }

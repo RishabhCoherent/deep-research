@@ -37,7 +37,7 @@ async def run(
 
     notify("start", "Starting enhanced research with web search...")
 
-    set_model_tier("standard")
+    set_model_tier("budget")  # gpt-4o-mini — L1 is search+write, save cost for L2 compose
     llm = get_llm("writer")
 
     # Create agent context for tool closures

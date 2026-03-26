@@ -1524,18 +1524,19 @@ INSTRUCTIONS:
 4. Identify each section's central thesis (one sentence)
 5. Identify missing angles — what SHOULD this section cover but doesn't?
 
-GRADING RULES:
-- "strong": Has at least ONE of: a specific number, a named company, a named regulation, or a year+data combination
-- "weak": General assertion with NO specifics at all
-- "unsupported": No evidence of any kind
+GRADING RULES — BE STRICT:
+- "strong": Has BOTH a specific number/dollar amount AND a named source or verifiable reference.
+  Example: "The market reached $4.2B in 2025 according to DataReportal" → STRONG
+- "weak": Has only a named company OR only a vague number, but not both + source.
+  Examples:
+  - "Tesla leads the market" → WEAK (no number, no source)
+  - "The market is worth $600 billion" → WEAK (no source cited)
+  - "TikTok Shop is growing rapidly in Southeast Asia" → WEAK (no specific metrics)
+  - "UPI processes billions of transactions" → WEAK (vague "billions", no exact figure)
+- "unsupported": No specifics at all — pure assertion.
+  Example: "Regulations are tightening" → UNSUPPORTED
 - "stale": Data from before 2024 presented as current
-- IMPORTANT: If a claim mentions a specific company OR a specific number, grade it "strong" — do not require BOTH
-- "Tesla leads the market" → STRONG (named company)
-- "Market reached $4.2B in 2025" → STRONG (specific number + year)
-- "Battery costs have declined significantly" → WEAK (no specific cost figure)
-- "Several companies are competing" → WEAK (no names)
-- "Regulations are tightening" → UNSUPPORTED (no specifics)
-- TARGET: At least 30-40% of claims should be "strong" if the prior report contains specific data
+- TARGET: Grade at least 50-70% of claims as "weak" or "unsupported" — the L1 report is a draft that needs deepening, not a finished product. Be skeptical.
 
 OUTPUT FORMAT — return ONLY valid JSON, no explanation:
 {{
@@ -1555,6 +1556,36 @@ OUTPUT FORMAT — return ONLY valid JSON, no explanation:
           "reasoning": "No specific market size figure or source cited"
         }}
       ]
+    }}
+  ]
+}}"""
+
+
+EXPERT_TOPIC_PLAN_PROMPT = """You are a senior research director planning a comprehensive research project.
+
+TOPIC: {topic}
+
+BRIEF: {brief}
+
+Generate a research plan with 6-10 sections. For EACH section, provide 3-4 targeted search queries.
+
+PLANNING RULES:
+- Think like a McKinsey partner scoping a client engagement — what sections would the definitive report need?
+- Include: Executive Summary, market overview, country/company deep-dives, competitive analysis, regulatory, technology, and forward-looking sections
+- Each query should be specific enough to find concrete data: company names, dollar amounts, percentages, dates
+- Include the current year (2025/2026) in queries for recency
+- GOOD query: "TikTok Shop GMV Southeast Asia 2025 billion" (specific platform, metric, region, year)
+- BAD query: "social commerce trends Asia" (too generic)
+- Total: 20-35 queries across all sections
+
+OUTPUT FORMAT — return ONLY valid JSON:
+{{
+  "sections": [
+    {{
+      "section": "Section Title",
+      "description": "What this section should cover (1 sentence)",
+      "queries": ["specific search query 1", "specific search query 2", "specific search query 3"],
+      "priority": 1
     }}
   ]
 }}"""
@@ -1614,6 +1645,44 @@ OUTPUT FORMAT — return ONLY valid JSON:
     }}
   ]
 }}"""
+
+
+EXPERT_SECTION_INVESTIGATE_PROMPT = """You are a senior research analyst conducting deep research for a comprehensive report.
+
+TOPIC: {topic}
+
+RESEARCH PLAN (sections to investigate):
+{research_plan}
+
+YOUR TOOLS:
+1. search_web(query) — Search the web for data
+2. scrape_page(url) — Get full page content from a URL
+3. record_finding(section, finding, evidence_type, confidence) — Record what you found
+
+═══ WORKFLOW ═══
+
+For EACH section in the plan:
+1. SEARCH using the provided queries (and add your own if needed)
+2. SCRAPE the best 1-2 URLs from results for detailed data
+3. RECORD every useful finding: specific numbers, company names, dates, quotes
+
+═══ record_finding ARGUMENTS ═══
+record_finding(
+    section="Market Overview",      # Which section this evidence supports
+    finding="TikTok Shop processed $12B GMV in Southeast Asia in 2025",
+    evidence_type="quantifies",     # "confirms", "contradicts", "extends", "quantifies"
+    confidence="high"               # "high", "medium", "low"
+)
+
+═══ CRITICAL RULES ═══
+- Record EVERY useful data point — numbers, percentages, company metrics, regulatory details
+- One search can yield findings for MULTIPLE sections — record for each relevant section
+- AIM for 3-5 findings per section minimum
+- After every 2 searches, you MUST call record_finding at least once
+- SCRAPE pages that have detailed data beyond snippets
+- Cover ALL sections before going deep on any single one
+- Target: 15-25 searches, 8-15 scrapes, 30-50 recorded findings total
+"""
 
 
 EXPERT_INVESTIGATE_PROMPT = """You are a senior research analyst. You MUST follow this EXACT workflow for each claim in your research plan.
@@ -1763,7 +1832,7 @@ UNSUPPORTED CLAIMS (gap report):
 INSTRUCTIONS:
 
 1. EXECUTIVE SUMMARY FIRST: Start with ## Executive Summary containing:
-   - 5-7 key findings as bold bullet points with specific numbers
+   - 5-7 key findings as bullet points — bold only the key number or metric in each, not the entire sentence
    - A 2-sentence strategic verdict — what should the reader DO?
    - A CEO must understand the full picture from this section alone
 
@@ -1811,10 +1880,11 @@ SOURCE CITATIONS:
 
 OUTPUT FORMAT:
 - Start directly with ## Executive Summary — NO preamble, NO meta-commentary
-- Each section: 400-700 words with data, case studies, analysis, and implications
-- TARGET: 4000-6000 words. This is a COMPREHENSIVE report, not a summary.
+- Each section: ~{per_section_words} words with data, analysis, and implications
+- TARGET: {target_words} words total. Write comprehensively, not as a summary.
 - Include at least 2 tables with real data
-- Format for maximum readability: short paragraphs, bullet points, bold key terms"""
+- Format for maximum readability: short paragraphs, bullet points, bold key terms
+- END with ## Sources & References — list the best sources used in the report as a numbered bibliography. Include ONLY credible sources (government agencies, major news outlets, company filings, industry associations, well-known data platforms like DataReportal/Statista). Format each as: Source Name — URL. Do NOT include competitor research firms. Aim for 8-15 high-quality references."""
 
 
 EXPERT_EDITORIAL_REVIEW_PROMPT = """You are a senior editorial reviewer evaluating a research report draft. Score the draft on these 4 dimensions (1-10 each) and provide specific, actionable feedback.
