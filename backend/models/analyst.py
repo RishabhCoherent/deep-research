@@ -58,10 +58,10 @@ class AnalysisFramework:
     scope_out: list[str] = field(default_factory=list)     # Explicitly out of scope
     report_sections: list[str] = field(default_factory=list)  # Final section headings
 
-    # Analytical framework — designed during decompose, guides research and compose
-    comparison_dimensions: list[str] = field(default_factory=list)  # e.g. ["Demand & Scale", "Payments"]
-    key_tables: list[str] = field(default_factory=list)            # e.g. ["Country comparison across 6 dims"]
-    market_segmentation_hypothesis: str = ""                       # e.g. "Mature vs High-Growth vs Emerging"
+    # Analytical approach — designed during decompose, guides research and compose.
+    # Free-form dict: the LLM decides what keys to use based on the topic.
+    # May contain dimensions, proposed_tables, segmentation_hypothesis, evaluation_criteria, etc.
+    analytical_approach: dict = field(default_factory=dict)
     contrarian_hypotheses: list[str] = field(default_factory=list)  # Bold claims to test
 
     def pending_questions(self, priority: Optional[int] = None) -> list[SubQuestion]:
@@ -348,14 +348,16 @@ class ResearchBoard:
             for c in self.unresolved_contradictions()[:3]:
                 lines.append(f"  {c.id}: {c.description}")
 
-        # Analytical framework context (guides what structure to fill)
-        if self.framework.comparison_dimensions:
-            lines.append(f"\nANALYTICAL FRAMEWORK TO FILL:")
-            lines.append(f"  Dimensions: {', '.join(self.framework.comparison_dimensions[:6])}")
-            if self.framework.market_segmentation_hypothesis:
-                lines.append(f"  Segmentation hypothesis: {self.framework.market_segmentation_hypothesis}")
-            if self.framework.contrarian_hypotheses:
-                lines.append(f"  Contrarian hypotheses to test: {'; '.join(self.framework.contrarian_hypotheses[:3])}")
+        # Analytical approach context (guides what structure to fill)
+        if self.framework.analytical_approach:
+            lines.append(f"\nANALYTICAL APPROACH:")
+            for key, value in self.framework.analytical_approach.items():
+                if isinstance(value, list):
+                    lines.append(f"  {key}: {', '.join(str(v) for v in value[:6])}")
+                else:
+                    lines.append(f"  {key}: {str(value)[:200]}")
+        if self.framework.contrarian_hypotheses:
+            lines.append(f"  Contrarian hypotheses to test: {'; '.join(self.framework.contrarian_hypotheses[:3])}")
 
         return "\n".join(lines)
 
@@ -639,11 +641,10 @@ class AnalysisResult:
     narrative_thread: str = ""                                # The overarching story
     causal_chains: list[str] = field(default_factory=list)    # Human-readable causal chains
 
-    # Original analytical frameworks — created by the analyze phase
-    scoring_matrix: dict = field(default_factory=dict)        # { dimensions, entities, scores }
-    market_segments: list[dict] = field(default_factory=list)  # [{ name, members, characteristics }]
-    ranked_recommendations: list[dict] = field(default_factory=list)  # [{ rank, entity, reasoning }]
-    conversion_framework: dict = field(default_factory=dict)  # { layers, entity_performance }
+    # Analytical frameworks — created by the analyze phase.
+    # Free-form list: the LLM decides what frameworks to create based on evidence.
+    # Each dict: {name, type, description, data}
+    analytical_frameworks: list[dict] = field(default_factory=list)
     contrarian_insights: list[str] = field(default_factory=list)
 
 

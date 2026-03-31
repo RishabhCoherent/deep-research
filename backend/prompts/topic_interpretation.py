@@ -60,10 +60,12 @@ Step 1 — Identify the report TYPE from the topic. Examples:
   - "Key Developments" / "M&A" → Key Developments
   - "BCG Matrix" → BCG Matrix
   - "Micro and Macro Economic Factors" / "Economic Factors" / "Macroeconomic" / "Microeconomic" → Economic Factors Analysis
-  - Anything not matching a named framework → Infer the best report type from the topic.
+  - Anything not matching a named framework above → Infer the best report type from the topic.
     Use a descriptive label (e.g., "Platform Comparison", "Adoption Analysis", "Impact Assessment",
-    "Feasibility Study", "Technology Evaluation"). Do NOT default to "General Market Report"
+    "Feasibility Study", "Technology Evaluation", "Policy Analysis", "Threat Assessment",
+    "Comparative Study", "Industry Deep-Dive"). Do NOT default to "General Market Report"
     unless the topic is genuinely a broad market overview.
+    MOST topics will NOT match a named framework — design custom sections instead.
 
 Step 2 — Generate the CANONICAL SECTIONS for this report type.
 Use exactly the sections a top-tier consulting firm would include — no extras, no omissions.
@@ -140,7 +142,7 @@ Do NOT output anything else."""
 # 1b. TOPIC SCOPE DEFINITION — utils.py (auto-generated scope boundaries)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-SCOPE_DEFINITION_PROMPT = """You are a senior research analyst. Your job is to define PRECISE SCOPE BOUNDARIES for a market research report.
+SCOPE_DEFINITION_PROMPT = """You are a senior research analyst. Your job is to define PRECISE SCOPE BOUNDARIES for a research report.
 
 Topic: {topic}
 

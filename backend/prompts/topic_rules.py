@@ -215,8 +215,14 @@ def get_quality_rules(report_type: str) -> str:
     for key, rules in TOPIC_QUALITY_RULES.items():
         if key.lower() in rt_lower or rt_lower in key.lower():
             return rules
-    # Default: universal rules only (no topic-specific block)
-    return ""
+    # Generic fallback for non-market topics
+    return """QUALITY RULES (general):
+- Every major claim must be supported by at least one cited source
+- Include specific names, dates, and data points — avoid vague generalizations
+- Distinguish between established facts and expert opinions
+- Acknowledge uncertainty and evidence gaps honestly
+- Use "So what?" framing: explain why each finding matters to the reader
+- Cross-reference findings across sections to build a coherent narrative"""
 
 
 def get_question_rules(report_type: str) -> str:
@@ -227,7 +233,12 @@ def get_question_rules(report_type: str) -> str:
     for key, rules in TOPIC_QUESTION_RULES.items():
         if key.lower() in rt_lower or rt_lower in key.lower():
             return rules
-    return ""
+    return """QUESTION RULES (general):
+- Start with "what is the current state?" to establish baseline understanding
+- Include at least one "who are the key players/actors?" question
+- Include at least one forward-looking question about trends or trajectory
+- Include at least one question about challenges, risks, or limitations
+- Make questions specific and answerable with research, not vague"""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

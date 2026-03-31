@@ -92,25 +92,6 @@ def get_llm(role: str) -> ChatOpenAI:
     )
 
 
-# ─── Sub-section Definitions (canonical order) ────────────────────────────────
-
-
-SUBSECTIONS = [
-    {"id": "market_dynamics",       "name": "Market Dynamics"},
-    {"id": "pest_analysis",         "name": "PEST Analysis"},
-    {"id": "porters_five_forces",   "name": "Porter's Five Forces Analysis"},
-    {"id": "tech_advancements",     "name": "Technological Advancements"},
-    {"id": "mergers_acquisitions",  "name": "Merger, Acquisition and Collaboration Scenario"},
-    {"id": "product_approvals",     "name": "Recent Product Approvals/Launches"},
-    {"id": "key_developments",      "name": "Key Developments"},
-    {"id": "market_trends",         "name": "Market Trends"},
-    {"id": "cost_of_therapy",       "name": "Cost of Therapy/Product"},
-    {"id": "patient_journey",       "name": "Patient Journey / Treatment Algorithm"},
-    {"id": "treatment_options",     "name": "Treatment Options Analysis"},
-]
-
-SUBSECTION_ORDER = [s["id"] for s in SUBSECTIONS]
-
 
 # ─── Research Constants ───────────────────────────────────────────────────────
 

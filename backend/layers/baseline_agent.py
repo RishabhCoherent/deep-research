@@ -63,7 +63,7 @@ async def run(
             try:
                 section_names = json.loads(raw)
             except json.JSONDecodeError:
-                section_names = ["Market Overview", "Key Players", "Trends", "Challenges", "Outlook"]
+                section_names = ["Overview", "Key Findings", "Analysis", "Challenges", "Outlook"]
 
         section_list = "\n".join(f"## {s}" for s in section_names)
         notify("planning", f"Planned {len(section_names)} sections")

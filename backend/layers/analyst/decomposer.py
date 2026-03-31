@@ -47,13 +47,12 @@ async def decompose(topic: str, brief: str = "", notify=None) -> AnalysisFramewo
 
     if not data or "sub_questions" not in data:
         logger.error(f"[Analyst] Decompose failed to parse: {raw[:200]}")
-        # Return a minimal framework so the pipeline doesn't crash
         return _fallback_framework(topic)
 
-    # Parse analytical framework (designed before sub-questions)
-    af = data.get("analytical_framework", {})
-    if not isinstance(af, dict):
-        af = {}
+    # Parse analytical approach (free-form dict — LLM decides the keys)
+    analytical_approach = data.get("analytical_approach", {})
+    if not isinstance(analytical_approach, dict):
+        analytical_approach = {}
 
     framework = AnalysisFramework(
         core_question=data.get("core_question", topic),
@@ -61,10 +60,8 @@ async def decompose(topic: str, brief: str = "", notify=None) -> AnalysisFramewo
         scope_in=data.get("scope_in", []),
         scope_out=data.get("scope_out", []),
         report_sections=data.get("report_sections", []),
-        comparison_dimensions=af.get("comparison_dimensions", []),
-        key_tables=af.get("key_tables", []),
-        market_segmentation_hypothesis=af.get("market_segmentation_hypothesis", ""),
-        contrarian_hypotheses=af.get("contrarian_hypotheses", []),
+        analytical_approach=analytical_approach,
+        contrarian_hypotheses=data.get("contrarian_hypotheses", []),
     )
 
     for sq_data in data["sub_questions"]:
@@ -101,40 +98,48 @@ async def decompose(topic: str, brief: str = "", notify=None) -> AnalysisFramewo
 
 
 def _fallback_framework(topic: str) -> AnalysisFramework:
-    """Minimal framework when LLM parsing fails."""
+    """Minimal generic framework when LLM parsing fails."""
+    from datetime import date
+    year = date.today().year
+
     return AnalysisFramework(
         core_question=topic,
         sub_questions=[
-            SubQuestion(id="sq_01", question=f"What is the overall market size and growth for {topic}?",
-                       answer_type="numeric", research_strategy="data_hunt", priority=1,
-                       search_queries=[f"{topic} market size 2025 2026", f"{topic} growth rate CAGR"]),
-            SubQuestion(id="sq_02", question=f"Who are the key players and competitors in {topic}?",
-                       answer_type="list", research_strategy="company_deep_dive", priority=1,
-                       search_queries=[f"{topic} major companies market share", f"{topic} competitive landscape leaders"]),
-            SubQuestion(id="sq_03", question=f"What are the main trends and drivers for {topic}?",
+            SubQuestion(id="sq_01", question=f"What is the current state and scope of {topic}?",
+                       answer_type="general", research_strategy="data_hunt", priority=1,
+                       search_queries=[f"{topic} overview {year}", f"{topic} current state {year}"]),
+            SubQuestion(id="sq_02", question=f"Who are the key entities or actors involved in {topic}?",
+                       answer_type="list", research_strategy="data_hunt", priority=1,
+                       search_queries=[f"{topic} key players", f"{topic} major participants {year}"]),
+            SubQuestion(id="sq_03", question=f"What are the main trends or developments in {topic}?",
                        answer_type="trend", research_strategy="expert_scan", priority=2,
-                       search_queries=[f"{topic} trends outlook 2025 2026", f"{topic} key drivers challenges"]),
-            SubQuestion(id="sq_04", question=f"What is the regulatory environment for {topic}?",
-                       answer_type="list", research_strategy="regulatory_lookup", priority=2,
-                       search_queries=[f"{topic} regulations policy government 2025", f"{topic} compliance requirements"]),
-            SubQuestion(id="sq_05", question=f"What are the risks and challenges for {topic}?",
+                       search_queries=[f"{topic} trends {year}", f"{topic} recent developments"]),
+            SubQuestion(id="sq_04", question=f"What are the main challenges or risks related to {topic}?",
                        answer_type="list", research_strategy="expert_scan", priority=2,
-                       search_queries=[f"{topic} risks challenges barriers", f"{topic} disruption threats"]),
+                       search_queries=[f"{topic} challenges risks", f"{topic} obstacles barriers"]),
+            SubQuestion(id="sq_05", question=f"What is the outlook or trajectory for {topic}?",
+                       answer_type="trend", research_strategy="triangulate", priority=2,
+                       search_queries=[f"{topic} outlook forecast", f"{topic} future predictions"]),
         ],
-        report_sections=["Executive Summary", "Market Overview", "Key Players", "Trends & Drivers",
-                         "Regulatory Environment", "Risks & Challenges", "Recommendations"],
+        report_sections=["Executive Summary", "Current State", "Key Entities",
+                         "Trends & Developments", "Challenges", "Outlook"],
     )
 
 
 def _enrich_framework(framework: AnalysisFramework, topic: str) -> AnalysisFramework:
     """Add basic sub-questions if LLM generated too few."""
+    from datetime import date
+    year = date.today().year
     existing_ids = {sq.id for sq in framework.sub_questions}
     idx = len(framework.sub_questions) + 1
 
     basics = [
-        ("What is the market size?", "numeric", "data_hunt", 1, [f"{topic} market size 2025 billion"]),
-        ("Who are the key players?", "list", "company_deep_dive", 1, [f"{topic} major companies market share"]),
-        ("What are the growth trends?", "trend", "expert_scan", 2, [f"{topic} growth trends outlook"]),
+        (f"What is the current state of {topic}?", "general", "data_hunt", 1,
+         [f"{topic} overview {year}"]),
+        (f"Who are the key entities involved in {topic}?", "list", "data_hunt", 1,
+         [f"{topic} key players participants {year}"]),
+        (f"What are the main trends in {topic}?", "trend", "expert_scan", 2,
+         [f"{topic} trends outlook {year}"]),
     ]
 
     for question, atype, strategy, priority, queries in basics:

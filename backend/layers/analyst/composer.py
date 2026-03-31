@@ -5,7 +5,9 @@ Pass 1: Argument structure (reasoning model) — what each section argues
 Pass 2: Full report (premium writer) — prose from structured outline + evidence
 """
 
+import json
 import logging
+import re
 
 from config import get_llm, set_model_tier
 from models.analyst import AnalysisResult, ResearchBoard
@@ -32,8 +34,8 @@ async def compose(
 
     sections = board.framework.report_sections
     if not sections:
-        sections = ["Executive Summary", "Market Overview", "Key Players",
-                     "Competitive Analysis", "Trends & Outlook", "Recommendations"]
+        sections = ["Executive Summary", "Current State", "Key Findings",
+                     "Analysis", "Implications", "Conclusion"]
 
     # Build evidence organized by section/sub-question
     evidence_by_section = _build_evidence_by_section(board)
@@ -59,12 +61,8 @@ async def compose(
     # Causal chains
     chains_text = "\n".join(f"- {c}" for c in analysis.causal_chains) if analysis.causal_chains else "None identified."
 
-    # Format analytical frameworks for prompts
-    import json
-    scoring_matrix_text = json.dumps(analysis.scoring_matrix, indent=2) if analysis.scoring_matrix else "Not generated."
-    market_segments_text = json.dumps(analysis.market_segments, indent=2) if analysis.market_segments else "Not generated."
-    ranked_recs_text = json.dumps(analysis.ranked_recommendations, indent=2) if analysis.ranked_recommendations else "Not generated."
-    conversion_fw_text = json.dumps(analysis.conversion_framework, indent=2) if analysis.conversion_framework else "Not applicable."
+    # Format analytical frameworks (flexible — whatever the analyze phase produced)
+    frameworks_text = _format_frameworks(analysis.analytical_frameworks)
     contrarian_text = "\n".join(f"- {c}" for c in analysis.contrarian_insights) if analysis.contrarian_insights else "None identified."
 
     set_model_tier("standard")
@@ -80,10 +78,7 @@ async def compose(
             causal_chains=chains_text,
             judgments=judgments_text,
             evidence_gaps=gaps_text,
-            scoring_matrix=scoring_matrix_text,
-            market_segments=market_segments_text,
-            ranked_recommendations=ranked_recs_text,
-            conversion_framework=conversion_fw_text,
+            analytical_frameworks=frameworks_text,
             contrarian_insights=contrarian_text,
         )},
     ]
@@ -104,10 +99,13 @@ async def compose(
 
     # ── Pass 2: Full report ───────────────────────────────────────────────
 
-    # Calculate dynamic word targets — be generous, LLMs tend to underwrite
+    # Calculate dynamic word targets
     num_sections = len(sections)
     target_words = max(6000, num_sections * 800)
     per_section_words = target_words // max(num_sections, 1)
+
+    # Build banned firms summary for the prompt
+    banned_firms_summary = ", ".join(BANNED_RESEARCH_FIRMS[:10]) + ", etc."
 
     set_model_tier("premium")
     llm_writer = get_llm("writer")
@@ -119,11 +117,9 @@ async def compose(
             evidence_by_section=evidence_by_section,
             judgments=judgments_text,
             evidence_gaps=gaps_text,
-            scoring_matrix=scoring_matrix_text,
-            market_segments=market_segments_text,
-            ranked_recommendations=ranked_recs_text,
-            conversion_framework=conversion_fw_text,
+            analytical_frameworks=frameworks_text,
             contrarian_insights=contrarian_text,
+            banned_firms_summary=banned_firms_summary,
             target_words=target_words,
             per_section_words=per_section_words,
             **date_vars(),
@@ -150,6 +146,7 @@ async def compose(
             f"The report is only {word_count} words. The target is {target_words}. "
             f"Expand each section with more detail, additional case studies, "
             f"deeper analysis, and more specific data points from the evidence. "
+            f"IMPORTANT: Only use data from the evidence below. Do NOT fabricate any numbers or statistics.\n\n"
             f"Here is the current draft to expand:\n\n{draft}\n\n"
             f"EVIDENCE:\n{evidence_by_section}\n\n"
             f"Write the COMPLETE expanded report. Start with ## Executive Summary."
@@ -168,11 +165,29 @@ async def compose(
     return draft
 
 
+def _format_frameworks(frameworks: list[dict]) -> str:
+    """Format analytical frameworks for prompt injection."""
+    if not frameworks:
+        return "No analytical frameworks were generated."
+    parts = []
+    for i, fw in enumerate(frameworks, 1):
+        name = fw.get("name", f"Framework {i}")
+        fw_type = fw.get("type", "unknown")
+        desc = fw.get("description", "")
+        data = fw.get("data", {})
+        parts.append(f"### {name} (type: {fw_type})")
+        if desc:
+            parts.append(f"{desc}")
+        if data:
+            parts.append(json.dumps(data, indent=2))
+        parts.append("")
+    return "\n".join(parts)
+
+
 def _build_evidence_by_section(board: ResearchBoard) -> str:
     """Organize evidence by section/sub-question for the compose prompt."""
     parts = []
 
-    # Group sub-questions by report section (rough mapping by keywords)
     section_evidence = {}
     for sq in board.framework.sub_questions:
         evidence = board.evidence_for(sq.id)
@@ -212,11 +227,14 @@ def _format_outline(outline_data: dict) -> str:
         so_what = section.get("so_what", "")
         structure = section.get("structure", "narrative")
         judgment = section.get("judgment", "")
+        frameworks = section.get("frameworks", [])
 
         lines.append(f"{heading}")
         lines.append(f"  THESIS: {thesis}")
         if judgment:
             lines.append(f"  JUDGMENT: {judgment}")
+        if frameworks:
+            lines.append(f"  FRAMEWORKS: {', '.join(frameworks)}")
         lines.append(f"  SO WHAT: {so_what}")
         lines.append(f"  STRUCTURE: {structure}")
         lines.append("")
@@ -238,19 +256,15 @@ def _simple_outline(sections: list[str], analysis: AnalysisResult) -> str:
 
 def _scrub_competitors(text: str) -> str:
     """Remove mentions of competitor research firms."""
-    import re
     for firm in BANNED_RESEARCH_FIRMS:
-        # Remove "according to X" patterns
         text = re.sub(
             rf'(?i)according\s+to\s+{re.escape(firm)}[,.\s]',
             '', text
         )
-        # Remove "(Source: X)" patterns
         text = re.sub(
             rf'(?i)\((?:source:\s*)?{re.escape(firm)}[^)]*\)',
             '', text
         )
-        # Remove standalone mentions like "X reports that" or "X estimates"
         text = re.sub(
             rf'(?i){re.escape(firm)}\s+(?:reports?|estimates?|projects?|forecasts?)\s+(?:that\s+)?',
             '', text

@@ -58,10 +58,16 @@ async def analyze(board: ResearchBoard, topic: str, notify=None) -> AnalysisResu
     set_model_tier("reasoning")
     llm = get_llm("analyst")
 
+    # Format analytical approach from decompose phase
+    import json as _json
+    approach = board.framework.analytical_approach
+    approach_text = _json.dumps(approach, indent=2) if approach else "No specific analytical approach was pre-defined."
+
     messages = [
         {"role": "system", "content": "You output only valid JSON. No explanation, no markdown fences."},
         {"role": "user", "content": ANALYZE_PROMPT.format(
             topic=topic,
+            analytical_approach=approach_text,
             evidence_summary=evidence_summary,
             contradictions=contradictions_text,
             question_status=question_status,
@@ -125,22 +131,10 @@ async def analyze(board: ResearchBoard, topic: str, notify=None) -> AnalysisResu
             result.evidence_gaps.append(sq_id)
             result.gap_severity[sq_id] = severity
 
-    # Extract original analytical frameworks
-    sm = data.get("scoring_matrix")
-    if isinstance(sm, dict):
-        result.scoring_matrix = sm
-
-    ms = data.get("market_segments")
-    if isinstance(ms, list):
-        result.market_segments = [s for s in ms if isinstance(s, dict)]
-
-    rr = data.get("ranked_recommendations")
-    if isinstance(rr, list):
-        result.ranked_recommendations = [r for r in rr if isinstance(r, dict)]
-
-    cf = data.get("conversion_framework")
-    if isinstance(cf, dict):
-        result.conversion_framework = cf
+    # Extract analytical frameworks (LLM-designed, variable structure)
+    frameworks = data.get("analytical_frameworks", [])
+    if isinstance(frameworks, list):
+        result.analytical_frameworks = [f for f in frameworks if isinstance(f, dict)]
 
     ci = data.get("contrarian_insights")
     if isinstance(ci, list):
