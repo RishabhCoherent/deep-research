@@ -38,6 +38,7 @@ class ResearchResult:
     metadata: dict = field(default_factory=dict)
     elapsed_seconds: float = 0.0
     word_count: int = 0
+    trace: Optional[object] = None  # ResearchTrace (optional, for analyst agent)
 
     def __post_init__(self):
         self.word_count = len(self.content.split())
@@ -281,6 +282,7 @@ class AgentContext:
     """Shared state passed to tools via closures."""
     sources: list[Source] = field(default_factory=list)
     urls_seen: set[str] = field(default_factory=set)
+    searched_queries: set[str] = field(default_factory=set)
     tool_calls_log: list[dict] = field(default_factory=list)
     tool_call_count: int = 0
     max_tool_calls: int = 20

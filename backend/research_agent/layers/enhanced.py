@@ -41,7 +41,7 @@ async def run(
     llm = get_llm("writer")
 
     # Create agent context for tool closures
-    ctx = AgentContext(max_tool_calls=40)
+    ctx = AgentContext(max_tool_calls=30)
 
     # Seed with prior sources
     if prior_sources:
@@ -55,7 +55,7 @@ async def run(
         llm=llm,
         tools=tools,
         system_prompt=L1_ENHANCEMENT_PROMPT,
-        max_tool_calls=50,
+        max_tool_calls=30,
         min_word_count=1500,
         max_retries=3,
         progress_callback=progress_callback,
@@ -70,7 +70,7 @@ async def run(
         system_prompt=L1_ENHANCEMENT_PROMPT,
         prior_report=prior_report,
         brief=brief,
-        max_tool_calls=50,
+        max_tool_calls=30,
         min_word_count=1500,
         max_retries=3,
     )

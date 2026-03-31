@@ -232,6 +232,15 @@ def extract_usage(response) -> tuple[int, int, str, int]:
     return input_tok, output_tok, model, reasoning_tok
 
 
+# ── Per-run cost limit ───────────────────────────────────────────────────────
+MAX_COST_PER_RUN_USD = 3.00  # Hard kill switch — abort if a single run exceeds this
+
+
+class CostLimitExceeded(Exception):
+    """Raised when a single research run exceeds the cost cap."""
+    pass
+
+
 # Module-level singleton tracker -- layers record usage here
 _global_tracker = CostTracker()
 
@@ -248,6 +257,21 @@ def reset_tracker():
 
 
 def track(label: str, response):
-    """Record token usage from an LLM response into the global tracker."""
+    """Record token usage from an LLM response into the global tracker.
+
+    Raises CostLimitExceeded if the run's cumulative cost exceeds MAX_COST_PER_RUN_USD.
+    """
     input_tok, output_tok, model, reasoning_tok = extract_usage(response)
     _global_tracker.get(label).add(input_tok, output_tok, model, reasoning_tok)
+
+    # Circuit breaker
+    if _global_tracker.total_cost > MAX_COST_PER_RUN_USD:
+        import logging
+        logging.getLogger(__name__).critical(
+            f"COST LIMIT EXCEEDED: ${_global_tracker.total_cost:.2f} > "
+            f"${MAX_COST_PER_RUN_USD:.2f} — aborting run"
+        )
+        raise CostLimitExceeded(
+            f"Run cost ${_global_tracker.total_cost:.2f} exceeded "
+            f"limit of ${MAX_COST_PER_RUN_USD:.2f}"
+        )

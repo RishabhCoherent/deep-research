@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 120" fill="none">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif&amp;family=JetBrains+Mono:wght@400&amp;display=swap');
+    </style>
+  </defs>
+
+  <!-- Warm off-white background matching frontend -->
+  <rect width="520" height="120" rx="20" fill="#FAF9F6"/>
+
+  <!-- Glass-card border (subtle purple) -->
+  <rect width="520" height="120" rx="20" fill="none" stroke="rgba(124,58,237,0.10)" stroke-width="1"/>
+
+  <!-- Wordmark with purple accent on "Bot" -->
+  <text x="32" y="62" font-family="'Instrument Serif', Georgia, 'Times New Roman', serif" font-weight="400" font-size="46" letter-spacing="-0.5">
+    <tspan fill="#1C1917">Coherent</tspan><tspan fill="#7C3AED">Bot</tspan>
+  </text>
+
+  <!-- Tagline -->
+  <text x="34" y="86" font-family="'JetBrains Mono', 'Cascadia Code', Consolas, monospace" font-size="9.5" fill="#6B6560" letter-spacing="0.8">
+    0 hallucination · 100% validation · 25 year experience
+  </text>
+</svg>

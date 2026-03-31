@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { highlightDataPoints } from "@/lib/highlight";
-import { extractAgentWorkflow } from "@/lib/extract-agent-steps";
+import { extractAgentWorkflow, isAnalystFormat } from "@/lib/extract-agent-steps";
 import type {
   ComparisonReport,
   AgentWorkflowData,
@@ -1337,7 +1337,7 @@ export function ScrollPipeline({ report }: ScrollPipelineProps) {
       s.push(ALL_STEPS[1]); // search
       s.push(ALL_STEPS[2]); // l1-result
     }
-    if (report.layers.length > 2) {
+    if (report.layers.length > 2 && !isAnalystFormat(report)) {
       s.push(ALL_STEPS[3]); // dissect
       s.push(ALL_STEPS[4]); // plan
       s.push(ALL_STEPS[5]); // investigate

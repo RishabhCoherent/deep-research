@@ -19,6 +19,7 @@ Graph structure:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime
 from typing import Annotated, Optional, Callable
@@ -31,7 +32,7 @@ from langchain_core.tools import tool
 
 from research_agent.models import Source, AgentContext, EvidenceLedger, ClaimMap
 from research_agent.cost import track
-from research_agent.utils import strip_preamble, infer_publisher
+from research_agent.utils import strip_preamble, infer_publisher, format_tier
 from tools.search import search
 from tools.scraper import scrape_url
 from tools.source_classifier import get_source_tier
@@ -237,6 +238,19 @@ def make_tools(ctx: AgentContext, ledger: EvidenceLedger | None = None, claim_ma
         """Search the web for current data, trends, and insights. Returns titles,
         URLs, and snippets from top results. Use targeted queries with specific
         terms and the current year."""
+        # ── Deduplication ─────────────────────────────────────────────
+        normalized = query.lower().strip()
+        if normalized in ctx.searched_queries:
+            return "Already searched this exact query. Try a DIFFERENT query with new keywords."
+        # Similarity check — reject if 80%+ word overlap with a previous query
+        new_words = set(normalized.split())
+        for prev in ctx.searched_queries:
+            prev_words = set(prev.split())
+            union = new_words | prev_words
+            if union and len(new_words & prev_words) / len(union) >= 0.8:
+                return "Too similar to a previous search. Use substantially different terms."
+        ctx.searched_queries.add(normalized)
+
         if ctx.tool_call_count >= ctx.max_tool_calls:
             return (
                 "BUDGET EXCEEDED. Write your final report now — start directly "
@@ -290,7 +304,7 @@ def make_tools(ctx: AgentContext, ledger: EvidenceLedger | None = None, claim_ma
                 new_count += 1
 
             tier = get_source_tier(url)
-            tier_label = {1: "T1", 2: "T2", 3: "T3"}[tier]
+            tier_label = format_tier(tier, short=True)
             parts.append(f"[{tier_label}] {title}\n  {snippet[:200]}")
 
         hit_data = [
@@ -370,7 +384,7 @@ def make_tools(ctx: AgentContext, ledger: EvidenceLedger | None = None, claim_ma
                 ))
 
         ctx.tool_calls_log.append({"tool": "scrape_page", "url": url})
-        tier_label = {1: "T1", 2: "T2", 3: "T3"}[get_source_tier(url)]
+        tier_label = format_tier(get_source_tier(url), short=True)
         return (
             f"[{tier_label}] Content from {infer_publisher(url)} "
             f"({len(content)} chars):\n\n{content}"
@@ -519,14 +533,29 @@ def build_agent_graph(
         notify("researching", f"Agent working... ({state['tool_call_count']} tool calls so far)")
 
         try:
-            response = await llm_with_tools.ainvoke(state["messages"])
+            response = await asyncio.wait_for(
+                llm_with_tools.ainvoke(state["messages"]),
+                timeout=120.0
+            )
             track(f"L{layer} agent", response)
         except Exception as e:
             logger.error(f"[Agent L{layer}] LLM call failed: {e}")
+            # If the last message has pending tool_calls, add dummy ToolMessages
+            # to satisfy the API constraint before adding the error message.
+            # Without this, the error repeats infinitely.
+            repair_msgs = []
+            if state["messages"]:
+                last = state["messages"][-1]
+                if hasattr(last, "tool_calls") and last.tool_calls:
+                    for tc in last.tool_calls:
+                        repair_msgs.append(ToolMessage(
+                            content=f"Tool call failed due to error: {e}",
+                            tool_call_id=tc["id"],
+                        ))
             error_msg = HumanMessage(
                 content=f"Error occurred: {e}. Write your report with available data."
             )
-            return {"messages": [error_msg]}
+            return {"messages": repair_msgs + [error_msg]}
 
         return {"messages": [response]}
 
@@ -570,6 +599,16 @@ def build_agent_graph(
         """Call LLM without tools to force a final report."""
         notify("forcing", "Requesting final report...")
 
+        # Repair messages: if the last AI message has tool_calls that were never
+        # executed (budget cutoff), add dummy ToolMessages so the API doesn't reject.
+        messages = list(state["messages"])
+        if messages and hasattr(messages[-1], "tool_calls") and messages[-1].tool_calls:
+            for tc in messages[-1].tool_calls:
+                messages.append(ToolMessage(
+                    content="Budget exceeded — tool call skipped.",
+                    tool_call_id=tc["id"],
+                ))
+
         force_msg = HumanMessage(
             content=(
                 "Write your final report NOW. Start DIRECTLY with ## headings — "
@@ -585,7 +624,10 @@ def build_agent_graph(
 
         try:
             # Call WITHOUT tools bound so it can't make more tool calls
-            response = await llm.ainvoke(state["messages"] + [force_msg])
+            response = await asyncio.wait_for(
+                llm.ainvoke(messages + [force_msg]),
+                timeout=120.0
+            )
             track(f"L{layer} forced", response)
         except Exception as e:
             logger.error(f"[Agent L{layer}] Forced output failed: {e}")
@@ -699,9 +741,17 @@ def build_agent_graph(
         """Route based on the last AI message: tool calls, or final output."""
         last_msg = state["messages"][-1]
 
-        # If the last message has tool calls, go to tools
+        # If the last message has tool calls, go to tools — unless budget is blown
         if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
+            if state["tool_call_count"] >= state["max_tool_calls"]:
+                return "force_output"
             return "tools"
+
+        # Guard against error recovery loops — consecutive errors should bail out
+        if isinstance(last_msg, HumanMessage):
+            msg_text = last_msg.content if isinstance(last_msg.content, str) else str(last_msg.content)
+            if "Error occurred:" in msg_text and state["retries"] >= state["max_retries"]:
+                return "force_output"
 
         # No tool calls — agent produced text output
         content = last_msg.content if isinstance(last_msg.content, str) else str(last_msg.content)

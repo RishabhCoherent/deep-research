@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { ComparisonReport } from "./types";
+import type { ComparisonReport, ResearchNodeData, ResearchNodeStatus } from "./types";
 
 // ─── Research Store ───────────────────────────────────────────
 
@@ -24,6 +24,10 @@ interface ResearchStore {
   report: ComparisonReport | null;
   error: string | null;
 
+  // Research tree graph state (live during progress)
+  graphNodes: Record<string, ResearchNodeData>;
+  selectedNodeId: string | null;
+
   setTopic: (topic: string) => void;
   setBrief: (brief: string) => void;
   setMaxLayer: (layer: number) => void;
@@ -35,6 +39,11 @@ interface ResearchStore {
   setError: (error: string) => void;
   setDone: () => void;
   reset: () => void;
+
+  // Graph actions
+  addGraphNode: (node: ResearchNodeData) => void;
+  updateGraphNode: (nodeId: string, patch: Partial<ResearchNodeData>) => void;
+  setSelectedNodeId: (id: string | null) => void;
 }
 
 export const useResearchStore = create<ResearchStore>((set) => ({
@@ -48,6 +57,8 @@ export const useResearchStore = create<ResearchStore>((set) => ({
   completedLayers: [],
   report: null,
   error: null,
+  graphNodes: {},
+  selectedNodeId: null,
 
   setTopic: (topic) => set({ topic }),
   setBrief: (brief) => set({ brief }),
@@ -94,5 +105,26 @@ export const useResearchStore = create<ResearchStore>((set) => ({
       completedLayers: [],
       report: null,
       error: null,
+      graphNodes: {},
+      selectedNodeId: null,
     }),
+
+  addGraphNode: (node) =>
+    set((state) => ({
+      graphNodes: { ...state.graphNodes, [node.id]: node },
+    })),
+
+  updateGraphNode: (nodeId, patch) =>
+    set((state) => {
+      const existing = state.graphNodes[nodeId];
+      if (!existing) return state;
+      return {
+        graphNodes: {
+          ...state.graphNodes,
+          [nodeId]: { ...existing, ...patch },
+        },
+      };
+    }),
+
+  setSelectedNodeId: (id) => set({ selectedNodeId: id }),
 }));

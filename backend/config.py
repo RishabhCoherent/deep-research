@@ -64,11 +64,32 @@ def get_model_tier() -> str:
     return _model_tier
 
 
+
+# ─── Output Token Caps (per role) ────────────────────────────────────────────
+# CRITICAL: Without these caps, a single run can burn $30-40+ in output tokens.
+# Target: <$2 per full pipeline run.
+MAX_OUTPUT_TOKENS = {
+    "planner":    4_096,   # decompose JSON / outline (~2K typical)
+    "researcher": 1_024,   # tool call decisions (~200-500 typical)
+    "organizer":  1_024,   # structural decisions
+    "analyst":    4_096,   # think/reflect JSON (~1-2K), analyze (~3K)
+    "writer":    12_288,   # compose report (6K words ≈ 8K tokens)
+    "reviewer":   2_048,   # quality feedback
+}
+
+
 def get_llm(role: str) -> ChatOpenAI:
     """Return the appropriate LLM for each pipeline role."""
     tier = MODEL_TIERS[_model_tier]
     model_name, temperature = tier[role]
-    return ChatOpenAI(model=model_name, temperature=temperature, max_retries=5, timeout=300)
+    max_tokens = MAX_OUTPUT_TOKENS.get(role, 4_096)
+    return ChatOpenAI(
+        model=model_name,
+        temperature=temperature,
+        max_retries=5,
+        timeout=300,
+        max_tokens=max_tokens,
+    )
 
 
 # ─── Sub-section Definitions (canonical order) ────────────────────────────────

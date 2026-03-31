@@ -6,6 +6,7 @@ import os
 import queue
 import threading
 import logging
+import time
 from pathlib import Path
 
 # Configure logging — must be before any getLogger() calls in imported modules
@@ -159,7 +160,12 @@ async def research_progress(job_id: str):
 
     async def event_stream():
         heartbeat_counter = 0
+        stream_start = time.time()
+        STREAM_TIMEOUT = 1800  # 30 minutes max
         while True:
+            if time.time() - stream_start > STREAM_TIMEOUT:
+                yield f"event: done\ndata: {json.dumps({'success': False, 'error': 'Stream timeout (30 min)'})}\n\n"
+                return
             messages = drain_queue(job.progress_queue)
 
             for msg_type, msg_data in messages:

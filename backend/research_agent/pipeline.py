@@ -15,10 +15,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 
 from research_agent.models import ResearchResult, ComparisonReport
-from research_agent.layers import baseline, enhanced, expert
+from research_agent.layers import baseline, enhanced
+from research_agent.analyst.run import run_analyst
 from research_agent.evaluator import evaluate_all_layers, compare_layers
 from research_agent.cost import reset_tracker
 
@@ -90,46 +92,45 @@ async def run_pipeline(
     # ── L2: Deep Dive Agent (receives L1 report, or L0 as fallback) ───────
     prior_for_l2 = result_l1 if "error" not in result_l1.metadata else result_l0
 
-    notify(2, "start", "Layer 2: Deep-dive analysis...")
+    notify(2, "start", "Layer 2: Analyst agent — structured research...")
     try:
-        result_l2 = await expert.run(
+        result_l2 = await run_analyst(
             topic, progress_callback,
             prior_report=prior_for_l2.content,
             prior_sources=prior_for_l2.sources,
             brief=brief,
         )
     except Exception as e:
-        logger.error(f"[Pipeline] Expert failed: {e}")
+        logger.error(f"[Pipeline] Analyst failed: {e}")
         result_l2 = ResearchResult(
-            layer=2, topic=topic, content=f"## Error\n\nDeep-dive analysis failed: {e}",
-            metadata={"method": "langgraph_deepdive", "error": str(e)},
+            layer=2, topic=topic, content=f"## Error\n\nAnalyst research failed: {e}",
+            metadata={"method": "analyst_agent", "error": str(e)},
         )
     results.append(result_l2)
 
     # ── Evaluate & Compare ────────────────────────────────────────────────
-    # Evaluation temporarily disabled to reduce cost while iterating on L2 quality.
-    # To re-enable: uncomment the two lines below and remove the skip block.
-    # notify(-1, "evaluating", "Evaluating and comparing all 3 layers...")
-    # evaluations = await evaluate_all_layers(results)
-    # report = await compare_layers(results, evaluations)
-
-    # Skip evaluation — build a minimal ComparisonReport with empty evals
-    notify(-1, "evaluating", "Evaluation skipped (disabled for L2 iteration)")
     from research_agent.models import LayerEvaluation
-    evaluations = [
-        LayerEvaluation(
-            layer=r.layer,
-            source_diversity=len(r.sources),
-            word_count=len(r.content.split()),
+
+    if os.getenv("ENABLE_EVALUATION", "").lower() == "true":
+        notify(-1, "evaluating", "Evaluating and comparing all 3 layers...")
+        evaluations = await evaluate_all_layers(results)
+        report = await compare_layers(results, evaluations)
+    else:
+        notify(-1, "evaluating", "Evaluation skipped")
+        evaluations = [
+            LayerEvaluation(
+                layer=r.layer,
+                source_diversity=len(r.sources),
+                word_count=len(r.content.split()),
+            )
+            for r in results
+        ]
+        report = ComparisonReport(
+            topic=topic,
+            results=results,
+            evaluations=evaluations,
+            summary="Evaluation skipped — focusing on L2 quality iteration.",
         )
-        for r in results
-    ]
-    report = ComparisonReport(
-        topic=topic,
-        results=results,
-        evaluations=evaluations,
-        summary="Evaluation skipped — focusing on L2 quality iteration.",
-    )
 
     total_elapsed = time.time() - total_start
     notify(-1, "complete", f"Pipeline complete in {total_elapsed:.1f}s")

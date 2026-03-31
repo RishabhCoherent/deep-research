@@ -10,6 +10,7 @@ import type {
   PhaseTimings,
   SectionAnnotationDetail,
   ResearchTaskDetail,
+  AnalystTrace,
 } from "./types";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -172,4 +173,22 @@ export function extractAgentWorkflow(report: ComparisonReport): AgentWorkflowDat
   }
 
   return { baseline, enhanced, expert };
+}
+
+
+// ─── Analyst trace extraction ──────────────────────────────────────────────
+
+export function extractAnalystTrace(report: ComparisonReport): AnalystTrace | null {
+  if (!report.layers || report.layers.length < 3) return null;
+  const m2 = meta(report, 2);
+  if (m2.method !== "analyst_agent") return null;
+  const trace = m2.trace as AnalystTrace | undefined;
+  if (!trace || !Array.isArray(trace.steps)) return null;
+  return trace;
+}
+
+export function isAnalystFormat(report: ComparisonReport): boolean {
+  if (!report.layers || report.layers.length < 3) return false;
+  const m2 = meta(report, 2);
+  return m2.method === "analyst_agent";
 }

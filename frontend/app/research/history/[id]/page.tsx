@@ -17,6 +17,7 @@ import {
   TrendingDown,
   Zap,
   Crosshair,
+  BrainCircuit,
 } from "lucide-react";
 import { ResearchLayout } from "@/components/ResearchLayout";
 import { ScoreChart } from "@/components/ScoreChart";
@@ -24,11 +25,14 @@ import { ResultsPopup } from "@/components/ResultsPopup";
 import { ScrollPipeline } from "@/components/ScrollPipeline";
 import { LayerPopupContent } from "@/components/LayerPopupContent";
 import { ComparatorContent } from "@/components/ComparatorContent";
+import { AnalystTraceTimeline } from "@/components/AnalystTrace";
+import { ResearchGraph } from "@/components/ResearchGraph";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LAYER_NAMES, LAYER_DESCRIPTIONS } from "@/lib/types";
 import { getResearchHistoryDetail } from "@/lib/api";
-import type { ComparisonReport } from "@/lib/types";
+import { extractAnalystTrace } from "@/lib/extract-agent-steps";
+import type { ComparisonReport, ResearchTreeData } from "@/lib/types";
 
 function AnimatedCounter({ value }: { value: number }) {
   const [display, setDisplay] = useState(0);
@@ -90,6 +94,7 @@ export default function HistoryDetailPage({
   const [loading, setLoading] = useState(true);
   const [openPopup, setOpenPopup] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [selectedTreeNodeId, setSelectedTreeNodeId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsVisible(true);
@@ -115,6 +120,14 @@ export default function HistoryDetailPage({
   if (!report) return null;
 
   const totalSources = report.layers.reduce((s, l) => s + l.source_count, 0);
+  const analystTrace = extractAnalystTrace(report);
+  const hasAnalystTrace = analystTrace !== null;
+
+  const researchTree: ResearchTreeData | null = (() => {
+    const l3 = report.layers.find((l) => l.layer === 2);
+    const tree = (l3?.metadata as Record<string, unknown>)?.research_tree as ResearchTreeData | undefined;
+    return tree && tree.total_nodes > 0 ? tree : null;
+  })();
 
   function handleDownloadJson() {
     if (!report) return;
@@ -262,8 +275,8 @@ export default function HistoryDetailPage({
             : "opacity-0 translate-y-4"
         }`}
       >
-        {/* Overview + Comparator cards — 2 columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        {/* Overview + Research Trace + Comparator cards */}
+        <div className={cn("grid grid-cols-1 gap-4 mb-4", hasAnalystTrace ? "md:grid-cols-3" : "md:grid-cols-2")}>
           <button
             onClick={() => setOpenPopup("overview")}
             className={cn(
@@ -290,6 +303,35 @@ export default function HistoryDetailPage({
               <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
             </div>
           </button>
+
+          {hasAnalystTrace && (
+            <button
+              onClick={() => setOpenPopup("trace")}
+              className={cn(
+                "w-full glass-card-hover p-6 lg:p-8 text-left group cursor-pointer",
+                "relative overflow-hidden"
+              )}
+            >
+              <div
+                className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl pointer-events-none opacity-40"
+                style={{ background: "rgba(99, 102, 241, 0.15)" }}
+              />
+              <div className="relative z-10 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-indigo-500/10">
+                    <BrainCircuit className="h-6 w-6 text-indigo-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-display">Research Trace</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Analyst reasoning journey &middot; Hypotheses, searches, reflections, and judgments
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
+              </div>
+            </button>
+          )}
 
           <button
             onClick={() => setOpenPopup("comparator")}
@@ -386,6 +428,33 @@ export default function HistoryDetailPage({
         </div>
       </div>
 
+      {/* ── Research Tree Graph ──────────────────────────── */}
+      {researchTree && (
+        <div
+          className={`mb-12 transition-all duration-700 delay-300 ${
+            isVisible
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-8"
+          }`}
+        >
+          <div className="mb-4">
+            <span className="inline-flex items-center gap-3 text-xs font-mono uppercase tracking-wider text-muted-foreground">
+              <span className="w-6 h-px bg-foreground/30" />
+              Deep Research Tree
+            </span>
+            <p className="text-sm text-muted-foreground mt-1">
+              The analyst explored {researchTree.total_nodes} research nodes across {researchTree.max_depth + 1} depth{researchTree.max_depth > 0 ? "s" : ""}. Click any node to inspect.
+            </p>
+          </div>
+          <ResearchGraph
+            treeData={researchTree}
+            selectedNodeId={selectedTreeNodeId}
+            onSelectNode={setSelectedTreeNodeId}
+            className="h-120"
+          />
+        </div>
+      )}
+
       {/* ── Popups ───────────────────────────────────────── */}
 
       <ResultsPopup
@@ -397,6 +466,19 @@ export default function HistoryDetailPage({
       >
         <ScrollPipeline report={report} />
       </ResultsPopup>
+
+      {/* Research Trace popup */}
+      {analystTrace && (
+        <ResultsPopup
+          isOpen={openPopup === "trace"}
+          onClose={() => setOpenPopup(null)}
+          title="Research Trace"
+          subtitle="How the AI analyst reasoned through this research"
+          accentColor="rgba(99, 102, 241, 0.15)"
+        >
+          <AnalystTraceTimeline trace={analystTrace} />
+        </ResultsPopup>
+      )}
 
       {/* Comparator popup */}
       <ResultsPopup

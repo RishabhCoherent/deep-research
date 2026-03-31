@@ -88,6 +88,60 @@ export interface ComparisonReport {
   relevancy?: number;
 }
 
+// ─── Research Tree Types ─────────────────────────────────────
+
+export type ResearchNodeStatus = "pending" | "exploring" | "complete" | "dead-end";
+export type ResearchNodeWhy =
+  | "root"
+  | "vague_finding"
+  | "contradiction"
+  | "thin_data"
+  | "surprising_data"
+  | "missing_entity";
+
+export interface ResearchNodeData {
+  id: string;
+  parent_id: string | null;
+  depth: number;                    // 0=root, 1=drill-down, 2=deep verification
+  query: string;
+  why_created: ResearchNodeWhy;
+  trigger_finding: string;
+  sq_id: string | null;
+  hypothesis: string;
+  answer: string;
+  confidence: number;
+  status: ResearchNodeStatus;
+  children_ids: string[];
+  evidence_ids: string[];
+}
+
+export interface ResearchTreeData {
+  total_nodes: number;
+  max_depth: number;
+  sq_to_root: Record<string, string>;
+  nodes: Record<string, ResearchNodeData>;
+}
+
+// Live node event from SSE (node_created / node_complete)
+export interface NodeCreatedEvent {
+  node_id: string;
+  parent_id: string | null;
+  depth: number;
+  query: string;
+  why: ResearchNodeWhy;
+  trigger_finding: string;
+  sq_id: string;
+}
+
+export interface NodeCompleteEvent {
+  node_id: string;
+  depth: number;
+  status: ResearchNodeStatus;
+  confidence: number;
+  answer: string;
+  evidence_count: number;
+}
+
 export const LAYER_NAMES: Record<number, string> = {
   0: "L1 Baseline (Prompt-Driven)",
   1: "L2 Enhanced (AI Agent)",
@@ -229,6 +283,126 @@ export interface AgentWorkflowData {
     coverageBeforeGapFill: number | null;
     gapFillPasses: number;
   } | null;
+}
+
+// ─── Analyst Trace Types (from analyst agent metadata) ──────
+
+export type AnalystPhase =
+  | "decompose" | "think" | "search" | "scrape"
+  | "reflect" | "analyze" | "quality" | "compose";
+
+export interface TraceStep {
+  phase: AnalystPhase;
+  sq_id: string;
+  title: string;
+  content: Record<string, unknown>;
+  elapsed_s: number;
+}
+
+export interface AnalystTrace {
+  topic: string;
+  started_at: number;
+  total_steps: number;
+  steps: TraceStep[];
+}
+
+export interface DecomposeContent {
+  core_question: string;
+  assumptions: string[];
+  scope_in?: string[];
+  scope_out?: string[];
+  report_sections?: string[];
+  sub_questions: Array<{
+    id: string;
+    question: string;
+    answer_type: string;
+    research_strategy: string;
+    priority: number;
+    depends_on: string[];
+    search_queries: string[];
+  }>;
+}
+
+export interface ThinkContent {
+  hypothesis: string;
+  would_change_mind: string;
+  search_queries: string[];
+  question?: string;
+  priority?: number;
+  answer_type?: string;
+  research_strategy?: string;
+}
+
+export interface SearchContent {
+  query: string;
+  results: Array<{
+    title: string;
+    url: string;
+    snippet: string;
+    tier: number;
+  }>;
+}
+
+export interface ScrapeContent {
+  url: string;
+  success: boolean;
+  method: string;
+  content_length: number;
+  content_preview?: string;
+  tier?: number;
+}
+
+export interface ReflectFinding {
+  data_point: string;
+  confidence: number;
+  confirms_hypothesis: boolean;
+  source_title: string;
+  source_tier: number;
+}
+
+export interface ReflectContent {
+  question?: string;
+  hypothesis?: string;
+  findings: ReflectFinding[];
+  contradictions: string[];
+  answer: string;
+  confidence: number;
+  hypothesis_revised: boolean;
+  revised_hypothesis?: string;
+}
+
+export interface AnalyzeContent {
+  key_findings: string[];
+  judgments: Array<{
+    claim: string;
+    conviction: string;
+    reasoning: string;
+    supporting_evidence: string[];
+    counter_evidence: string[];
+  }>;
+  causal_chains: string[];
+  narrative_thread: string;
+  evidence_gaps?: string[];
+  overall_confidence?: number;
+}
+
+export interface QualityContent {
+  coverage: number;
+  evidence_strength: number;
+  evidence_depth: number;
+  contradiction_resolution: number;
+  judgment_formation: number;
+  gap_acknowledgment: number;
+  overall: number;
+  passes: boolean;
+  feedback: string;
+  remediation_queries?: string[];
+  iteration?: number;
+}
+
+export interface ComposeContent {
+  word_count: number;
+  sections?: string[];
 }
 
 // ─── Expert Pipeline Phase Progress ─────────────────────────

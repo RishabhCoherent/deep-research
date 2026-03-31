@@ -14,9 +14,33 @@ from __future__ import annotations
 import json
 import logging
 import re
+from datetime import date
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
+
+
+# ── Shared constants ──────────────────────────────────────────────────────────
+
+TIER_LABELS = {1: "[T1 GOLD]", 2: "[T2 RELIABLE]", 3: "[T3]"}
+TIER_LABELS_SHORT = {1: "T1", 2: "T2", 3: "T3"}
+
+
+def format_tier(tier: int, short: bool = False) -> str:
+    """Format source tier as a display label."""
+    labels = TIER_LABELS_SHORT if short else TIER_LABELS
+    return labels.get(tier, "[T3]")
+
+
+def date_vars() -> dict:
+    """Return common date template variables. Use instead of local _date_vars()."""
+    today = date.today()
+    return {
+        "current_date": today.strftime("%B %d, %Y"),
+        "current_year": str(today.year),
+        "last_year": str(today.year - 1),
+        "next_year": str(today.year + 1),
+    }
 
 
 def get_content(response) -> str:
