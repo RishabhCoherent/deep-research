@@ -81,7 +81,8 @@ async def analyze(board: ResearchBoard, topic: str, notify=None) -> AnalysisResu
     data = extract_json(raw)
 
     if not data:
-        logger.error("[Analyst] Analyze phase failed to parse")
+        logger.error(f"[Analyst] Analyze phase failed to parse JSON. Raw response length: {len(raw)}. First 500 chars: {raw[:500]}")
+        logger.error(f"[Analyst] Last 200 chars of response: {raw[-200:]}")
         return AnalysisResult(overall_confidence=0.5, narrative_thread="Analysis unavailable.")
 
     # Build result

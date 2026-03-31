@@ -72,7 +72,7 @@ MAX_OUTPUT_TOKENS = {
     "planner":    4_096,   # decompose JSON / outline (~2K typical)
     "researcher": 1_024,   # tool call decisions (~200-500 typical)
     "organizer":  1_024,   # structural decisions
-    "analyst":    4_096,   # think/reflect JSON (~1-2K), analyze (~3K)
+    "analyst":    8_192,   # think/reflect (~1-2K), analyze needs ~6K for full JSON output
     "writer":    12_288,   # compose report (6K words ≈ 8K tokens)
     "reviewer":   2_048,   # quality feedback
 }
