@@ -14,7 +14,7 @@ import time
 from config import get_llm, set_model_tier
 from models.analyst import ResearchBoard, ResearchTrace
 from workflow.analyst_graph import build_analyst_graph
-from agents.analyst.tree_research import expand_research_tree
+from layers.analyst.tree_research import expand_research_tree
 from utils.cost_tracker import track
 from models.pipeline import Source
 

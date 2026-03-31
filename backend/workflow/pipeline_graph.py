@@ -19,8 +19,8 @@ import os
 import time
 
 from models.pipeline import ResearchResult, ComparisonReport
-from agents import baseline_agent, enhanced_agent
-from agents.analyst.run import run_analyst
+from layers import baseline_agent, enhanced_agent
+from layers.analyst.run import run_analyst
 from workflow.evaluator import evaluate_all_layers, compare_layers
 from utils.cost_tracker import reset_tracker
 

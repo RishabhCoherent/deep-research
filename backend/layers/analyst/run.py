@@ -10,11 +10,11 @@ import logging
 import time
 
 from models.analyst import ResearchBoard, ResearchTrace, AnalysisResult
-from agents.analyst.decomposer import decompose
-from agents.analyst.investigator import investigate
-from agents.analyst.analyzer import analyze
-from agents.analyst.composer import compose
-from agents.analyst.quality_gate import score_research
+from layers.analyst.decomposer import decompose
+from layers.analyst.investigator import investigate
+from layers.analyst.analyzer import analyze
+from layers.analyst.composer import compose
+from layers.analyst.quality_gate import score_research
 from models.pipeline import ResearchResult, Source
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ async def run_analyst(
         framework = await decompose(topic, brief, notify)
     except Exception as e:
         logger.error(f"[Analyst] Decompose failed: {e}")
-        from agents.analyst.decomposer import _fallback_framework
+        from layers.analyst.decomposer import _fallback_framework
         framework = _fallback_framework(topic)
 
     decompose_elapsed = round(time.time() - t0, 1)
