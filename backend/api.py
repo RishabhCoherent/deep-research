@@ -37,8 +37,8 @@ from research_manager import (
     create_research_job, get_research_job, cleanup_stale_research,
     run_research_thread,
 )
-from history_manager import list_history, get_history, delete_history
-from research_agent.utils import strip_preamble
+from output.history import list_history, get_history, delete_history
+from utils.text_cleaning import strip_preamble
 from config import has_openai, has_searxng, has_tavily
 
 logger = logging.getLogger(__name__)

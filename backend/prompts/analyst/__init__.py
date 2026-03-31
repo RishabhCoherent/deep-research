@@ -1,0 +1,11 @@
+"""Analyst prompts package."""
+
+from prompts.analyst.prompts import (
+    DECOMPOSE_PROMPT,
+    INVESTIGATE_SYSTEM_PROMPT,
+    ANALYZE_PROMPT,
+    QUALITY_GATE_PROMPT,
+    COMPOSE_OUTLINE_PROMPT,
+    COMPOSE_REPORT_PROMPT,
+    BANNED_RESEARCH_FIRMS,
+)

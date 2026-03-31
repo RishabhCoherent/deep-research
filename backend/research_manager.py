@@ -62,7 +62,7 @@ def run_research_thread(topic: str, brief: str, max_layer: int,
     """Thread target: runs the multi-layer research agent."""
     try:
 
-        from research_agent import run_all_layers
+        from workflow.pipeline_graph import run_all_layers
 
         def progress_callback(layer, status, message):
             event = json.dumps({
@@ -119,7 +119,7 @@ def run_research_thread(topic: str, brief: str, max_layer: int,
             })
 
         # Capture cost breakdown from the global tracker
-        from research_agent.cost import get_tracker
+        from utils.cost_tracker import get_tracker
         cost_data = get_tracker().to_dict()
 
         # Serialize pairwise layer comparisons
@@ -204,7 +204,7 @@ def run_research_thread(topic: str, brief: str, max_layer: int,
 
         # Auto-save to persistent history
         try:
-            from history_manager import save_research
+            from output.history import save_research
             save_research(result_holder["report"])
         except Exception as save_err:
             logger.warning(f"Failed to auto-save research history: {save_err}")
