@@ -29,8 +29,7 @@ async def analyze(board: ResearchBoard, topic: str, notify=None) -> AnalysisResu
         sq_evidence = board.evidence_for(sq.id)
         if sq_evidence:
             for e in sq_evidence:
-                tier_label = f"T{e.source_tier}"
-                evidence_lines.append(f"  [{e.id}] [{tier_label}] {e.fact}")
+                evidence_lines.append(f"  [{e.id}] {e.fact}")
                 if e.source_title:
                     evidence_lines.append(f"    Source: {e.source_title} ({e.source_url})")
         else:

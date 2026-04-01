@@ -198,22 +198,22 @@ def _build_evidence_by_section(board: ResearchBoard) -> str:
     for section_key, evidence_list in section_evidence.items():
         parts.append(f"\n### {section_key}")
         for e in evidence_list:
-            tier_label = f"T{e.source_tier}"
-            line = f"- [{tier_label}] {e.fact}"
+            # Do NOT include tier labels — they leak into the final report
+            line = f"- {e.fact}"
             if e.source_title:
                 line += f"\n  Source: {e.source_title}"
                 if e.source_url:
                     line += f" ({e.source_url})"
             parts.append(line)
 
-    # Append source bibliography for compose reference
-    parts.append("\n### AVAILABLE SOURCES FOR BIBLIOGRAPHY (T1 and T2 only)")
+    # Append source bibliography for compose reference (no tier labels)
+    parts.append("\n### AVAILABLE SOURCES FOR BIBLIOGRAPHY (high-credibility only)")
     seen_urls = set()
     for e in board.evidence:
         if e.source_url and e.source_url not in seen_urls and e.source_tier <= 2:
             seen_urls.add(e.source_url)
             title = e.source_title or e.source_url
-            parts.append(f"- [T{e.source_tier}] {title} — {e.source_url}")
+            parts.append(f"- {title} — {e.source_url}")
 
     return "\n".join(parts) if parts else "(No evidence gathered)"
 

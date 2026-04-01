@@ -292,8 +292,26 @@ def _tavily_available() -> bool:
 
 # Domains that frequently pollute analytical/research queries
 _GARBAGE_DOMAINS = {
-    "zhihu.com", "flyporter.com", "aecf.org", "quora.com",
-    "reddit.com/r/gaming", "fandom.com",
+    # Social/forum (low signal-to-noise)
+    "zhihu.com", "quora.com", "reddit.com/r/gaming", "fandom.com",
+    # Reference/dictionary (not research sources)
+    "merriam-webster.com", "dictionary.com", "wiktionary.org", "thesaurus.com",
+    "vocabulary.com", "definitions.net",
+    # Travel/lifestyle (irrelevant for research)
+    "tripadvisor.com", "booking.com", "lonelyplanet.com", "trivago.com",
+    "airbnb.com", "expedia.com", "hotels.com",
+    # Shopping/product listings (not analytical)
+    "amazon.com/dp/", "ebay.com/itm/", "alibaba.com/product",
+    "etsy.com/listing/", "walmart.com/ip/",
+    # Spam/low quality
+    "flyporter.com", "aecf.org", "pinterest.com",
+    "tiktok.com/@", "instagram.com/p/", "facebook.com/photo",
+    # Job/career sites
+    "indeed.com", "glassdoor.com", "linkedin.com/jobs",
+    # Generic aggregators
+    "slideshare.net", "scribd.com", "issuu.com",
+    # Login/auth pages
+    "login.", "/login", "/signin", "/auth",
 }
 
 _STOPWORDS = {
@@ -314,19 +332,43 @@ def _is_relevant(result: dict, query: str, min_matches: int = 2) -> bool:
     Applied to ALL search results including Tavily.
     """
     url = result.get("url", "").lower()
+    title = result.get("title", "").lower()
+    snippet = result.get("snippet", "").lower()
 
     # Block known garbage domains
     for domain in _GARBAGE_DOMAINS:
         if domain in url:
             return False
 
+    # Block file downloads (PDFs, docs, spreadsheets — often paywalled or empty)
+    if any(url.endswith(ext) for ext in [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip"]):
+        # Allow government/academic PDFs
+        if not any(d in url for d in [".gov", ".edu", ".ac.", "nist.", "who.int", "oecd."]):
+            return False
+
+    # Block pages with no meaningful title or snippet
+    if len(title) < 10 and len(snippet) < 20:
+        return False
+
+    # Block obvious non-research content by title
+    _JUNK_TITLE_PATTERNS = [
+        "log in", "sign in", "sign up", "register", "subscribe",
+        "cookie policy", "privacy policy", "terms of service",
+        "page not found", "404", "access denied", "forbidden",
+        "buy now", "add to cart", "shop now", "order now",
+    ]
+    for pattern in _JUNK_TITLE_PATTERNS:
+        if pattern in title:
+            return False
+
+    # Keyword relevance check
     words = re.findall(r'[a-zA-Z]{3,}', query.lower())
     keywords = [w for w in words if w not in _STOPWORDS and not w.isdigit()]
 
     if len(keywords) < 2:
         return True
 
-    text = (result.get("title", "") + " " + result.get("snippet", "")).lower()
+    text = title + " " + snippet
     matches = sum(1 for kw in keywords if kw in text)
     return matches >= min(min_matches, len(keywords))
 
