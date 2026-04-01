@@ -291,7 +291,7 @@ function NodeDetailPanel({
   const s = getStyle(node.depth, node.status);
 
   return (
-    <div className="absolute top-3 right-3 w-96 z-10 rounded-2xl border bg-background shadow-xl overflow-hidden">
+    <div className="absolute top-3 right-3 bottom-3 w-96 z-10 rounded-2xl border bg-background shadow-xl flex flex-col overflow-hidden">
       {/* Header */}
       <div className={cn("flex items-center justify-between px-4 py-3 border-b", s.bg)}>
         <div className="flex items-center gap-2">
@@ -308,7 +308,7 @@ function NodeDetailPanel({
         </button>
       </div>
 
-      <div className="p-4 space-y-3 max-h-[70vh] overflow-y-auto text-xs">
+      <div className="p-4 space-y-3 flex-1 overflow-y-auto text-xs">
         {/* Query */}
         <div>
           <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
