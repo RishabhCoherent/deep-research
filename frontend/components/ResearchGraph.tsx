@@ -291,7 +291,7 @@ function NodeDetailPanel({
   const s = getStyle(node.depth, node.status);
 
   return (
-    <div className="absolute top-3 right-3 bottom-3 w-96 z-10 rounded-2xl border bg-background shadow-xl flex flex-col overflow-hidden">
+    <div className="fixed top-24 right-6 w-96 max-h-[calc(100vh-7rem)] z-50 rounded-2xl border bg-background shadow-2xl flex flex-col overflow-hidden">
       {/* Header */}
       <div className={cn("flex items-center justify-between px-4 py-3 border-b", s.bg)}>
         <div className="flex items-center gap-2">
