@@ -249,12 +249,12 @@ class ResearchTree:
                     "why_created": n.why_created,
                     "trigger_finding": n.trigger_finding,
                     "status": n.status,
-                    "answer": n.answer[:300] if n.answer else "",
+                    "answer": n.answer or "",
                     "confidence": n.confidence,
                     "children_ids": n.children_ids,
                     "evidence_ids": n.evidence_ids,
                     "sq_id": n.sq_id,
-                    "hypothesis": n.hypothesis[:200] if n.hypothesis else "",
+                    "hypothesis": n.hypothesis or "",
                 }
                 for nid, n in self.nodes.items()
             },
@@ -368,12 +368,12 @@ class ResearchBoard:
         return {
             "sub_questions": [
                 {"id": sq.id, "question": sq.question, "status": sq.status,
-                 "confidence": sq.confidence, "answer": sq.answer[:200]}
+                 "confidence": sq.confidence, "answer": sq.answer}
                 for sq in self.framework.sub_questions
             ],
             "evidence_count": len(self.evidence),
             "evidence": [
-                {"id": e.id, "fact": e.fact[:200], "source_url": e.source_url,
+                {"id": e.id, "fact": e.fact, "source_url": e.source_url,
                  "source_title": e.source_title, "source_tier": e.source_tier,
                  "sub_question_id": e.sub_question_id}
                 for e in self.evidence
@@ -384,7 +384,7 @@ class ResearchBoard:
                 for c in self.contradictions
             ],
             "judgments": [
-                {"claim": j.claim, "conviction": j.conviction, "reasoning": j.reasoning[:200]}
+                {"claim": j.claim, "conviction": j.conviction, "reasoning": j.reasoning}
                 for j in self.judgments
             ],
             "causal_links": [
