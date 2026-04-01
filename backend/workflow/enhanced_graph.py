@@ -160,11 +160,42 @@ def build_agent_graph(
         content = response.content if isinstance(response.content, str) else str(response.content)
         draft = strip_preamble(content.strip())
         draft = _scrub_competitor_mentions(draft)
-        notify("drafted", f"Report: {len(draft.split())} words")
+        word_count = len(draft.split())
+        notify("drafted", f"Report: {word_count} words")
+
+        # If forced output is too short, retry once with explicit word count demand
+        if word_count < state["min_word_count"] and state["retries"] < 1:
+            logger.info(f"[Agent L{layer}] Forced output too short ({word_count} words), retrying...")
+            expand_msg = HumanMessage(
+                content=(
+                    f"Your report is only {word_count} words. The MINIMUM is {state['min_word_count']} words.\n\n"
+                    f"Rewrite the COMPLETE report with much more detail. For each section:\n"
+                    f"- Include ALL specific data points from your research\n"
+                    f"- Add analysis and implications, not just facts\n"
+                    f"- Minimum 200 words per section\n\n"
+                    f"Start directly with ## headings. Write the FULL report now."
+                )
+            )
+            try:
+                response2 = await asyncio.wait_for(
+                    llm.ainvoke(messages + [force_msg, response, expand_msg]),
+                    timeout=120.0
+                )
+                track(f"L{layer} forced retry", response2)
+                content2 = response2.content if isinstance(response2.content, str) else str(response2.content)
+                draft2 = strip_preamble(content2.strip())
+                draft2 = _scrub_competitor_mentions(draft2)
+                if len(draft2.split()) > word_count:
+                    draft = draft2
+                    word_count = len(draft.split())
+                    notify("drafted", f"Expanded report: {word_count} words")
+            except Exception as e:
+                logger.warning(f"[Agent L{layer}] Forced retry failed: {e}")
 
         return {
             "messages": [force_msg, response],
             "draft": draft,
+            "retries": state["retries"] + 1,
         }
 
     # ── Node: budget_nudge ─────────────────────────────────────────────────
