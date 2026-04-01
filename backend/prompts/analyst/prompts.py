@@ -10,60 +10,43 @@ The agent autonomously decides what analytical approach fits each topic.
 # 1. DECOMPOSE — Break the topic into sub-questions
 # ═══════════════════════════════════════════════════════════════════════════════
 
-DECOMPOSE_PROMPT = """You are a senior research analyst preparing to investigate a complex topic. Before doing ANY research, you must structure the problem.
+DECOMPOSE_PROMPT = """You are a research analyst. Read the topic carefully and plan your research.
 
-TODAY'S DATE: {current_date}
-IMPORTANT: We are in {current_year}. Any data from {last_year} or earlier is HISTORICAL, not projected. Search for {current_year}-{next_year} data. When referencing past years, say "was" not "is projected to be".
+TODAY'S DATE: {current_date} (we are in {current_year} — treat {last_year} data as historical)
 
 TOPIC: {topic}
 
 {brief_section}
 
-Think like an analyst: Before answering any question, clarify what specifically is being asked. Identify the hidden assumptions, the scope boundaries, and the dimensions that matter.
+Read the topic above. What is the client ACTUALLY asking for? Not every topic is a market overview. If they ask for "key trends" — research trends. If they ask to "compare" — compare. If they ask about "impact" — analyze impact. Match your research plan to EXACTLY what is being asked.
 
-INSTRUCTIONS:
-1. STATE the core question in one clear sentence — what is the client REALLY asking?
-2. LIST 3-5 assumptions that must be true for this question to be answerable.
-3. DESIGN your analytical approach BEFORE creating sub-questions. Based on THIS SPECIFIC topic, decide:
-   - What are the key dimensions or axes of comparison? (these depend entirely on the topic)
-   - What tables, matrices, or frameworks would make the final report most useful to the reader?
-   - If entities are being compared, how do you hypothesize they will cluster or rank? State your grouping logic.
-   - What are 2-3 bold or contrarian hypotheses the research should test?
-   Your approach must be ORIGINAL and SPECIFIC to this topic. Do not default to generic frameworks unless they genuinely fit.
-4. DECOMPOSE into 10-15 sub-questions that FILL your analytical approach with data. For each:
-   - The exact question
-   - answer_type: "numeric" (hard data), "comparison" (relative data), "causal" (mechanism), "trend" (direction), "opinion" (expert assessment), "list" (enumeration), "general" (broad overview)
-   - research_strategy: "data_hunt" (find specific numbers), "triangulate" (cross-reference sources), "expert_scan" (find expert commentary), "regulatory_lookup" (government/legal sources), "company_deep_dive" (entity-specific data), "historical_analysis" (track changes over time), "technical_deep_dive" (understand mechanisms)
-   - priority: 1 (blocking — report fails without), 2 (important — weakens without), 3 (enrichment)
-   - depends_on: list of sub-question IDs this depends on
-   - search_queries: 2-3 specific search queries. Write like a journalist: include names, years, specific terms.
-5. DEFINE scope boundaries: what's in scope and what's explicitly out.
-6. PROPOSE 6-8 report sections that map to your sub-questions and analytical approach.
-
-OUTPUT FORMAT — return ONLY valid JSON, no explanation:
+Plan your research and return ONLY valid JSON:
 {{
-  "core_question": "...",
-  "assumptions": ["...", "..."],
+  "core_question": "What the client is really asking, in one sentence",
+  "assumptions": ["What must be true for this to be answerable"],
   "sub_questions": [
     {{
       "id": "sq_01",
-      "question": "...",
-      "answer_type": "...",
-      "research_strategy": "...",
+      "question": "A specific research question that directly serves the core question",
+      "answer_type": "numeric|comparison|causal|trend|opinion|list|general",
+      "research_strategy": "data_hunt|triangulate|expert_scan|regulatory_lookup|company_deep_dive|historical_analysis|technical_deep_dive",
       "priority": 1,
       "depends_on": [],
-      "search_queries": ["...", "...", "..."]
+      "search_queries": ["specific search query 1", "specific search query 2"]
     }}
   ],
-  "analytical_approach": {{
-  }},
-  "contrarian_hypotheses": ["...", "..."],
-  "scope_in": ["...", "..."],
-  "scope_out": ["...", "..."],
-  "report_sections": ["...", "..."]
+  "analytical_approach": {{}},
+  "contrarian_hypotheses": ["A bold claim the research should test"],
+  "scope_in": ["What this report covers"],
+  "scope_out": ["What this report does NOT cover"],
+  "report_sections": ["Section names that match what was asked"]
 }}
 
-IMPORTANT: The "analytical_approach" field is free-form — YOU decide what keys belong there based on the topic. It might contain comparison_dimensions, proposed_tables, segmentation_hypothesis, evaluation_criteria, causal_model, timeline_structure, risk_matrix, scoring_rubric, or anything else that fits. Design it for THIS topic, not from a template."""
+RULES:
+- Generate 8-12 sub-questions. Every sub-question must directly serve the core question.
+- Do NOT add generic sub-questions like "market size" or "key players" unless the topic specifically asks for them.
+- report_sections should reflect what was ASKED, not a default template.
+- search_queries should be specific: include names, years, and precise terms."""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
