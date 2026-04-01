@@ -271,12 +271,18 @@ For each analytical framework above, decide which report section it belongs in a
 
 Contrarian insights should each get a highlighted callout in the relevant section.
 
+CRITICAL — NO DATA REPETITION:
+- Each specific data point (number, statistic, percentage) must appear in ONE primary section only.
+- The Executive Summary should reference findings at a HIGH LEVEL (trends, verdicts, conclusions) — not restate every number that appears in later sections. Use phrases like "as detailed in Section 3" instead of repeating the data.
+- If a fact is central to Section A, other sections should REFERENCE it ("as noted in [Section A]") not repeat it.
+- Assign each evidence_id to its ONE best-fit section. Do NOT assign the same evidence_id to multiple sections.
+
 For each section, define:
 1. thesis: The ONE argument this section makes
-2. evidence_ids: Which evidence entries to cite (list IDs)
+2. evidence_ids: Which evidence entries to cite — UNIQUE to this section, not shared with others
 3. judgment: Which analyst judgment to express (if any)
 4. frameworks: Which analytical framework(s) to include in this section
-5. causal_links: How this section connects to others
+5. causal_links: How this section connects to others (use cross-references, not repetition)
 6. so_what: The implication for the reader
 7. structure: bullet_heavy | narrative | table_driven | case_study
 
@@ -323,7 +329,7 @@ CONTRARIAN INSIGHTS:
 {contrarian_insights}
 
 WRITING RULES:
-1. Start with ## Executive Summary — 5-7 bullet points with specific numbers, then the key verdict
+1. Start with ## Executive Summary — 5-7 bullet points summarizing KEY VERDICTS and conclusions (not raw numbers). The Executive Summary should make the reader want to read more, not replace the sections that follow.
 2. Each section: lead with the thesis (bold), then evidence, then "So what?" implication
 3. Include CASE STUDIES where the evidence supports them — real entities with real metrics
 4. Render each analytical framework as a formatted markdown table, diagram, or structured list — whichever best communicates the data
@@ -332,6 +338,12 @@ WRITING RULES:
 7. Name specific entities — no vague "several companies" or "some countries"
 8. NEVER show internal labels like [T1], [T2], evidence IDs, or sub-question IDs
 9. NEVER attribute data to competitor research firms ({banned_firms_summary})
+
+NO REPETITION (critical):
+- Each specific number, statistic, or data point should appear ONCE in its primary section. Do NOT restate the same figure in the Executive Summary AND the detailed section AND the conclusion.
+- The Executive Summary should contain VERDICTS and IMPLICATIONS, not a preview of every number in the report.
+- If you need to reference a data point from another section, write "as detailed in [Section Name]" — do not copy the number again.
+- Case studies and examples should appear in ONE section only.
 
 EVIDENCE INTEGRITY (non-negotiable):
 10. If you have NO evidence for a claim, do NOT include it. Never fabricate numbers, percentages, or statistics.
