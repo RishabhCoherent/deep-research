@@ -142,22 +142,29 @@ async def compose(
         if notify:
             notify("compose", f"Report at {word_count} words, expanding...")
 
+        # Truncate evidence to avoid hitting TPM limits on the expand call
+        truncated_evidence = evidence_by_section[:15000] if len(evidence_by_section) > 15000 else evidence_by_section
+
         expand_msg = (
             f"The report is only {word_count} words. The target is {target_words}. "
             f"Expand each section with more detail, additional case studies, "
             f"deeper analysis, and more specific data points from the evidence. "
             f"IMPORTANT: Only use data from the evidence below. Do NOT fabricate any numbers or statistics.\n\n"
             f"Here is the current draft to expand:\n\n{draft}\n\n"
-            f"EVIDENCE:\n{evidence_by_section}\n\n"
+            f"EVIDENCE:\n{truncated_evidence}\n\n"
             f"Write the COMPLETE expanded report. Start with ## Executive Summary."
         )
-        response2 = await llm_writer.ainvoke([{"role": "user", "content": expand_msg}])
-        track("analyst compose expand", response2)
-        expanded = get_content(response2)
-        if len(expanded.split()) > word_count:
-            draft = _scrub_competitors(expanded)
-            word_count = len(draft.split())
-            logger.info(f"[Analyst] Expanded to {word_count} words")
+        try:
+            response2 = await llm_writer.ainvoke([{"role": "user", "content": expand_msg}])
+            track("analyst compose expand", response2)
+            expanded = get_content(response2)
+            if len(expanded.split()) > word_count:
+                draft = _scrub_competitors(expanded)
+                word_count = len(draft.split())
+                logger.info(f"[Analyst] Expanded to {word_count} words")
+        except Exception as e:
+            logger.warning(f"[Analyst] Expand failed (keeping original draft): {e}")
+            # Keep the original draft — don't crash
 
     if notify:
         notify("compose", f"Report complete: {word_count} words")
