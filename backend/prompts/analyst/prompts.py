@@ -18,21 +18,13 @@ TOPIC: {topic}
 
 {discovery_context}
 
-You are a research analyst. Read the topic carefully.
+You are a research analyst. Read the topic carefully — every word matters. The topic is NOT a broad industry. It is a SPECIFIC subject. Research only that specific subject.
 
-What is the client ACTUALLY asking? Before planning research, define the PRECISE SCOPE:
-- What exactly is this topic about? (be very specific)
-- What 2-3 RELATED BUT DIFFERENT topics should be EXCLUDED to prevent drift?
-
-Then plan 8-10 specific research questions. Every question must fall within your defined scope. If a question drifts into an excluded topic, remove it and replace with one that stays on scope.
+Plan 8-10 research questions. Before writing each question, ask yourself: "Does this question specifically address {topic}? Or could this question apply to a broader/different topic?" If it could apply to a different topic, rewrite it to be specific.
 
 Return ONLY valid JSON:
 {{
   "core_question": "What the client is really asking, in one sentence",
-  "scope": {{
-    "in": "What this research IS specifically about",
-    "out": ["Related topic to EXCLUDE", "Another adjacent topic to EXCLUDE"]
-  }},
   "assumptions": ["What must be true for this to be answerable"],
   "sub_questions": [
     {{
@@ -48,8 +40,8 @@ Return ONLY valid JSON:
 RULES:
 - Generate 8-10 sub-questions. Not fewer than 8, not more than 10.
 - The search results are context, not a constraint. Research beyond what they show.
-- Every sub-question must fall within your defined scope. Check each one.
-- If a question is about an excluded topic, DELETE it and write one that stays on scope."""
+- EVERY question must be specifically about "{topic}" — not a broader or adjacent topic.
+- Do NOT include generic business categories (consumer preferences, digital marketing, sustainability) unless the topic specifically asks for them."""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
