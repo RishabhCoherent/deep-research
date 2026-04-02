@@ -38,7 +38,7 @@ Return ONLY valid JSON:
 }}
 
 RULES:
-- Generate 8-12 sub-questions. This is a minimum — do not generate fewer than 8.
+- Generate 8-10 sub-questions. Not fewer than 8, not more than 10.
 - The search results are context, not a constraint. Research beyond what they show.
 - Every sub-question must directly serve the core question."""
 
