@@ -304,7 +304,7 @@ WRITING RULES:
 1. Start with ## Executive Summary — 5-7 bullet points summarizing KEY VERDICTS and conclusions (not raw numbers). The Executive Summary should make the reader want to read more, not replace the sections that follow.
 2. Each section: lead with the thesis (bold), then evidence, then "So what?" implication
 3. Include CASE STUDIES where the evidence supports them — real entities with real metrics
-4. Render each analytical framework as a formatted markdown table, diagram, or structured list — whichever best communicates the data
+4. Render each analytical framework as a formatted markdown table or structured list. Do NOT use Mermaid, code blocks, or diagram syntax — only plain markdown.
 5. "So what?" after every major finding — what should the reader DO with this?
 6. Bold key numbers, names, and percentages
 7. Name specific entities — no vague "several companies" or "some countries"
