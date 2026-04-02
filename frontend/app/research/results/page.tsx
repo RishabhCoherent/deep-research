@@ -24,8 +24,10 @@ import { ScrollPipeline } from "@/components/ScrollPipeline";
 import { LayerPopupContent } from "@/components/LayerPopupContent";
 import { ComparatorContent } from "@/components/ComparatorContent";
 import { AnalystTraceOverlay } from "@/components/AnalystTrace";
+import { DecompositionTree } from "@/components/DecompositionTree";
 import { Button } from "@/components/ui/button";
 import { useResearchStore } from "@/lib/store";
+import type { ResearchTreeData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { LAYER_NAMES, LAYER_DESCRIPTIONS } from "@/lib/types";
 import { extractAnalystTrace, isAnalystFormat } from "@/lib/extract-agent-steps";
@@ -107,7 +109,11 @@ export default function ResearchResultsPage() {
   const analystTrace = extractAnalystTrace(report);
   const hasAnalystTrace = analystTrace !== null;
 
-  // Research tree from L3 metadata
+  const researchTree: ResearchTreeData | null = (() => {
+    const l3 = report.layers.find((l) => l.layer === 2);
+    const tree = (l3?.metadata as Record<string, unknown>)?.research_tree as ResearchTreeData | undefined;
+    return tree && tree.total_nodes > 0 ? tree : null;
+  })();
 
   function handleDownloadJson() {
     if (!report) return;
@@ -414,6 +420,22 @@ export default function ResearchResultsPage() {
         </div>
       </div>
 
+
+      {/* ── Decomposition Tree ────────────────────────────── */}
+      {researchTree && researchTree.total_nodes > 1 && (
+        <div className="mb-12">
+          <div className="mb-4">
+            <span className="inline-flex items-center gap-3 text-xs font-mono uppercase tracking-wider text-muted-foreground">
+              <span className="w-6 h-px bg-foreground/30" />
+              Research Decomposition
+            </span>
+            <p className="text-sm text-muted-foreground mt-1">
+              Each question was broken into smaller parts and researched individually. Click any node to inspect.
+            </p>
+          </div>
+          <DecompositionTree treeData={researchTree} className="h-[400px]" />
+        </div>
+      )}
 
       {/* ── Popups ───────────────────────────────────────── */}
 
