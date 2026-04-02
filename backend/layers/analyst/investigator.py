@@ -244,9 +244,20 @@ async def _research_single_question(
     parts = await _decompose_question(sq.question, llm, budget_lock, board)
     logger.info(f"[Analyst] {sq.id} decomposed into {len(parts)} parts: {[p[:50] for p in parts]}")
 
-    # Create child research nodes in the tree
+    # Create root node for this sub-question in the tree
     tree = board.research_tree
-    root_node_id = tree.sq_to_root.get(sq.id)
+    root_node = ResearchNode(
+        parent_id="",
+        depth=0,
+        query=sq.question,
+        why_created="root",
+        trigger_finding="",
+        sq_id=sq.id,
+        status="exploring",
+    )
+    tree.add_node(root_node)
+    tree.sq_to_root[sq.id] = root_node.id
+    root_node_id = root_node.id
 
     if trace:
         trace.add("think", f"Decomposed: {sq.question[:50]}", {
@@ -334,6 +345,12 @@ async def _research_single_question(
     for ev in all_evidence:
         board.evidence.append(ev)
         sq.evidence_ids.append(ev.id)
+
+    # Update root node with combined result
+    root_node.answer = sq.answer[:500] if sq.answer else ""
+    root_node.confidence = sq.confidence
+    root_node.status = "complete" if sq.status == "answered" else "dead-end"
+    root_node.evidence_ids = [e.id for e in all_evidence]
 
     logger.info(
         f"[Analyst] {sq.id}: {sq.status} (conf={sq.confidence:.0%}, "
