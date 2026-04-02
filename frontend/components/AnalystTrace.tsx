@@ -147,7 +147,7 @@ function InvestigateSection({ steps }: { steps: TraceStep[] }) {
   const scrapes = steps.filter(s => s.phase === "scrape").length;
   const reflects = steps.filter(s => s.phase === "reflect");
   const answered = reflects.filter(s => {
-    const c = s.content as ReflectContent;
+    const c = s.content as any;
     return c?.confidence && c.confidence >= 0.3;
   }).length;
 
@@ -161,7 +161,7 @@ function InvestigateSection({ steps }: { steps: TraceStep[] }) {
     <section className="space-y-6">
       <PhaseBadge phase="search" />
       <p className="text-muted-foreground leading-relaxed">
-        The agent researched each question using a <strong className="text-foreground">think → search → reflect</strong> cycle.
+        The agent broke each question into smaller parts, researched each part, then combined the answers.
         It performed <strong className="text-foreground">{searches} searches</strong>, read{" "}
         <strong className="text-foreground">{scrapes} web pages</strong>, and answered{" "}
         <strong className="text-foreground">{answered} of {sqIds.length}</strong> questions.
@@ -174,14 +174,19 @@ function InvestigateSection({ steps }: { steps: TraceStep[] }) {
           const thinkStep = g.steps.find(s => s.phase === "think");
           const reflectStep = g.steps.find(s => s.phase === "reflect");
           const searchSteps = g.steps.filter(s => s.phase === "search");
-          const thinkC = thinkStep?.content as ThinkContent | undefined;
-          const reflectC = reflectStep?.content as ReflectContent | undefined;
+          const thinkC = thinkStep?.content as any;
+          const reflectC = reflectStep?.content as any;
           const confidence = reflectC?.confidence || 0;
           const status = confidence >= 0.3 ? "answered" : "gap";
 
+          // New decomposition format: think has "parts" array
+          const hasParts = Array.isArray(thinkC?.parts) && thinkC.parts.length > 0;
+          // Old format: think has "hypothesis"
+          const hasHypothesis = !!thinkC?.hypothesis;
+
           return (
             <div key={sqId} className="rounded-xl border border-foreground/5 bg-foreground/[0.02] overflow-hidden">
-              {/* Header — always visible */}
+              {/* Header */}
               <button
                 onClick={() => toggle(sqId)}
                 className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-foreground/[0.03] transition-colors"
@@ -190,6 +195,11 @@ function InvestigateSection({ steps }: { steps: TraceStep[] }) {
                 <span className="text-sm font-medium text-foreground/80 flex-1">
                   Q{idx + 1}: {g.question}
                 </span>
+                {hasParts && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border bg-blue-500/10 text-blue-400 border-blue-500/20 mr-1">
+                    {thinkC.parts.length} parts
+                  </span>
+                )}
                 <span className={cn(
                   "text-[10px] font-mono px-2 py-0.5 rounded-full border",
                   status === "answered" ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-red-500/10 text-red-400 border-red-500/20"
@@ -198,11 +208,26 @@ function InvestigateSection({ steps }: { steps: TraceStep[] }) {
                 </span>
               </button>
 
-              {/* Detail — collapsible */}
+              {/* Detail */}
               {isOpen && (
                 <div className="px-4 pb-4 space-y-4 border-t border-foreground/5 pt-3">
-                  {/* Hypothesis */}
-                  {thinkC?.hypothesis && (
+                  {/* Decomposition parts (new format) */}
+                  {hasParts && (
+                    <div>
+                      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Decomposed into {thinkC.parts.length} parts</p>
+                      <div className="space-y-1.5">
+                        {thinkC.parts.map((part: string, i: number) => (
+                          <div key={i} className="flex items-start gap-2 text-xs">
+                            <span className="shrink-0 text-[10px] font-mono text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">P{i + 1}</span>
+                            <span className="text-foreground/80">{part}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hypothesis (old format) */}
+                  {!hasParts && hasHypothesis && (
                     <div>
                       <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Hypothesis</p>
                       <p className="text-sm text-foreground/70 italic">"{thinkC.hypothesis}"</p>
@@ -228,7 +253,22 @@ function InvestigateSection({ steps }: { steps: TraceStep[] }) {
                     </div>
                   )}
 
-                  {/* Key findings */}
+                  {/* Part answers (new format) */}
+                  {reflectC?.part_answers?.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Part answers</p>
+                      <div className="space-y-2">
+                        {reflectC.part_answers.map((a: string, i: number) => (
+                          <div key={i} className="text-xs rounded-lg border border-foreground/5 bg-foreground/[0.01] p-2.5">
+                            <span className="text-[10px] font-mono text-blue-400 mr-1.5">Part {i + 1}:</span>
+                            <span className="text-foreground/70">{a}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Evidence findings (old format) */}
                   {reflectC?.findings?.length > 0 && (
                     <div>
                       <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Evidence found ({reflectC.findings.length})</p>
@@ -248,10 +288,12 @@ function InvestigateSection({ steps }: { steps: TraceStep[] }) {
                     </div>
                   )}
 
-                  {/* Answer */}
+                  {/* Combined answer */}
                   {reflectC?.answer && (
                     <div>
-                      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Conclusion</p>
+                      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">
+                        {hasParts ? "Combined answer" : "Conclusion"}
+                      </p>
                       <p className="text-sm text-foreground/80">{reflectC.answer}</p>
                       <ConfidenceBar value={confidence} />
                     </div>
