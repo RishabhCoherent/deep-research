@@ -20,16 +20,24 @@ TOPIC: {topic}
 
 You are a research analyst. Read the topic carefully.
 
-What is the client ACTUALLY asking? Plan 8-12 specific research questions that directly answer what was asked. The search results above are just a starting point — use them for context but also think about what ELSE you would need to research beyond what those snippets cover. Do not limit yourself to only what the search results mention.
+What is the client ACTUALLY asking? Before planning research, define the PRECISE SCOPE:
+- What exactly is this topic about? (be very specific)
+- What 2-3 RELATED BUT DIFFERENT topics should be EXCLUDED to prevent drift?
+
+Then plan 8-10 specific research questions. Every question must fall within your defined scope. If a question drifts into an excluded topic, remove it and replace with one that stays on scope.
 
 Return ONLY valid JSON:
 {{
   "core_question": "What the client is really asking, in one sentence",
+  "scope": {{
+    "in": "What this research IS specifically about",
+    "out": ["Related topic to EXCLUDE", "Another adjacent topic to EXCLUDE"]
+  }},
   "assumptions": ["What must be true for this to be answerable"],
   "sub_questions": [
     {{
       "id": "sq_01",
-      "question": "A specific research question",
+      "question": "A specific research question WITHIN SCOPE",
       "priority": 1,
       "search_queries": ["specific search query 1", "specific search query 2"]
     }}
@@ -40,7 +48,8 @@ Return ONLY valid JSON:
 RULES:
 - Generate 8-10 sub-questions. Not fewer than 8, not more than 10.
 - The search results are context, not a constraint. Research beyond what they show.
-- Every sub-question must directly serve the core question."""
+- Every sub-question must fall within your defined scope. Check each one.
+- If a question is about an excluded topic, DELETE it and write one that stays on scope."""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
