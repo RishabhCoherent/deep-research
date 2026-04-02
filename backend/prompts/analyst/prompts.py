@@ -227,58 +227,51 @@ OUTPUT FORMAT — return ONLY valid JSON:
 # 5. COMPOSE — Two-pass report writing
 # ═══════════════════════════════════════════════════════════════════════════════
 
-COMPOSE_OUTLINE_PROMPT = """You are a senior analyst creating an argument structure for a research report.
+COMPOSE_OUTLINE_PROMPT = """You are structuring an opinionated, thesis-driven research report.
 
 TOPIC: {topic}
 REPORT SECTIONS: {sections}
 
-ANALYSIS RESULT:
-Key findings: {key_findings}
-Narrative thread: {narrative_thread}
-Causal chains: {causal_chains}
-Analyst judgments: {judgments}
-Evidence gaps: {evidence_gaps}
+KEY FINDINGS: {key_findings}
+NARRATIVE: {narrative_thread}
+CAUSAL CHAINS: {causal_chains}
+JUDGMENTS: {judgments}
+EVIDENCE GAPS: {evidence_gaps}
+FRAMEWORKS: {analytical_frameworks}
+CONTRARIAN INSIGHTS: {contrarian_insights}
 
-ANALYTICAL FRAMEWORKS (created during analysis — incorporate into report structure):
-{analytical_frameworks}
+Create 5-7 focused sections. Each section must argue ONE thesis. The report should build a COHERENT ARGUMENT, not just list findings.
 
-Contrarian insights: {contrarian_insights}
+REQUIRED SECTIONS:
+- Executive Summary (verdicts only, no data)
+- 3-5 analytical sections (each with a clear thesis + evidence + "so what?")
+- Contrarian View (2-3 bold, non-consensus claims backed by evidence)
+- Sources & References
 
-For each analytical framework above, decide which report section it belongs in and how to present it (as a table, as a subsection structure, as a callout, etc.). The frameworks should drive the report's structure, not be bolted on as appendices.
+RULES:
+1. Each evidence_id assigned to ONE section only.
+2. MERGE overlapping sections. Fewer, deeper sections > many thin ones.
+3. DROP sections with zero evidence.
+4. Include at least one section with an analytical FRAMEWORK (comparison table, risk matrix, or causal chain).
 
-Contrarian insights should each get a highlighted callout in the relevant section.
-
-CRITICAL RULES:
-1. NO REPETITION: Each data point appears in ONE section only. The Executive Summary gives verdicts, not numbers. Other sections cross-reference ("as detailed in [Section]"), never re-state.
-2. NO OVERLAP: If two proposed sections cover similar ground, MERGE them into one. Aim for 5-7 focused sections, not 10+ thin ones.
-3. NO FABRICATION: If a section has zero evidence_ids, DROP IT entirely. Do not include sections you cannot fill with real evidence.
-4. Assign each evidence_id to exactly ONE section.
-
-For each section, define:
-1. thesis: The ONE argument this section makes
-2. evidence_ids: Which evidence entries to cite — UNIQUE to this section
-3. judgment: Which analyst judgment to express (if any)
-4. frameworks: Which analytical framework(s) to include
-5. so_what: The implication for the reader
-
-OUTPUT FORMAT — return ONLY valid JSON (5-7 sections max, no empty sections):
+Return ONLY valid JSON:
 {{
   "sections": [
     {{
       "heading": "## Section Title",
-      "thesis": "...",
+      "thesis": "The ONE argument this section makes",
       "evidence_ids": ["ev_01", "ev_05"],
-      "judgment": "...",
-      "so_what": "..."
+      "judgment": "Which analyst judgment to express",
+      "so_what": "What the reader should DO with this"
     }}
   ]
 }}"""
 
 
-COMPOSE_REPORT_PROMPT = """You are a senior analyst writing a client-ready research report. You have a complete argument structure and evidence base. Your job is to WRITE — the analysis is done.
+COMPOSE_REPORT_PROMPT = """You are a senior analyst at a top-tier consulting firm. You are writing a report that will change how the reader thinks about this topic. You are NOT writing a Wikipedia article — you are writing an opinionated, thesis-driven analysis.
 
 TODAY'S DATE: {current_date}
-IMPORTANT: We are in {current_year}. Use past tense for {last_year} data ("reached", "was"). Use present/future tense for {current_year}-{next_year} projections.
+IMPORTANT: We are in {current_year}. Use past tense for {last_year} data. Use present/future for {current_year}+.
 
 TOPIC: {topic}
 
@@ -294,44 +287,39 @@ ANALYST JUDGMENTS:
 EVIDENCE GAPS (be honest about these):
 {evidence_gaps}
 
-ANALYTICAL FRAMEWORKS (render each in the section designated by the outline):
+ANALYTICAL FRAMEWORKS:
 {analytical_frameworks}
 
 CONTRARIAN INSIGHTS:
 {contrarian_insights}
 
-WRITING RULES:
-1. Start with ## Executive Summary — 5-7 bullet points summarizing KEY VERDICTS and conclusions (not raw numbers). The Executive Summary should make the reader want to read more, not replace the sections that follow.
-2. Each section: lead with the thesis (bold), then evidence, then "So what?" implication
-3. Include CASE STUDIES where the evidence supports them — real entities with real metrics
-4. Render each analytical framework as a formatted markdown table or structured list. Do NOT use Mermaid, code blocks, or diagram syntax — only plain markdown.
-5. "So what?" after every major finding — what should the reader DO with this?
-6. Bold key numbers, names, and percentages
-7. Name specific entities — no vague "several companies" or "some countries"
-8. NEVER show internal labels like [T1], [T2], evidence IDs, or sub-question IDs
-9. NEVER attribute data to competitor research firms ({banned_firms_summary})
+WHAT MAKES A GREAT REPORT (follow these):
+1. **Executive Summary**: 5-7 bullet VERDICTS (not data points). End with a bold, one-sentence investment thesis. The reader should know your position after reading just this section.
+2. **Every section has ONE thesis** (bold, first line). Then evidence. Then "So what?" — what should the reader DO differently because of this finding?
+3. **Be selective, not comprehensive**. You have more evidence than you need. Use the 5-10 strongest data points, not all 30. A focused argument beats an exhaustive list.
+4. **Build causal chains**: Show WHY trends are happening, not just THAT they are happening. Use explicit cause→effect→implication chains. Include at least one causal chain table.
+5. **Create analytical frameworks**: At least one comparison table, one risk matrix, or one segmentation taxonomy. These are the artifacts readers remember and share.
+6. **Dedicated contrarian section**: End with "## Contrarian View" — 2-3 bold claims that challenge the consensus narrative. Be specific and evidence-backed.
+7. **Name names**: Every claim needs a specific entity, number, or date. "Several companies" = delete the sentence. "Diageo paused Teaninich production in April 2025" = keep.
+8. Render frameworks as markdown tables. No Mermaid, no code blocks.
+9. NEVER show [T1], [T2], evidence IDs, or sub-question IDs.
+10. NEVER attribute to competitor research firms ({banned_firms_summary}).
 
-NO REPETITION (critical):
-- Each number/statistic appears ONCE in its primary section. Never restate in Executive Summary AND body AND conclusion.
-- Executive Summary = verdicts and implications ONLY, not raw numbers.
-- Cross-reference other sections ("as detailed in [Section Name]"), never repeat data.
-- Each case study appears in ONE section only.
+NO REPETITION:
+- Each data point appears ONCE. Executive Summary = verdicts only, not numbers.
+- Cross-reference sections, never repeat.
 
-NO FABRICATION (non-negotiable):
-10. If the EVIDENCE section above contains NO data for a topic, do NOT write about that topic. Skip it entirely.
-11. If evidence is thin, keep the section SHORT. Do not pad with generic statements.
-12. NEVER write sentences like "Data analytics is increasingly used..." or "Technology plays a growing role..." without specific evidence. These are filler.
-13. Every specific data point must come from the evidence above. If you cannot point to it in the evidence, delete the sentence.
+NO FABRICATION:
+- If you have no evidence for a claim, delete the sentence.
+- No filler like "Technology plays a growing role..." without specifics.
+- Every number must come from the evidence above.
 
 SOURCES:
-14. END with ## Sources & References — numbered bibliography of T1/T2 sources only
-15. Format: "Source Name — URL"
-16. Include only sources you actually cited
+- END with ## Sources & References — numbered list, include only what you actually cited.
 
-TARGET: {target_words} words. But quality over quantity — a shorter fully-evidenced report beats a padded one.
-Each section: ~{per_section_words} words.
+TARGET: {target_words} words. Quality over quantity.
 
-OUTPUT: Start directly with ## Executive Summary. No preamble."""
+OUTPUT: Start with ## Executive Summary. No preamble."""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
