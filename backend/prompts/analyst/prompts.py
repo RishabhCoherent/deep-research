@@ -18,9 +18,9 @@ TOPIC: {topic}
 
 {discovery_context}
 
-You are a research analyst. Read the topic and the search results above.
+You are a research analyst. Read the topic carefully.
 
-What is the client ACTUALLY asking? Use the search results to identify SPECIFIC trends, entities, events, and developments. Your sub-questions should reference what you see in the search results — not generic categories.
+What is the client ACTUALLY asking? Plan 8-12 specific research questions that directly answer what was asked. The search results above are just a starting point — use them for context but also think about what ELSE you would need to research beyond what those snippets cover. Do not limit yourself to only what the search results mention.
 
 Return ONLY valid JSON:
 {{
@@ -35,7 +35,12 @@ Return ONLY valid JSON:
     }}
   ],
   "report_sections": ["Section names that match what was asked"]
-}}"""
+}}
+
+RULES:
+- Generate 8-12 sub-questions. This is a minimum — do not generate fewer than 8.
+- The search results are context, not a constraint. Research beyond what they show.
+- Every sub-question must directly serve the core question."""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
