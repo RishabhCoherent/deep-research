@@ -78,10 +78,10 @@ async def run_analyst(
 
     # ── Initialize Research Board ─────────────────────────────────────────
 
-    # Budget: ~10 tool calls per question (think + 3 search + 2 scrape + reflect + overhead)
-    # + 20 for limited tree expansion (breadth over depth — cover all questions first)
+    # Budget: ~15 tool calls per question (decompose + 3 parts × (search + scrape) + combine)
+    # No separate tree expansion — decomposition is the tree
     num_questions = len(framework.sub_questions)
-    budget = max(100, num_questions * 10) + 20
+    budget = max(120, num_questions * 15)
     board = ResearchBoard(
         framework=framework,
         tool_calls_budget=budget,
