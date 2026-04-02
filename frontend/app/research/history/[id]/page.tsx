@@ -441,7 +441,7 @@ export default function HistoryDetailPage({
               Each question was broken into smaller parts and researched individually. Click any node to inspect.
             </p>
           </div>
-          <DecompositionTree treeData={researchTree} className="h-[400px]" />
+          <DecompositionTree treeData={researchTree} className="h-100" />
         </div>
       )}
 

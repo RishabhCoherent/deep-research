@@ -111,7 +111,7 @@ function DecomposeSection({ step }: { step: TraceStep }) {
             {sqs.map((sq: any, i: number) => {
               const pri = PRIORITY_BADGE[sq.priority] || PRIORITY_BADGE[2];
               return (
-                <div key={sq.id || i} className="flex items-start gap-3 rounded-lg border border-foreground/5 bg-foreground/[0.02] px-4 py-3">
+                <div key={sq.id || i} className="flex items-start gap-3 rounded-lg border border-foreground/5 bg-foreground/2 px-4 py-3">
                   <span className={cn("mt-0.5 shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-mono font-medium", pri.cls)}>
                     {pri.label}
                   </span>
@@ -187,11 +187,11 @@ function InvestigateSection({ steps }: { steps: TraceStep[] }) {
           const hasHypothesis = !!thinkC?.hypothesis;
 
           return (
-            <div key={sqId} className="rounded-xl border border-foreground/5 bg-foreground/[0.02] overflow-hidden">
+            <div key={sqId} className="rounded-xl border border-foreground/5 bg-foreground/2 overflow-hidden">
               {/* Header */}
               <button
                 onClick={() => toggle(sqId)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-foreground/[0.03] transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-foreground/3 transition-colors"
               >
                 {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
                 <span className="text-sm font-medium text-foreground/80 flex-1">
@@ -243,7 +243,7 @@ function InvestigateSection({ steps }: { steps: TraceStep[] }) {
                       {g.steps.filter(s => s.phase === "part_research").map((s, i) => {
                         const pc = s.content as any;
                         return (
-                          <div key={i} className="rounded-lg border border-foreground/5 bg-foreground/[0.02] p-3 space-y-2">
+                          <div key={i} className="rounded-lg border border-foreground/5 bg-foreground/2 p-3 space-y-2">
                             {/* Part header */}
                             <div className="flex items-center gap-2">
                               <span className="text-[10px] font-mono font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">P{i + 1}</span>
@@ -403,7 +403,7 @@ function AnalyzeSection({ step }: { step: TraceStep }) {
           <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">Analyst Judgments</p>
           <div className="space-y-3">
             {judgments.map((j: any, i: number) => (
-              <div key={i} className="rounded-lg border border-foreground/5 bg-foreground/[0.02] p-4">
+              <div key={i} className="rounded-lg border border-foreground/5 bg-foreground/2 p-4">
                 <div className="flex items-start gap-2">
                   <span className={cn(
                     "shrink-0 mt-0.5 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border",
