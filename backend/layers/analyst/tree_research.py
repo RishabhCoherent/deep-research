@@ -43,10 +43,10 @@ from tools.citation import is_banned_source
 
 logger = logging.getLogger(__name__)
 
-MAX_DEPTH = 2
-MAX_CHILDREN_PER_ROOT = 3
-MAX_CHILDREN_PER_CHILD = 2
-MAX_TOTAL_NODES = 25  # Hard cap on total research nodes across all sub-questions
+MAX_DEPTH = 1               # Only 1 level deep — prioritize breadth over depth
+MAX_CHILDREN_PER_ROOT = 2   # Max 2 child questions per root (was 3)
+MAX_CHILDREN_PER_CHILD = 0  # No grandchildren — save budget for unanswered roots
+MAX_TOTAL_NODES = 12        # Hard cap (was 25) — leaves budget for flat investigation
 
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
@@ -192,6 +192,13 @@ async def expand_research_tree(
         notify("node_graph", f"Research tree built: {tree.total_nodes} root nodes")
 
     # Step 2: decide which root nodes to expand
+    # But ONLY if all questions have been attempted — breadth first
+    unanswered = [sq for sq in board.framework.sub_questions
+                  if sq.status in ("pending", "researching")]
+    if unanswered:
+        logger.info(f"[TreeResearch] {len(unanswered)} questions still unanswered — skipping tree expansion to preserve budget")
+        return
+
     if board.budget_remaining < 12:
         logger.info("[TreeResearch] Budget too low for expansion, skipping")
         return
