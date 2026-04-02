@@ -234,8 +234,75 @@ function InvestigateSection({ steps }: { steps: TraceStep[] }) {
                     </div>
                   )}
 
-                  {/* Searches */}
-                  {searchSteps.length > 0 && (
+                  {/* Per-part research detail (new recursive format) */}
+                  {g.steps.filter(s => s.phase === "part_research").length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Research per part</p>
+                      {g.steps.filter(s => s.phase === "part_research").map((s, i) => {
+                        const pc = s.content as any;
+                        return (
+                          <div key={i} className="rounded-lg border border-foreground/5 bg-foreground/[0.02] p-3 space-y-2">
+                            {/* Part header */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-mono font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">P{i + 1}</span>
+                              <span className="text-xs font-medium text-foreground/80">{pc?.part_question}</span>
+                            </div>
+
+                            {/* Search results */}
+                            {pc?.search_results?.length > 0 && (
+                              <div className="pl-6">
+                                <p className="text-[10px] font-mono text-muted-foreground mb-1">
+                                  <Search className="h-3 w-3 inline mr-1" />
+                                  {pc.search_results.length} results found
+                                </p>
+                                <div className="space-y-1">
+                                  {pc.search_results.slice(0, 3).map((r: any, j: number) => (
+                                    <div key={j} className="text-[11px] text-muted-foreground">
+                                      <span className="text-foreground/70">{r.title}</span>
+                                      {r.snippet && <span className="ml-1">— {r.snippet}</span>}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Scrape info */}
+                            {pc?.scrape?.success && (
+                              <div className="pl-6">
+                                <p className="text-[10px] font-mono text-muted-foreground">
+                                  <FileDown className="h-3 w-3 inline mr-1" />
+                                  Scraped {pc.scrape.content_length?.toLocaleString()} chars via {pc.scrape.method}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Evidence found */}
+                            {pc?.evidence_found?.length > 0 && (
+                              <div className="pl-6">
+                                <p className="text-[10px] font-mono text-muted-foreground mb-1">{pc.evidence_found.length} evidence items</p>
+                                {pc.evidence_found.slice(0, 3).map((e: any, j: number) => (
+                                  <div key={j} className="flex items-start gap-1.5 text-[11px] mb-1">
+                                    <Check className="h-3 w-3 mt-0.5 text-green-500 shrink-0" />
+                                    <span className="text-foreground/70">{e.fact}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Part answer summary */}
+                            {pc?.answer_summary && (
+                              <div className="pl-6 pt-1 border-t border-foreground/5">
+                                <p className="text-[11px] text-foreground/80">{pc.answer_summary}</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Searches (old format — no part_research steps) */}
+                  {g.steps.filter(s => s.phase === "part_research").length === 0 && searchSteps.length > 0 && (
                     <div>
                       <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Searches ({searchSteps.length})</p>
                       <div className="space-y-1">
@@ -253,23 +320,8 @@ function InvestigateSection({ steps }: { steps: TraceStep[] }) {
                     </div>
                   )}
 
-                  {/* Part answers (new format) */}
-                  {reflectC?.part_answers?.length > 0 && (
-                    <div>
-                      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Part answers</p>
-                      <div className="space-y-2">
-                        {reflectC.part_answers.map((a: string, i: number) => (
-                          <div key={i} className="text-xs rounded-lg border border-foreground/5 bg-foreground/[0.01] p-2.5">
-                            <span className="text-[10px] font-mono text-blue-400 mr-1.5">Part {i + 1}:</span>
-                            <span className="text-foreground/70">{a}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Evidence findings (old format) */}
-                  {reflectC?.findings?.length > 0 && (
+                  {g.steps.filter(s => s.phase === "part_research").length === 0 && reflectC?.findings?.length > 0 && (
                     <div>
                       <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Evidence found ({reflectC.findings.length})</p>
                       <div className="space-y-1.5">

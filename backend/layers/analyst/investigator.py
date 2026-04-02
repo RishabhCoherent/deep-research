@@ -148,13 +148,8 @@ async def _research_part(
                 tier=tier,
             ))
 
-    if trace:
-        trace.add("search", f"Part search: {part_question[:50]}", {
-            "query": part_question,
-            "results": [{"title": r.get("title",""), "url": r.get("url",""), "snippet": r.get("snippet","")[:100], "tier": get_source_tier(r.get("url",""))} for r in results[:5]],
-        }, sq_id=sq.id)
-
     # Scrape top result for deeper data
+    scrape_data = None
     if results and board.budget_remaining >= 2:
         top_url = results[0].get("url", "")
         if top_url and not is_banned_source(top_url, ""):
@@ -168,20 +163,40 @@ async def _research_part(
                         board.scrapes_done += 1
                     content = scrape_result["content"][:4000]
                     search_text += f"\n--- SCRAPED: {content[:2000]}"
-
-                    if trace:
-                        trace.add("scrape", f"Part scrape: {top_url[:50]}", {
-                            "url": top_url, "success": True,
-                            "method": scrape_result["method"],
-                            "content_length": len(scrape_result["content"]),
-                        }, sq_id=sq.id)
+                    scrape_data = {
+                        "url": top_url,
+                        "success": True,
+                        "method": scrape_result["method"],
+                        "content_length": len(scrape_result["content"]),
+                        "content_preview": content[:300],
+                    }
                 else:
                     async with budget_lock:
                         board.scrapes_failed += 1
+                    scrape_data = {"url": top_url, "success": False, "method": scrape_result["method"]}
             except Exception as e:
                 logger.warning(f"[Part] Scrape failed: {e}")
 
     answer = search_text[:2000] if search_text else "(no data found)"
+
+    # Record a single bundled trace step for this part
+    if trace:
+        trace.add("part_research", f"Part: {part_question[:60]}", {
+            "part_question": part_question,
+            "search_query": part_question,
+            "search_results": [
+                {"title": r.get("title",""), "url": r.get("url",""),
+                 "snippet": r.get("snippet","")[:150], "tier": get_source_tier(r.get("url",""))}
+                for r in results[:5]
+            ],
+            "scrape": scrape_data,
+            "evidence_found": [
+                {"fact": e.fact[:200], "source_title": e.source_title, "source_url": e.source_url}
+                for e in findings
+            ],
+            "answer_summary": answer[:300],
+        }, sq_id=sq.id)
+
     return answer, findings
 
 
