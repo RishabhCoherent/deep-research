@@ -10,43 +10,30 @@ The agent autonomously decides what analytical approach fits each topic.
 # 1. DECOMPOSE — Break the topic into sub-questions
 # ═══════════════════════════════════════════════════════════════════════════════
 
-DECOMPOSE_PROMPT = """You are a research analyst. Read the topic carefully and plan your research.
-
-TODAY'S DATE: {current_date} (we are in {current_year} — treat {last_year} data as historical)
+DECOMPOSE_PROMPT = """TODAY'S DATE: {current_date} (we are in {current_year} — treat {last_year} data as historical)
 
 TOPIC: {topic}
 
 {brief_section}
 
-Read the topic above. What is the client ACTUALLY asking for? Not every topic is a market overview. If they ask for "key trends" — research trends. If they ask to "compare" — compare. If they ask about "impact" — analyze impact. Match your research plan to EXACTLY what is being asked.
+You are a research analyst. Read the topic and plan your research.
 
-Plan your research and return ONLY valid JSON:
+What is the client ACTUALLY asking? Plan 8-12 specific research questions that directly answer what was asked — not a generic market overview.
+
+Return ONLY valid JSON:
 {{
   "core_question": "What the client is really asking, in one sentence",
   "assumptions": ["What must be true for this to be answerable"],
   "sub_questions": [
     {{
       "id": "sq_01",
-      "question": "A specific research question that directly serves the core question",
-      "answer_type": "numeric|comparison|causal|trend|opinion|list|general",
-      "research_strategy": "data_hunt|triangulate|expert_scan|regulatory_lookup|company_deep_dive|historical_analysis|technical_deep_dive",
+      "question": "A specific research question",
       "priority": 1,
-      "depends_on": [],
       "search_queries": ["specific search query 1", "specific search query 2"]
     }}
   ],
-  "analytical_approach": {{}},
-  "contrarian_hypotheses": ["A bold claim the research should test"],
-  "scope_in": ["What this report covers"],
-  "scope_out": ["What this report does NOT cover"],
   "report_sections": ["Section names that match what was asked"]
-}}
-
-RULES:
-- Generate 8-12 sub-questions. Every sub-question must directly serve the core question.
-- Do NOT add generic sub-questions like "market size" or "key players" unless the topic specifically asks for them.
-- report_sections should reflect what was ASKED, not a default template.
-- search_queries should be specific: include names, years, and precise terms."""
+}}"""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
