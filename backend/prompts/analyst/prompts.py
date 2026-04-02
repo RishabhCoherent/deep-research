@@ -241,22 +241,20 @@ For each analytical framework above, decide which report section it belongs in a
 
 Contrarian insights should each get a highlighted callout in the relevant section.
 
-CRITICAL — NO DATA REPETITION:
-- Each specific data point (number, statistic, percentage) must appear in ONE primary section only.
-- The Executive Summary should reference findings at a HIGH LEVEL (trends, verdicts, conclusions) — not restate every number that appears in later sections. Use phrases like "as detailed in Section 3" instead of repeating the data.
-- If a fact is central to Section A, other sections should REFERENCE it ("as noted in [Section A]") not repeat it.
-- Assign each evidence_id to its ONE best-fit section. Do NOT assign the same evidence_id to multiple sections.
+CRITICAL RULES:
+1. NO REPETITION: Each data point appears in ONE section only. The Executive Summary gives verdicts, not numbers. Other sections cross-reference ("as detailed in [Section]"), never re-state.
+2. NO OVERLAP: If two proposed sections cover similar ground, MERGE them into one. Aim for 5-7 focused sections, not 10+ thin ones.
+3. NO FABRICATION: If a section has zero evidence_ids, DROP IT entirely. Do not include sections you cannot fill with real evidence.
+4. Assign each evidence_id to exactly ONE section.
 
 For each section, define:
 1. thesis: The ONE argument this section makes
-2. evidence_ids: Which evidence entries to cite — UNIQUE to this section, not shared with others
+2. evidence_ids: Which evidence entries to cite — UNIQUE to this section
 3. judgment: Which analyst judgment to express (if any)
-4. frameworks: Which analytical framework(s) to include in this section
-5. causal_links: How this section connects to others (use cross-references, not repetition)
-6. so_what: The implication for the reader
-7. structure: bullet_heavy | narrative | table_driven | case_study
+4. frameworks: Which analytical framework(s) to include
+5. so_what: The implication for the reader
 
-OUTPUT FORMAT — return ONLY valid JSON:
+OUTPUT FORMAT — return ONLY valid JSON (5-7 sections max, no empty sections):
 {{
   "sections": [
     {{
@@ -264,10 +262,7 @@ OUTPUT FORMAT — return ONLY valid JSON:
       "thesis": "...",
       "evidence_ids": ["ev_01", "ev_05"],
       "judgment": "...",
-      "frameworks": ["Name of framework to include here"],
-      "causal_links": ["Links to X section for detail"],
-      "so_what": "...",
-      "structure": "narrative"
+      "so_what": "..."
     }}
   ]
 }}"""
@@ -310,16 +305,16 @@ WRITING RULES:
 9. NEVER attribute data to competitor research firms ({banned_firms_summary})
 
 NO REPETITION (critical):
-- Each specific number, statistic, or data point should appear ONCE in its primary section. Do NOT restate the same figure in the Executive Summary AND the detailed section AND the conclusion.
-- The Executive Summary should contain VERDICTS and IMPLICATIONS, not a preview of every number in the report.
-- If you need to reference a data point from another section, write "as detailed in [Section Name]" — do not copy the number again.
-- Case studies and examples should appear in ONE section only.
+- Each number/statistic appears ONCE in its primary section. Never restate in Executive Summary AND body AND conclusion.
+- Executive Summary = verdicts and implications ONLY, not raw numbers.
+- Cross-reference other sections ("as detailed in [Section Name]"), never repeat data.
+- Each case study appears in ONE section only.
 
-EVIDENCE INTEGRITY (non-negotiable):
-10. If you have NO evidence for a claim, do NOT include it. Never fabricate numbers, percentages, or statistics.
-11. If evidence is thin for a section, say "Based on available evidence..." and keep the section shorter.
-12. Do NOT pad sections with generic filler. A shorter, evidence-backed section is better than a longer fabricated one.
-13. Every specific data point in the report must trace back to evidence provided above. If it is not in the evidence, it is not in the report.
+NO FABRICATION (non-negotiable):
+10. If the EVIDENCE section above contains NO data for a topic, do NOT write about that topic. Skip it entirely.
+11. If evidence is thin, keep the section SHORT. Do not pad with generic statements.
+12. NEVER write sentences like "Data analytics is increasingly used..." or "Technology plays a growing role..." without specific evidence. These are filler.
+13. Every specific data point must come from the evidence above. If you cannot point to it in the evidence, delete the sentence.
 
 SOURCES:
 14. END with ## Sources & References — numbered bibliography of T1/T2 sources only

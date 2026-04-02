@@ -368,13 +368,16 @@ class ResearchBoard:
         return {
             "sub_questions": [
                 {"id": sq.id, "question": sq.question, "status": sq.status,
-                 "confidence": sq.confidence, "answer": sq.answer}
+                 "priority": sq.priority, "answer_type": sq.answer_type,
+                 "confidence": sq.confidence, "answer": sq.answer,
+                 "evidence_count": len(sq.evidence_ids)}
                 for sq in self.framework.sub_questions
             ],
             "evidence_count": len(self.evidence),
             "evidence": [
                 {"id": e.id, "fact": e.fact, "source_url": e.source_url,
                  "source_title": e.source_title, "source_tier": e.source_tier,
+                 "confidence": e.confidence, "evidence_type": e.evidence_type,
                  "sub_question_id": e.sub_question_id}
                 for e in self.evidence
             ],

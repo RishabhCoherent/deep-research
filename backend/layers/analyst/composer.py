@@ -225,18 +225,18 @@ def _format_outline(outline_data: dict) -> str:
         heading = section.get("heading", "## Section")
         thesis = section.get("thesis", "")
         so_what = section.get("so_what", "")
-        structure = section.get("structure", "narrative")
         judgment = section.get("judgment", "")
-        frameworks = section.get("frameworks", [])
+        evidence_ids = section.get("evidence_ids", [])
+
+        # Skip sections with no evidence — prevents fabrication
+        if not evidence_ids and heading != "## Executive Summary":
+            continue
 
         lines.append(f"{heading}")
         lines.append(f"  THESIS: {thesis}")
         if judgment:
             lines.append(f"  JUDGMENT: {judgment}")
-        if frameworks:
-            lines.append(f"  FRAMEWORKS: {', '.join(frameworks)}")
         lines.append(f"  SO WHAT: {so_what}")
-        lines.append(f"  STRUCTURE: {structure}")
         lines.append("")
 
     return "\n".join(lines)
