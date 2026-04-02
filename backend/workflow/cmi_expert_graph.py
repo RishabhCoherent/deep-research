@@ -140,8 +140,17 @@ def build_analyst_graph(
     sources: list[Source],
     notify=None,
     trace: ResearchTrace | None = None,
+    budget_lock=None,
+    single_sq_id: str | None = None,
 ):
-    """Build a LangGraph that enforces THINK → RESEARCH → REFLECT → RECORD."""
+    """Build a LangGraph that enforces THINK → RESEARCH → REFLECT → RECORD.
+
+    Args:
+        budget_lock: asyncio.Lock for thread-safe budget increments (parallel mode)
+        single_sq_id: If set, only research this sub-question then stop (parallel mode)
+    """
+    import asyncio
+    _lock = budget_lock or asyncio.Lock()
 
     urls_seen: set[str] = set()
 
@@ -150,10 +159,11 @@ def build_analyst_graph(
     @tool
     async def search_web(query: str) -> str:
         """Search the web for data. Write queries like a journalist with specific terms and years."""
-        if board.budget_remaining <= 0:
-            return "BUDGET EXHAUSTED. Move to reflect and record your findings."
-        board.searches_done += 1
-        board.tool_calls_used += 1
+        async with _lock:
+            if board.budget_remaining <= 0:
+                return "BUDGET EXHAUSTED. Move to reflect and record your findings."
+            board.searches_done += 1
+            board.tool_calls_used += 1
 
         try:
             results = await search(query, max_results=5, include_news=True)
@@ -208,9 +218,10 @@ def build_analyst_graph(
     @tool
     async def scrape_page(url: str) -> str:
         """Scrape full text from a web page. Use this for promising search results."""
-        if board.budget_remaining <= 0:
-            return "BUDGET EXHAUSTED. Move to reflect and record your findings."
-        board.tool_calls_used += 1
+        async with _lock:
+            if board.budget_remaining <= 0:
+                return "BUDGET EXHAUSTED. Move to reflect and record your findings."
+            board.tool_calls_used += 1
 
         if is_banned_source(url, ""):
             return "Competitor research firm URL — skip."
@@ -308,7 +319,8 @@ def build_analyst_graph(
 
         response = await llm.ainvoke(messages)
         track("analyst think", response)
-        board.tool_calls_used += 1
+        async with _lock:
+            board.tool_calls_used += 1
 
         raw = get_content(response)
         data = extract_json(raw)
@@ -446,7 +458,8 @@ def build_analyst_graph(
 
         response = await llm.ainvoke(messages)
         track("analyst reflect", response)
-        board.tool_calls_used += 1
+        async with _lock:
+            board.tool_calls_used += 1
 
         raw = get_content(response)
         data = extract_json(raw)
@@ -552,6 +565,9 @@ def build_analyst_graph(
     def route_after_record(state: AnalystState) -> str:
         if state.get("phase") == "done":
             return END
+        # In single-question mode, stop after one question
+        if single_sq_id:
+            return END
         return "pick_question"
 
     # ── BUILD GRAPH ───────────────────────────────────────────────────────
@@ -566,7 +582,12 @@ def build_analyst_graph(
     graph.add_node("record", record)
 
     # Edges
-    graph.add_edge(START, "pick_question")
+    if single_sq_id:
+        # Single-question mode: start at think, end after record
+        graph.add_edge(START, "think")
+    else:
+        # Multi-question mode: pick → think → ... → pick loop
+        graph.add_edge(START, "pick_question")
     graph.add_conditional_edges("pick_question", route_after_pick, {"think": "think", END: END})
     graph.add_edge("think", "research_agent")
     graph.add_conditional_edges("research_agent", route_research, {"tools": "research_tools", "reflect": "reflect"})
