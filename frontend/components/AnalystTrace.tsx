@@ -542,7 +542,7 @@ export function AnalystTraceOverlay({ isOpen, onClose, trace }: AnalystTraceOver
   const qualityStep = trace.steps.find(s => s.phase === "quality");
   const composeStep = trace.steps.find(s => s.phase === "compose");
   const investigateSteps = trace.steps.filter(s =>
-    ["think", "search", "scrape", "reflect"].includes(s.phase)
+    ["think", "search", "scrape", "reflect", "part_research"].includes(s.phase)
   );
 
   const totalSearches = trace.steps.filter(s => s.phase === "search").length
