@@ -24,10 +24,8 @@ import { ScrollPipeline } from "@/components/ScrollPipeline";
 import { LayerPopupContent } from "@/components/LayerPopupContent";
 import { ComparatorContent } from "@/components/ComparatorContent";
 import { AnalystTraceOverlay } from "@/components/AnalystTrace";
-import { ResearchGraph } from "@/components/ResearchGraph";
 import { Button } from "@/components/ui/button";
 import { useResearchStore } from "@/lib/store";
-import type { ResearchTreeData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { LAYER_NAMES, LAYER_DESCRIPTIONS } from "@/lib/types";
 import { extractAnalystTrace, isAnalystFormat } from "@/lib/extract-agent-steps";
@@ -92,7 +90,6 @@ export default function ResearchResultsPage() {
   const { report, reset } = useResearchStore();
   const [openPopup, setOpenPopup] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [selectedTreeNodeId, setSelectedTreeNodeId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsVisible(true);
@@ -111,11 +108,6 @@ export default function ResearchResultsPage() {
   const hasAnalystTrace = analystTrace !== null;
 
   // Research tree from L3 metadata
-  const researchTree: ResearchTreeData | null = (() => {
-    const l3 = report.layers.find((l) => l.layer === 2);
-    const tree = (l3?.metadata as Record<string, unknown>)?.research_tree as ResearchTreeData | undefined;
-    return tree && tree.total_nodes > 0 ? tree : null;
-  })();
 
   function handleDownloadJson() {
     if (!report) return;
@@ -422,32 +414,6 @@ export default function ResearchResultsPage() {
         </div>
       </div>
 
-      {/* ── Research Tree Graph ──────────────────────────── */}
-      {researchTree && (
-        <div
-          className={`mb-12 transition-all duration-700 delay-300 ${
-            isVisible
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-8"
-          }`}
-        >
-          <div className="mb-4">
-            <span className="inline-flex items-center gap-3 text-xs font-mono uppercase tracking-wider text-muted-foreground">
-              <span className="w-6 h-px bg-foreground/30" />
-              Deep Research Tree
-            </span>
-            <p className="text-sm text-muted-foreground mt-1">
-              The analyst explored {researchTree.total_nodes} research nodes across {researchTree.max_depth + 1} depth{researchTree.max_depth > 0 ? "s" : ""}. Click any node to inspect.
-            </p>
-          </div>
-          <ResearchGraph
-            treeData={researchTree}
-            selectedNodeId={selectedTreeNodeId}
-            onSelectNode={setSelectedTreeNodeId}
-            className="h-120"
-          />
-        </div>
-      )}
 
       {/* ── Popups ───────────────────────────────────────── */}
 

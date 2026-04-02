@@ -10,7 +10,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { ResearchLayout } from "@/components/ResearchLayout";
-import { ResearchGraph } from "@/components/ResearchGraph";
 import { useResearchStore } from "@/lib/store";
 import { useResearch } from "@/hooks/useResearch";
 import { cn } from "@/lib/utils";
@@ -288,30 +287,6 @@ export default function ResearchProgressPage() {
         </div>
       </div>
 
-      {/* ── Research Tree Graph (appears once nodes exist) ────── */}
-      {Object.keys(graphNodes).length > 0 && (
-        <div
-          className={`mt-10 transition-all duration-700 ${
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-          }`}
-        >
-          <div className="mb-3">
-            <span className="inline-flex items-center gap-3 text-xs font-mono text-muted-foreground">
-              <span className="w-6 h-px bg-foreground/30" />
-              Deep Research Tree
-            </span>
-            <p className="text-sm text-muted-foreground mt-1">
-              The agent is going deeper on uncertain findings. Click any node to inspect.
-            </p>
-          </div>
-          <ResearchGraph
-            liveNodes={graphNodes}
-            selectedNodeId={selectedNodeId}
-            onSelectNode={setSelectedNodeId}
-            className="h-120"
-          />
-        </div>
-      )}
     </ResearchLayout>
   );
 }
