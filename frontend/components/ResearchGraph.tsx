@@ -245,11 +245,19 @@ function buildFlow(
   onSelect: (id: string) => void,
   selectedId: string | null
 ): { rfNodes: Node[]; rfEdges: Edge[] } {
-  const positions = layoutTree(nodes);
+  // Filter out dead-end nodes (budget exhausted before research — no useful data)
+  const liveNodes: Record<string, ResearchNodeData> = {};
+  for (const [id, node] of Object.entries(nodes)) {
+    if (node.status !== "dead-end") {
+      liveNodes[id] = node;
+    }
+  }
+
+  const positions = layoutTree(liveNodes);
   const rfNodes: Node[] = [];
   const rfEdges: Edge[] = [];
 
-  for (const [id, node] of Object.entries(nodes)) {
+  for (const [id, node] of Object.entries(liveNodes)) {
     const pos = positions[id] ?? { x: 0, y: 0 };
     rfNodes.push({
       id,
@@ -263,8 +271,8 @@ function buildFlow(
     });
   }
 
-  for (const [id, node] of Object.entries(nodes)) {
-    if (!node.parent_id || !nodes[node.parent_id]) continue;
+  for (const [id, node] of Object.entries(liveNodes)) {
+    if (!node.parent_id || !liveNodes[node.parent_id]) continue;
     const s = getStyle(node.depth, node.status);
     rfEdges.push({
       id: `e-${node.parent_id}-${id}`,
@@ -511,7 +519,7 @@ export function ResearchGraph({
     return {};
   }, [liveNodes, treeData]);
 
-  const nodeCount = Object.keys(nodes).length;
+  const nodeCount = Object.values(nodes).filter(n => n.status !== "dead-end").length;
 
   return (
     <div className={cn("relative rounded-2xl border bg-background overflow-hidden", className)}>
