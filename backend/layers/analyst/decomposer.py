@@ -1,8 +1,9 @@
 """
 Phase 1: DECOMPOSE — Break the topic into structured sub-questions.
 
-This is where the analyst thinks BEFORE researching.
-Single LLM call, ~15 seconds.
+Discovery search → LLM decomposition.
+The discovery search gives the LLM real-world context so it generates
+specific questions instead of generic MBA categories.
 """
 
 import json
@@ -13,18 +14,51 @@ from models.analyst import AnalysisFramework, SubQuestion
 from prompts.analyst import DECOMPOSE_PROMPT
 from utils.cost_tracker import track
 from utils import get_content, extract_json, date_vars
+from tools.search import search
 
 logger = logging.getLogger(__name__)
+
+
+async def _discovery_search(topic: str) -> str:
+    """Quick web search to discover what's actually out there on this topic.
+
+    Returns formatted search results for the decompose prompt, or empty string on failure.
+    """
+    try:
+        results = await search(topic, max_results=5, include_news=True)
+        if not results:
+            return ""
+
+        lines = []
+        for r in results[:5]:
+            title = r.get("title", "")
+            snippet = r.get("snippet", "")
+            if title or snippet:
+                lines.append(f"- {title}: {snippet[:200]}")
+
+        if lines:
+            return "CURRENT WEB SEARCH RESULTS FOR THIS TOPIC:\n" + "\n".join(lines)
+    except Exception as e:
+        logger.warning(f"[Decompose] Discovery search failed (non-fatal): {e}")
+
+    return ""
 
 
 async def decompose(topic: str, brief: str = "", notify=None) -> AnalysisFramework:
     """Decompose a topic into a structured research framework.
 
-    Returns an AnalysisFramework with typed sub-questions, each having
-    its own research strategy, priority, and search queries.
+    First does a discovery search to see what's actually out there,
+    then asks the LLM to generate specific sub-questions based on real data.
     """
     if notify:
         notify("decompose", "Breaking down the research problem...")
+
+    # Discovery search — see what's actually out there before planning
+    discovery_context = await _discovery_search(topic)
+    if discovery_context:
+        logger.info(f"[Decompose] Discovery search found context ({len(discovery_context)} chars)")
+    else:
+        discovery_context = "(No search results available — plan from your knowledge)"
 
     brief_section = f"CLIENT BRIEF:\n{brief}" if brief else ""
 
@@ -36,6 +70,7 @@ async def decompose(topic: str, brief: str = "", notify=None) -> AnalysisFramewo
         {"role": "user", "content": DECOMPOSE_PROMPT.format(
             topic=topic,
             brief_section=brief_section,
+            discovery_context=discovery_context,
             **date_vars(),
         )},
     ]

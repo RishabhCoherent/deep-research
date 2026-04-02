@@ -16,9 +16,11 @@ TOPIC: {topic}
 
 {brief_section}
 
-You are a research analyst. Read the topic and plan your research.
+{discovery_context}
 
-What is the client ACTUALLY asking? Plan 8-12 specific research questions that directly answer what was asked — not a generic market overview.
+You are a research analyst. Read the topic and the search results above.
+
+What is the client ACTUALLY asking? Use the search results to identify SPECIFIC trends, entities, events, and developments. Your sub-questions should reference what you see in the search results — not generic categories.
 
 Return ONLY valid JSON:
 {{
