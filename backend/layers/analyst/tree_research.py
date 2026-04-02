@@ -66,17 +66,19 @@ BUDGET REMAINING: {budget}
 CURRENT DEPTH: {depth} / {max_depth}
 
 GO DEEPER when:
-- Confidence < 55% on a P1 or P2 question
+- Confidence ≤ 80% on a P1 question (default 75% counts — dig deeper)
+- Confidence ≤ 70% on a P2 question
 - 2+ unresolved contradictions need a tiebreaker source
 - A comparison/list question has fewer than 3 data points
-- A surprising finding is worth verifying with a second source
+- A finding that would benefit from a second independent source
+- The answer is vague or lacks specific data points
 
 STAY when:
-- Confidence ≥ 70%
+- Confidence > 80% with strong specific evidence
 - Budget < 12
 - Depth is already at max ({max_depth})
 - P3 priority question
-- Data simply doesn't exist (marked as gap)
+- Answer already has 4+ evidence pieces with specific data
 
 Output ONLY valid JSON (no surrounding text):
 If not expanding:
