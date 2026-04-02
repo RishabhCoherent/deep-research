@@ -143,8 +143,10 @@ function InvestigateSection({ steps }: { steps: TraceStep[] }) {
   const sqIds = Object.keys(groups);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(sqIds.slice(0, 3)));
 
-  const searches = steps.filter(s => s.phase === "search").length;
-  const scrapes = steps.filter(s => s.phase === "scrape").length;
+  const searches = steps.filter(s => s.phase === "search").length
+    + steps.filter(s => s.phase === "part_research").length; // each part does a search
+  const scrapes = steps.filter(s => s.phase === "scrape").length
+    + steps.filter(s => s.phase === "part_research" && (s.content as any)?.scrape?.success).length;
   const reflects = steps.filter(s => s.phase === "reflect");
   const answered = reflects.filter(s => {
     const c = s.content as any;
@@ -543,8 +545,10 @@ export function AnalystTraceOverlay({ isOpen, onClose, trace }: AnalystTraceOver
     ["think", "search", "scrape", "reflect"].includes(s.phase)
   );
 
-  const totalSearches = trace.steps.filter(s => s.phase === "search").length;
-  const totalScrapes = trace.steps.filter(s => s.phase === "scrape").length;
+  const totalSearches = trace.steps.filter(s => s.phase === "search").length
+    + trace.steps.filter(s => s.phase === "part_research").length;
+  const totalScrapes = trace.steps.filter(s => s.phase === "scrape").length
+    + trace.steps.filter(s => s.phase === "part_research" && (s.content as any)?.scrape?.success).length;
 
   if (!mounted) return null;
 
