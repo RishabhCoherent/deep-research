@@ -23,7 +23,7 @@ import { ResultsPopup } from "@/components/ResultsPopup";
 import { ScrollPipeline } from "@/components/ScrollPipeline";
 import { LayerPopupContent } from "@/components/LayerPopupContent";
 import { ComparatorContent } from "@/components/ComparatorContent";
-import { AnalystTraceTimeline } from "@/components/AnalystTrace";
+import { AnalystTraceOverlay } from "@/components/AnalystTrace";
 import { ResearchGraph } from "@/components/ResearchGraph";
 import { Button } from "@/components/ui/button";
 import { useResearchStore } from "@/lib/store";
@@ -462,17 +462,13 @@ export default function ResearchResultsPage() {
         <ScrollPipeline report={report} />
       </ResultsPopup>
 
-      {/* Research Trace popup */}
+      {/* Research Trace — full-screen narrative overlay */}
       {analystTrace && (
-        <ResultsPopup
+        <AnalystTraceOverlay
           isOpen={openPopup === "trace"}
           onClose={() => setOpenPopup(null)}
-          title="Research Trace"
-          subtitle="How the AI analyst reasoned through this research"
-          accentColor="rgba(99, 102, 241, 0.15)"
-        >
-          <AnalystTraceTimeline trace={analystTrace} />
-        </ResultsPopup>
+          trace={analystTrace}
+        />
       )}
 
       {/* Comparator popup */}
