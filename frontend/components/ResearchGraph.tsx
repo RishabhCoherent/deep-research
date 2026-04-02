@@ -245,10 +245,14 @@ function buildFlow(
   onSelect: (id: string) => void,
   selectedId: string | null
 ): { rfNodes: Node[]; rfEdges: Edge[] } {
-  // Filter out dead-end nodes (budget exhausted before research — no useful data)
+  // Filter out dead-end nodes that have no children (truly empty)
+  // Keep dead-end nodes that have children — the children were researched
+  const childParentIds = new Set(
+    Object.values(nodes).map(n => n.parent_id).filter(Boolean)
+  );
   const liveNodes: Record<string, ResearchNodeData> = {};
   for (const [id, node] of Object.entries(nodes)) {
-    if (node.status !== "dead-end") {
+    if (node.status !== "dead-end" || childParentIds.has(id)) {
       liveNodes[id] = node;
     }
   }
