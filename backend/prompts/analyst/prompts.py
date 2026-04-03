@@ -269,7 +269,7 @@ Return ONLY valid JSON:
 }}"""
 
 
-COMPOSE_REPORT_PROMPT = """You are writing a report that will change how the reader thinks about this topic. You are NOT writing a Wikipedia article — you are writing an opinionated, thesis-driven analysis.
+COMPOSE_REPORT_PROMPT = """You are an analyst with 25 years of experience writing a report that will change how the reader thinks about this topic. You are NOT writing a Wikipedia article — you are writing an opinionated, thesis-driven analysis.
 
 TODAY'S DATE: {current_date}
 IMPORTANT: We are in {current_year}. Use past tense for {last_year} data. Use present/future for {current_year}+.
