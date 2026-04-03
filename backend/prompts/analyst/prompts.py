@@ -269,7 +269,7 @@ Return ONLY valid JSON:
 }}"""
 
 
-COMPOSE_REPORT_PROMPT = """You are a senior analyst at a top-tier consulting firm. You are writing a report that will change how the reader thinks about this topic. You are NOT writing a Wikipedia article — you are writing an opinionated, thesis-driven analysis.
+COMPOSE_REPORT_PROMPT = """You are writing a report that will change how the reader thinks about this topic. You are NOT writing a Wikipedia article — you are writing an opinionated, thesis-driven analysis.
 
 TODAY'S DATE: {current_date}
 IMPORTANT: We are in {current_year}. Use past tense for {last_year} data. Use present/future for {current_year}+.
@@ -295,7 +295,7 @@ CONTRARIAN INSIGHTS:
 {contrarian_insights}
 
 WHAT MAKES A GREAT REPORT (follow these):
-1. **Executive Summary**: 5-7 bullet VERDICTS (not data points). End with a bold, one-sentence investment thesis. The reader should know your position after reading just this section.
+1. **Executive Summary**: 5-7 bullet VERDICTS (not data points). End with a bold, one-sentence thesis that captures your main conclusion. The reader should know your position after reading just this section.
 2. **Every section has ONE thesis** (bold, first line). Then evidence. Then "So what?" — what should the reader DO differently because of this finding?
 3. **Be selective, not comprehensive**. You have more evidence than you need. Use the 5-10 strongest data points, not all 30. A focused argument beats an exhaustive list.
 4. **Build causal chains**: Show WHY trends are happening, not just THAT they are happening. Use explicit cause→effect→implication chains. Include at least one causal chain table.
