@@ -58,6 +58,28 @@ Return ONLY valid JSON:
 {{"answer": "your combined answer here", "confidence": 0.75}}"""
 
 
+MAX_DEEP_DIVES = 2  # Max nodes that go deeper than depth 1 per run
+
+
+def _should_go_deeper(answer: str, evidence: list, sq_priority: int, budget_remaining: int, depth: int) -> bool:
+    """Decide if a researched part needs sub-decomposition for richer data."""
+    if depth >= 2:          # Max depth 3 (0→1→2)
+        return False
+    if budget_remaining < 20:
+        return False
+    if sq_priority > 2:     # Only go deep on P1-P2 questions
+        return False
+    if len(evidence) < 2:   # Too few evidence items — need more
+        return True
+    # Check if answer is vague (no numbers or specific entities)
+    import re
+    has_numbers = bool(re.search(r'\d{2,}', answer))
+    has_specifics = len(answer) > 200 and has_numbers
+    if not has_specifics:
+        return True
+    return False
+
+
 async def _decompose_question(question: str, llm, budget_lock, board) -> list[str]:
     """Break a question into 2-3 directly answerable parts."""
     messages = [
@@ -263,23 +285,27 @@ async def _research_single_question(
             "part_count": len(parts),
         }, sq_id=sq.id)
 
-    # Step 2: Research each part
+    # Step 2: Research each part (with selective deeper recursion)
     part_answers = []
     all_evidence = []
+    deep_dive_count = 0  # Track how many parts went deeper
 
-    for i, part_q in enumerate(parts):
+    async def _research_part_recursive(
+        part_q: str, parent_node_id: str, depth: int, part_index: int,
+    ) -> tuple[str, list[AnalystEvidence]]:
+        """Research a part, optionally going deeper if the answer is weak."""
+        nonlocal deep_dive_count
+
         if board.budget_remaining < 4:
-            logger.info(f"[Analyst] Budget low, skipping part {i+1}/{len(parts)} for {sq.id}")
-            part_answers.append("(budget exhausted)")
-            continue
+            return "(budget exhausted)", []
 
-        # Create child node in tree
+        # Create node in tree
         child_node = ResearchNode(
-            parent_id=root_node_id or "",
-            depth=1,
+            parent_id=parent_node_id,
+            depth=depth,
             query=part_q,
             why_created="decomposition",
-            trigger_finding=f"Part {i+1} of: {sq.question[:60]}",
+            trigger_finding=f"{'Sub-p' if depth > 1 else 'P'}art {part_index+1}",
             sq_id=sq.id,
             status="exploring",
         )
@@ -287,10 +313,9 @@ async def _research_single_question(
 
         if notify:
             notify("node_created", __import__('json').dumps({
-                "node_id": child_node.id, "parent_id": child_node.parent_id,
-                "depth": 1, "query": part_q[:100],
-                "why": "decomposition",
-                "trigger_finding": f"Part {i+1} of original question",
+                "node_id": child_node.id, "parent_id": parent_node_id,
+                "depth": depth, "query": part_q[:100],
+                "why": "decomposition" if depth == 1 else "deep_dive",
                 "sq_id": sq.id,
             }))
 
@@ -298,10 +323,37 @@ async def _research_single_question(
         answer, evidence = await _research_part(
             part_q, sq, board, sources, budget_lock, trace
         )
-        part_answers.append(answer)
-        all_evidence.extend(evidence)
 
-        # Update child node
+        # Check if we should go deeper
+        if (deep_dive_count < MAX_DEEP_DIVES
+                and _should_go_deeper(answer, evidence, sq.priority, board.budget_remaining, depth)):
+
+            logger.info(f"[Analyst] Going deeper on: {part_q[:50]} (depth {depth} → {depth+1})")
+            deep_dive_count += 1
+
+            # Decompose this part further
+            sub_parts = await _decompose_question(part_q, llm, budget_lock, board)
+
+            if len(sub_parts) > 1:
+                # Research sub-parts
+                sub_answers = []
+                sub_evidence = []
+                for j, sub_q in enumerate(sub_parts):
+                    sub_ans, sub_ev = await _research_part_recursive(
+                        sub_q, child_node.id, depth + 1, j
+                    )
+                    sub_answers.append(sub_ans)
+                    sub_evidence.extend(sub_ev)
+
+                # Combine sub-part answers into this part's answer
+                if any(a for a in sub_answers if "(budget" not in a):
+                    combined, conf = await _combine_answers(
+                        part_q, sub_parts, sub_answers, llm, budget_lock, board
+                    )
+                    answer = combined
+                    evidence = evidence + sub_evidence
+
+        # Update node
         child_node.answer = answer[:500]
         child_node.status = "complete" if answer and "(budget" not in answer else "dead-end"
         child_node.confidence = 0.7 if child_node.status == "complete" else 0.0
@@ -309,12 +361,25 @@ async def _research_single_question(
 
         if notify:
             notify("node_complete", __import__('json').dumps({
-                "node_id": child_node.id, "depth": 1,
+                "node_id": child_node.id, "depth": depth,
                 "status": child_node.status,
                 "confidence": child_node.confidence,
                 "answer": answer[:100],
                 "evidence_count": len(evidence),
             }))
+
+        return answer, evidence
+
+    for i, part_q in enumerate(parts):
+        if board.budget_remaining < 4:
+            part_answers.append("(budget exhausted)")
+            continue
+
+        answer, evidence = await _research_part_recursive(
+            part_q, root_node_id, depth=1, part_index=i
+        )
+        part_answers.append(answer)
+        all_evidence.extend(evidence)
 
     # Step 3: Combine part answers
     if len([a for a in part_answers if "(budget" not in a and "(no data" not in a]) >= 1:
