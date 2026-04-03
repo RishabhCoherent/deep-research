@@ -285,7 +285,8 @@ function TreeFlow({
       proOptions={{ hideAttribution: true }}
       nodesDraggable={false}
       nodesConnectable={false}
-      elementsSelectable={false}
+      elementsSelectable
+      onNodeClick={(_event, node) => onSelectNode(node.id)}
       panOnScroll
       zoomOnScroll
     >

@@ -35,18 +35,15 @@ PARALLEL_BATCH_SIZE = 3  # Research 3 sub-questions simultaneously
 
 DECOMPOSE_PART_PROMPT = """QUESTION: {question}
 
-Break this into 2-3 smaller, directly answerable sub-parts.
-Each part should be specific enough to answer with a single web search.
+Break this into smaller, directly answerable sub-parts. Each part should be specific enough to answer with a single web search.
 
-Example:
-  "What is the total weight of a Boeing 737?" →
-  ["What is the empty weight of a Boeing 737?", "How much fuel does a 737 carry at full capacity?", "What is the average weight of passengers and luggage on a 737?"]
-
-  "What are the key trends in the whisky cask market?" →
-  ["What pricing trends are occurring in the whisky cask market?", "How is demand from Asian markets affecting whisky cask investment?", "What regulatory changes are impacting cask ownership?"]
+How many parts depends on the question's complexity:
+- Simple factual question → 1-2 parts (or don't decompose at all)
+- Moderate question → 2-3 parts
+- Complex multi-faceted question → 3-4 parts
 
 Return ONLY valid JSON:
-{{"parts": ["part 1 question", "part 2 question", "part 3 question"]}}"""
+{{"parts": ["part 1 question", "part 2 question"], "reason": "why this many parts"}}"""
 
 
 COMBINE_PROMPT = """ORIGINAL QUESTION: {question}
@@ -76,8 +73,8 @@ async def _decompose_question(question: str, llm, budget_lock, board) -> list[st
     data = extract_json(get_content(response))
     if data and isinstance(data.get("parts"), list):
         parts = [p for p in data["parts"] if isinstance(p, str) and len(p) > 10]
-        if len(parts) >= 2:
-            return parts[:3]  # Max 3 parts
+        if len(parts) >= 1:
+            return parts[:4]  # Max 4 parts
 
     # Fallback: just return the original question as a single part
     return [question]
