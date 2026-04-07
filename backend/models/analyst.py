@@ -196,6 +196,7 @@ class ResearchTree:
     """Holds all ResearchNodes and their parent-child relationships."""
     nodes: dict = field(default_factory=dict)           # node_id -> ResearchNode
     sq_to_root: dict = field(default_factory=dict)      # sq_id -> root node_id
+    topic_root_id: str = ""                             # Single root node for the whole tree
 
     def add_node(self, node: ResearchNode) -> None:
         self.nodes[node.id] = node
@@ -239,6 +240,7 @@ class ResearchTree:
         return {
             "total_nodes": self.total_nodes,
             "max_depth": self.max_depth_reached,
+            "topic_root_id": self.topic_root_id,
             "sq_to_root": self.sq_to_root,
             "nodes": {
                 nid: {
@@ -649,6 +651,27 @@ class AnalysisResult:
     # Each dict: {name, type, description, data}
     analytical_frameworks: list[dict] = field(default_factory=list)
     contrarian_insights: list[str] = field(default_factory=list)
+
+
+# ── Verification Result: Output of the verify phase ──────────────────────────
+
+@dataclass
+class VerificationResult:
+    """Grounding check: how many factual claims in the report trace back to evidence."""
+    grounding_score: float = 0.0        # 0.0 – 1.0
+    total_claims: int = 0
+    verified_claims: int = 0
+    unverified: list[str] = field(default_factory=list)   # claim texts with no evidence
+    uncertain: list[str] = field(default_factory=list)    # plausible but unconfirmed
+
+    def to_dict(self) -> dict:
+        return {
+            "grounding_score": round(self.grounding_score, 3),
+            "total_claims": self.total_claims,
+            "verified_claims": self.verified_claims,
+            "unverified": self.unverified,
+            "uncertain": self.uncertain,
+        }
 
 
 # ── Quality Score: Output of the quality gate ─────────────────────────────────

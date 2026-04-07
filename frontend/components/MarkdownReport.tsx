@@ -350,28 +350,6 @@ function makeMarkdownComponents() {
         }
       }
 
-      // Bold lead paragraph: if the first child is <strong> and it's long (>40 chars),
-      // render it as a highlighted lead sentence
-      const kids = React.Children.toArray(children);
-      const firstChild = kids[0];
-      if (
-        kids.length <= 3 &&
-        React.isValidElement(firstChild) &&
-        firstChild.type === "strong"
-      ) {
-        const strongText = extractParagraphText((firstChild.props as { children?: React.ReactNode }).children);
-        if (strongText.length > 40) {
-          return (
-            <p
-              className="text-[14px] text-foreground font-medium leading-relaxed my-3 pl-3 border-l-2 border-foreground/20"
-              {...props}
-            >
-              {children}
-            </p>
-          );
-        }
-      }
-
       // Default paragraph
       return (
         <p className="text-muted-foreground leading-relaxed my-2 text-[13px]" {...props}>

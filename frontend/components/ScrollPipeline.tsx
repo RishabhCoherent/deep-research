@@ -19,6 +19,9 @@ import {
   ArrowRight,
   ShieldAlert,
   FileText,
+  Brain,
+  Scale,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { highlightDataPoints } from "@/lib/highlight";
@@ -135,6 +138,10 @@ const ALL_STEPS: StepConfig[] = [
   { id: "synthesize", label: "THE SYNTHESIS", sublabel: "Cross-Referencing", icon: GitMerge, bg: [15, 10, 30, 0.06], dotColor: "bg-foreground" },
   { id: "expert-result", label: "THE EXPERT REPORT", sublabel: "Agentic Pipeline Output", icon: FileText, bg: [5, 150, 105, 0.05], dotColor: "bg-emerald-500" },
   { id: "result", label: "THE TRANSFORMATION", sublabel: "Final Result", icon: Sparkles, bg: [124, 58, 237, 0.07], dotColor: "bg-purple" },
+  // Analyst-specific steps (used when isAnalystFormat)
+  { id: "analyst-investigate", label: "THE INVESTIGATION", sublabel: "Sub-questions · Evidence · Coverage", icon: Brain, bg: [124, 58, 237, 0.06], dotColor: "bg-purple" },
+  { id: "analyst-synthesize", label: "THE SYNTHESIS", sublabel: "Key Findings · Judgments · Narrative", icon: Scale, bg: [15, 10, 30, 0.06], dotColor: "bg-foreground" },
+  { id: "analyst-quality", label: "THE QUALITY CHECK", sublabel: "Coverage · Evidence · Confidence", icon: ShieldCheck, bg: [5, 150, 105, 0.05], dotColor: "bg-emerald-500" },
 ];
 
 const EVIDENCE_TYPE_COLORS: Record<string, string> = {
@@ -941,6 +948,228 @@ function StepSynthesize({ workflow }: { workflow: AgentWorkflowData }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// ANALYST STEP A — THE INVESTIGATION (Sub-questions + Evidence)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function StepAnalystInvestigate({ report }: { report: ComparisonReport }) {
+  const [showAll, setShowAll] = useState(false);
+  const m = (report.layers.find(l => l.layer === 2)?.metadata ?? {}) as Record<string, unknown>;
+  const board = (m.board ?? {}) as Record<string, unknown>;
+  const subQuestions = (Array.isArray(board.sub_questions) ? board.sub_questions : []) as Array<{
+    id: string; question: string; status: string; priority: number; answer_type: string; confidence: number; answer: string; evidence_count: number;
+  }>;
+  const evidenceCount = (m.evidence_count as number) ?? 0;
+  const searches = (m.searches_count as number) ?? 0;
+  const scrapes = (m.scrapes_done as number) ?? 0;
+  const coverage = (m.coverage as number) ?? 0;
+  const answered = subQuestions.filter(q => q.status === "answered").length;
+
+  const visible = showAll ? subQuestions : subQuestions.slice(0, 5);
+  const hidden = subQuestions.length - 5;
+
+  const statusDot = (status: string) => {
+    if (status === "answered") return "bg-emerald-400";
+    if (status === "gap") return "bg-amber-400";
+    return "bg-foreground/20";
+  };
+
+  return (
+    <motion.div className="max-w-2xl w-full mx-auto space-y-5 overflow-y-auto max-h-full" variants={staggerContainer} initial="initial" animate="animate">
+      {/* Stats */}
+      <motion.div className="glass-card p-4 flex items-center justify-center gap-6 text-center" variants={staggerChild}>
+        <div>
+          <div className="text-xl font-mono font-semibold text-purple"><AnimatedCounter value={searches} /></div>
+          <div className="text-[10px] font-mono text-muted-foreground uppercase">searches</div>
+        </div>
+        <div className="w-px h-8 bg-foreground/10" />
+        <div>
+          <div className="text-xl font-mono font-semibold text-purple"><AnimatedCounter value={scrapes} /></div>
+          <div className="text-[10px] font-mono text-muted-foreground uppercase">pages read</div>
+        </div>
+        <div className="w-px h-8 bg-foreground/10" />
+        <div>
+          <div className="text-xl font-mono font-semibold text-purple"><AnimatedCounter value={evidenceCount} /></div>
+          <div className="text-[10px] font-mono text-muted-foreground uppercase">evidence</div>
+        </div>
+        <div className="w-px h-8 bg-foreground/10" />
+        <div>
+          <div className="text-xl font-mono font-semibold text-emerald-500">{answered}/{subQuestions.length}</div>
+          <div className="text-[10px] font-mono text-muted-foreground uppercase">answered</div>
+        </div>
+      </motion.div>
+
+      {/* Coverage bar */}
+      <motion.div variants={staggerChild}>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-mono text-muted-foreground">Question Coverage</span>
+          <span className="text-xs font-mono font-semibold">{Math.round(coverage * 100)}%</span>
+        </div>
+        <div className="h-2.5 rounded-full bg-foreground/5 overflow-hidden">
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: "linear-gradient(90deg, #7C3AED, #059669)" }}
+            initial={{ width: 0 }}
+            animate={{ width: `${coverage * 100}%` }}
+            transition={{ duration: 1.2, ease: easeOutExpo, delay: 0.3 }}
+          />
+        </div>
+      </motion.div>
+
+      {/* Sub-questions */}
+      {subQuestions.length > 0 && (
+        <motion.div className="space-y-2" variants={staggerChild}>
+          <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Research Questions</p>
+          {visible.map((sq, i) => (
+            <motion.div key={sq.id} className="glass-card p-3 space-y-1" variants={slideInLeft} custom={i} initial="initial" animate="animate">
+              <div className="flex items-center gap-2">
+                <span className={cn("w-2 h-2 rounded-full shrink-0", statusDot(sq.status))} />
+                <p className="text-sm flex-1 leading-snug">{sq.question}</p>
+                {sq.priority === 1 && (
+                  <span className="text-[9px] font-mono text-red-400 border border-red-500/20 bg-red-500/10 px-1.5 py-0.5 rounded-full shrink-0">P1</span>
+                )}
+              </div>
+              {sq.status === "answered" && sq.answer && (
+                <p className="text-xs text-muted-foreground leading-relaxed pl-4 line-clamp-2">{sq.answer}</p>
+              )}
+              {sq.evidence_count > 0 && (
+                <p className="text-[10px] font-mono text-muted-foreground/60 pl-4">{sq.evidence_count} evidence · {sq.answer_type}</p>
+              )}
+            </motion.div>
+          ))}
+          {hidden > 0 && (
+            <button onClick={() => setShowAll(!showAll)} className="text-xs font-mono text-purple hover:text-purple-light transition-colors flex items-center gap-1">
+              {showAll ? <><ChevronUp className="h-3 w-3" /> Show less</> : <><ChevronDown className="h-3 w-3" /> +{hidden} more questions</>}
+            </button>
+          )}
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ANALYST STEP B — THE SYNTHESIS (Key Findings + Judgments + Narrative)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function StepAnalystSynthesize({ report }: { report: ComparisonReport }) {
+  const m = (report.layers.find(l => l.layer === 2)?.metadata ?? {}) as Record<string, unknown>;
+  const analysis = (m.analysis ?? {}) as Record<string, unknown>;
+  const keyFindings = (Array.isArray(analysis.key_findings) ? analysis.key_findings : []) as string[];
+  const judgments = (Array.isArray(analysis.judgments) ? analysis.judgments : []) as Array<{ claim: string; conviction: string; reasoning: string }>;
+  const narrative = (analysis.narrative as string) ?? "";
+
+  const convictionColor = (c: string) => {
+    if (c === "high") return "bg-emerald-500/10 text-emerald-700 border-emerald-500/15";
+    if (c === "medium") return "bg-amber-500/10 text-amber-700 border-amber-500/15";
+    return "bg-foreground/5 text-muted-foreground border-foreground/10";
+  };
+
+  return (
+    <motion.div className="max-w-2xl w-full mx-auto space-y-5 overflow-y-auto max-h-full" variants={staggerContainer} initial="initial" animate="animate">
+      {/* Narrative */}
+      {narrative && (
+        <motion.div className="glass-card p-5 border-l-2 border-purple/30" variants={staggerChild}>
+          <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-2">Analyst Narrative</p>
+          <p className="text-sm leading-relaxed text-foreground/80">{narrative}</p>
+        </motion.div>
+      )}
+
+      {/* Key findings */}
+      {keyFindings.length > 0 && (
+        <motion.div className="space-y-2" variants={staggerChild}>
+          <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Key Findings ({keyFindings.length})</p>
+          {keyFindings.slice(0, 5).map((f, i) => (
+            <motion.div key={i} className="glass-card p-3 flex gap-3" variants={slideInLeft} custom={i} initial="initial" animate="animate">
+              <Lightbulb className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-foreground/80 leading-snug">{f}</p>
+            </motion.div>
+          ))}
+          {keyFindings.length > 5 && (
+            <p className="text-xs text-muted-foreground font-mono ml-7">+{keyFindings.length - 5} more findings</p>
+          )}
+        </motion.div>
+      )}
+
+      {/* Judgments */}
+      {judgments.length > 0 && (
+        <motion.div className="space-y-2" variants={staggerChild}>
+          <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Analyst Judgments ({judgments.length})</p>
+          {judgments.map((j, i) => (
+            <motion.div key={i} className="glass-card p-3 space-y-1.5" variants={popIn} custom={i} initial="initial" animate="animate">
+              <div className="flex items-start gap-2">
+                <span className={cn("px-2 py-0.5 rounded text-[9px] font-mono font-bold border uppercase shrink-0", convictionColor(j.conviction))}>
+                  {j.conviction}
+                </span>
+                <p className="text-sm leading-snug">{j.claim}</p>
+              </div>
+              {j.reasoning && (
+                <p className="text-xs text-muted-foreground/70 italic pl-0.5 line-clamp-2">{j.reasoning}</p>
+              )}
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ANALYST STEP C — THE QUALITY CHECK
+// ═══════════════════════════════════════════════════════════════════════════
+
+function StepAnalystQuality({ report }: { report: ComparisonReport }) {
+  const m = (report.layers.find(l => l.layer === 2)?.metadata ?? {}) as Record<string, unknown>;
+  const quality = (m.quality ?? {}) as Record<string, number>;
+
+  const dims = [
+    { key: "coverage", label: "Coverage" },
+    { key: "evidence_strength", label: "Evidence Strength" },
+    { key: "evidence_depth", label: "Evidence Depth" },
+    { key: "contradiction_resolution", label: "Contradictions Resolved" },
+    { key: "judgment_formation", label: "Judgments Formed" },
+    { key: "gap_acknowledgment", label: "Gaps Acknowledged" },
+  ];
+
+  return (
+    <motion.div className="max-w-2xl w-full mx-auto space-y-5 overflow-y-auto max-h-full" variants={staggerContainer} initial="initial" animate="animate">
+      <motion.div variants={staggerChild}>
+        <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-4">Research Quality Dimensions</p>
+        <div className="space-y-3 max-w-md">
+          {dims.map(d => {
+            const val = quality[d.key] ?? 0;
+            const pct = Math.round(val * 100);
+            const color = pct >= 75 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-red-500";
+            return (
+              <motion.div key={d.key} className="flex items-center gap-3" variants={slideInLeft} custom={dims.indexOf(d)} initial="initial" animate="animate">
+                <span className="text-xs text-muted-foreground w-44 shrink-0">{d.label}</span>
+                <div className="flex-1 h-2 rounded-full bg-foreground/8">
+                  <motion.div
+                    className={cn("h-full rounded-full", color)}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.8, ease: easeOutExpo, delay: 0.1 * dims.indexOf(d) }}
+                  />
+                </div>
+                <span className="text-xs font-mono text-muted-foreground w-9 text-right">{pct}%</span>
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.div>
+
+      {quality.overall != null && (
+        <motion.div className="glass-card p-5 flex items-center gap-4" variants={staggerChild}>
+          <div>
+            <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Overall Quality</p>
+            <div className="text-3xl font-display text-gradient mt-1">{Math.round((quality.overall ?? 0) * 100)}%</div>
+          </div>
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // STEP 7 — THE EXPERT REPORT (Agentic Pipeline Output)
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1107,11 +1336,43 @@ function StepExpertResult({ report, workflow }: { report: ComparisonReport; work
 // STEP 8 — THE TRANSFORMATION (Final Result)
 // ═══════════════════════════════════════════════════════════════════════════
 
+function ConvictionBadgeInline({ conviction }: { conviction: string }) {
+  const norm = (conviction ?? "").toLowerCase();
+  const cls =
+    norm === "high"
+      ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
+      : norm === "medium"
+      ? "bg-amber-500/15 text-amber-400 border-amber-500/25"
+      : "bg-foreground/8 text-muted-foreground border-foreground/10";
+  return (
+    <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border uppercase tracking-wide shrink-0", cls)}>
+      {norm}
+    </span>
+  );
+}
+
 function StepTransformation({ report, workflow }: { report: ComparisonReport; workflow: AgentWorkflowData }) {
+  const l2Meta = (report.layers.find(l => l.layer === 2)?.metadata ?? {}) as Record<string, unknown>;
+  const isAnalyst = isAnalystFormat(report);
+
+  const analystSearches = (l2Meta.searches_count as number) ?? 0;
+  const analystEvidence = (l2Meta.evidence_count as number) ?? 0;
+  const analystCoverage = (l2Meta.coverage as number) ?? 0;
+  const groundingScore = (l2Meta.grounding_score as number) ?? 0;
+
+  const analysis = isAnalyst
+    ? (l2Meta.analysis as {
+        key_findings?: string[];
+        judgments?: Array<{ claim: string; conviction: string; reasoning: string }>;
+      } | null)
+    : null;
+  const keyFindings = Array.isArray(analysis?.key_findings) ? analysis!.key_findings!.slice(0, 3) : [];
+  const judgments = Array.isArray(analysis?.judgments) ? analysis!.judgments!.slice(0, 3) : [];
+
   const totalSearches = (workflow.enhanced?.totalSearches ?? 0)
-    + (workflow.expert?.phaseDetails.find(p => p.phase === "investigate")?.searches ?? 0);
-  const evidenceCount = workflow.expert?.evidenceLedger.length ?? 0;
-  const coverage = workflow.expert?.coverage ?? 0;
+    + (isAnalyst ? analystSearches : (workflow.expert?.phaseDetails.find(p => p.phase === "investigate")?.searches ?? 0));
+  const evidenceCount = isAnalyst ? analystEvidence : (workflow.expert?.evidenceLedger.length ?? 0);
+  const coverage = isAnalyst ? analystCoverage : (workflow.expert?.coverage ?? 0);
 
   const journey = report.claim_journey;
   const beforeText = journey?.snapshots?.find(s => s.layer === 0)?.claim_text
@@ -1120,102 +1381,153 @@ function StepTransformation({ report, workflow }: { report: ComparisonReport; wo
   const afterText = afterSnapshot?.claim_text
     || firstSentences(report.layers[report.layers.length - 1]?.content || "", 2);
 
+  const layerMethods = ["Model Memory", "Web-Enriched", "Deep Investigation"];
+  const layerSearchCounts = [0, workflow.enhanced?.totalSearches ?? 0, analystSearches];
+  const layerColors = ["text-amber-500", "text-blue-400", "text-purple"];
+
   return (
     <motion.div
-      className="max-w-2xl w-full mx-auto space-y-6 overflow-y-auto max-h-full"
+      className="max-w-2xl w-full mx-auto space-y-6 overflow-y-auto max-h-full pb-4"
       variants={staggerContainer}
       initial="initial"
       animate="animate"
     >
+      {/* Section 1 — Impact Header */}
       <motion.div className="text-center" variants={staggerChild}>
         <h3 className="text-2xl font-display text-gradient">The Transformation</h3>
-        <p className="text-sm text-muted-foreground mt-1">From model knowledge to verified research</p>
+        {isAnalyst && groundingScore > 0 ? (
+          <>
+            <div className="mt-4 inline-flex flex-col items-center gap-1">
+              <div className="text-5xl font-display font-bold text-gradient glow-sm">
+                <AnimatedCounter value={Math.round(groundingScore * 100)} suffix="%" />
+              </div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                Claims Grounded by Evidence
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              {totalSearches} searches · {evidenceCount} evidence pieces · {Math.round(coverage * 100)}% coverage
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground mt-1">From model knowledge to verified research</p>
+        )}
       </motion.div>
 
-      {/* Aggregate metrics */}
-      <motion.div className="grid grid-cols-3 gap-3" variants={staggerChild}>
-        <div className="glass-card p-4 text-center">
-          <div className="text-2xl font-display text-gradient"><AnimatedCounter value={totalSearches} /></div>
-          <div className="text-[10px] font-mono text-muted-foreground uppercase mt-1">searches total</div>
-        </div>
-        <div className="glass-card p-4 text-center">
-          <div className="text-2xl font-display text-gradient"><AnimatedCounter value={evidenceCount} /></div>
-          <div className="text-[10px] font-mono text-muted-foreground uppercase mt-1">evidence entries</div>
-        </div>
-        <div className="glass-card p-4 text-center">
-          <div className="text-2xl font-display text-gradient"><AnimatedCounter value={Math.round(coverage * 100)} suffix="%" /></div>
-          <div className="text-[10px] font-mono text-muted-foreground uppercase mt-1">coverage</div>
-        </div>
-      </motion.div>
-
-      {/* Before / After */}
-      <motion.div className="grid grid-cols-1 lg:grid-cols-2 gap-4 relative" variants={staggerChild}>
-        <motion.div
-          className="glass-card p-5 border-amber-500/20"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 0.7, x: 0 }}
-          transition={{ duration: 0.5, ease: easeOutExpo, delay: 0.2 }}
-        >
-          <p className="text-[10px] font-mono uppercase tracking-wider text-amber-600 mb-3">Before — Baseline</p>
-          <p className="text-sm text-foreground/60 italic leading-relaxed">&ldquo;{beforeText}&rdquo;</p>
-          <div className="flex flex-wrap gap-1 mt-3">
-            {["Unsourced", "No Data", "Vague"].map(w => (
-              <span key={w} className="px-2 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-700">{w}</span>
-            ))}
-          </div>
-        </motion.div>
-        <motion.div
-          className="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10"
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.5, duration: 0.4, ease: easeOutBack }}
-        >
-          <div className="w-10 h-10 rounded-full bg-background border border-purple/20 flex items-center justify-center animate-pulse-glow">
-            <ArrowRight className="h-4 w-4 text-purple" />
-          </div>
-        </motion.div>
-        <motion.div
-          className="glass-card p-5 border-purple/20 glow-sm"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, ease: easeOutExpo, delay: 0.35 }}
-        >
-          <p className="text-[10px] font-mono uppercase tracking-wider text-purple mb-3">After — Expert</p>
-          <p className="text-sm leading-relaxed">{highlightDataPoints(afterText)}</p>
-          <div className="flex flex-wrap gap-1 mt-3">
-            {["+Named Source", "+Quantified", "+Cross-Referenced"].map(tag => (
-              <span key={tag} className="px-2 py-0.5 rounded text-[10px] bg-green-500/10 text-green-700">{tag}</span>
-            ))}
-          </div>
-        </motion.div>
-      </motion.div>
-
-      {/* Narrative */}
-      {journey?.overall_narrative && (
-        <motion.div className="glass-card p-5 border-l-2 border-purple/30" variants={staggerChild}>
-          <p className="text-sm leading-relaxed text-muted-foreground">{journey.overall_narrative}</p>
-        </motion.div>
-      )}
-
-      {/* Layer progression fallback */}
-      {!journey && (
-        <motion.div className="flex gap-3" variants={staggerChild}>
+      {/* Section 2 — Research Journey */}
+      <motion.div variants={staggerChild}>
+        <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-3">Research Journey</p>
+        <div className="flex items-stretch gap-2">
           {report.layers.map((layer, i) => (
-            <motion.div
-              key={layer.layer}
-              className="flex-1 glass-card p-3 text-center"
-              variants={popIn}
-              custom={i}
-            >
-              <div className="text-xs font-mono text-muted-foreground mb-1">L{layer.layer}</div>
-              <div className="text-lg font-display">{layer.word_count.toLocaleString()}</div>
-              <div className="text-[9px] font-mono text-muted-foreground">words</div>
-              <div className="text-sm font-display mt-1">{layer.source_count}</div>
-              <div className="text-[9px] font-mono text-muted-foreground">sources</div>
-            </motion.div>
+            <div key={layer.layer} className="flex items-center gap-2 flex-1 min-w-0">
+              <div className={cn(
+                "flex-1 glass-card p-3 rounded-xl space-y-2 min-w-0",
+                i === 2 ? "border-purple/20 glow-sm" : ""
+              )}>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-mono text-muted-foreground/50">L{layer.layer}</span>
+                  <span className={cn("text-[10px] font-mono font-semibold", layerColors[i])}>
+                    {layerMethods[i] ?? ""}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-lg font-display">{layer.source_count.toLocaleString()}</span>
+                    <span className="text-[9px] font-mono text-muted-foreground">sources</span>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-sm font-display text-muted-foreground">{layerSearchCounts[i]}</span>
+                    <span className="text-[9px] font-mono text-muted-foreground">searches</span>
+                  </div>
+                  {i === 2 && coverage > 0 && (
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-sm font-display text-emerald-400">{Math.round(coverage * 100)}%</span>
+                      <span className="text-[9px] font-mono text-muted-foreground">coverage</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {i < report.layers.length - 1 && (
+                <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground/30" />
+              )}
+            </div>
           ))}
+        </div>
+      </motion.div>
+
+      {/* Section 3 — Key Findings */}
+      {keyFindings.length > 0 && (
+        <motion.div variants={staggerChild} className="space-y-2">
+          <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Key Findings</p>
+          <ol className="space-y-2">
+            {keyFindings.map((f, i) => (
+              <li key={i} className="flex gap-2.5">
+                <span className="text-[10px] font-mono text-muted-foreground/40 pt-0.5 shrink-0 w-4">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <p className="text-sm text-foreground/80 leading-relaxed">
+                  {highlightDataPoints(f.length > 150 ? f.slice(0, 150) + "…" : f)}
+                </p>
+              </li>
+            ))}
+          </ol>
         </motion.div>
       )}
+
+      {/* Section 4 — Analyst Judgments */}
+      {judgments.length > 0 && (
+        <motion.div variants={staggerChild} className="space-y-2">
+          <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Analyst Judgments</p>
+          <div className="space-y-2">
+            {judgments.map((j, i) => (
+              <div key={i} className="glass-card rounded-xl p-3 space-y-1.5">
+                <div className="flex items-start gap-2">
+                  <ConvictionBadgeInline conviction={j.conviction} />
+                  <p className="text-sm font-medium text-foreground/90 leading-snug">{j.claim}</p>
+                </div>
+                {j.reasoning && (
+                  <p className="text-xs text-muted-foreground leading-relaxed pl-0.5 line-clamp-2">{j.reasoning}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Section 5 — Before / After */}
+      <motion.div variants={staggerChild}>
+        <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-3">Claim Transformation</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 relative">
+          <motion.div
+            className="glass-card p-5 border-amber-500/20"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 0.7, x: 0 }}
+            transition={{ duration: 0.5, ease: easeOutExpo, delay: 0.2 }}
+          >
+            <p className="text-[10px] font-mono uppercase tracking-wider text-amber-600 mb-3">Before — Baseline</p>
+            <p className="text-sm text-foreground/60 italic leading-relaxed">&ldquo;{beforeText}&rdquo;</p>
+          </motion.div>
+          <motion.div
+            className="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.4, ease: easeOutBack }}
+          >
+            <div className="w-10 h-10 rounded-full bg-background border border-purple/20 flex items-center justify-center animate-pulse-glow">
+              <ArrowRight className="h-4 w-4 text-purple" />
+            </div>
+          </motion.div>
+          <motion.div
+            className="glass-card p-5 border-purple/20 glow-sm"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, ease: easeOutExpo, delay: 0.35 }}
+          >
+            <p className="text-[10px] font-mono uppercase tracking-wider text-purple mb-3">After — Expert</p>
+            <p className="text-sm leading-relaxed">{highlightDataPoints(afterText)}</p>
+          </motion.div>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -1337,12 +1649,20 @@ export function ScrollPipeline({ report }: ScrollPipelineProps) {
       s.push(ALL_STEPS[1]); // search
       s.push(ALL_STEPS[2]); // l1-result
     }
-    if (report.layers.length > 2 && !isAnalystFormat(report)) {
-      s.push(ALL_STEPS[3]); // dissect
-      s.push(ALL_STEPS[4]); // plan
-      s.push(ALL_STEPS[5]); // investigate
-      s.push(ALL_STEPS[6]); // synthesize
-      s.push(ALL_STEPS[7]); // expert-result
+    if (report.layers.length > 2) {
+      if (isAnalystFormat(report)) {
+        // Analyst agent steps
+        s.push(ALL_STEPS[9]);  // analyst-investigate
+        s.push(ALL_STEPS[10]); // analyst-synthesize
+        s.push(ALL_STEPS[11]); // analyst-quality
+        s.push(ALL_STEPS[7]);  // expert-result (final claim)
+      } else {
+        s.push(ALL_STEPS[3]); // dissect
+        s.push(ALL_STEPS[4]); // plan
+        s.push(ALL_STEPS[5]); // investigate
+        s.push(ALL_STEPS[6]); // synthesize
+        s.push(ALL_STEPS[7]); // expert-result
+      }
     }
     s.push(ALL_STEPS[8]); // transformation always
     return s;
@@ -1420,6 +1740,9 @@ export function ScrollPipeline({ report }: ScrollPipelineProps) {
       case "plan": return <StepPlan workflow={workflow} />;
       case "investigate": return <StepInvestigate workflow={workflow} />;
       case "synthesize": return <StepSynthesize workflow={workflow} />;
+      case "analyst-investigate": return <StepAnalystInvestigate report={report} />;
+      case "analyst-synthesize": return <StepAnalystSynthesize report={report} />;
+      case "analyst-quality": return <StepAnalystQuality report={report} />;
       case "expert-result": return <StepExpertResult report={report} workflow={workflow} />;
       case "result": return <StepTransformation report={report} workflow={workflow} />;
       default: return null;

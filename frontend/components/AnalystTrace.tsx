@@ -5,14 +5,14 @@ import { createPortal } from "react-dom";
 import {
   Puzzle, Brain, Search, FileDown, FlipHorizontal,
   Scale, ShieldCheck, PenTool, ChevronDown, ChevronRight,
-  Check, X, AlertTriangle, ExternalLink,
+  Check, X, BadgeCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type {
   AnalystTrace, TraceStep, DecomposeContent, ThinkContent,
-  SearchContent, ScrapeContent, ReflectContent, AnalyzeContent,
-  QualityContent, ComposeContent,
+  SearchContent, AnalyzeContent,
+  QualityContent, ComposeContent, VerifyContent,
 } from "@/lib/types";
 
 /* ── Phase styling ──────────────────────────────────────────── */
@@ -26,6 +26,7 @@ const PHASE = {
   analyze:   { icon: Scale, label: "Making Sense of the Data", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", accent: "emerald" },
   quality:   { icon: ShieldCheck, label: "Quality Check", color: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/20", accent: "green" },
   compose:   { icon: PenTool, label: "Writing the Report", color: "text-foreground/70", bg: "bg-foreground/5", border: "border-foreground/10", accent: "neutral" },
+  verify:    { icon: BadgeCheck, label: "Grounding Check", color: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/20", accent: "cyan" },
 };
 
 const PRIORITY_BADGE: Record<number, { label: string; cls: string }> = {
@@ -89,7 +90,7 @@ function PhaseBadge({ phase, elapsed }: { phase: string; elapsed?: number }) {
 /* ── Section 1: Decompose ────────────────────────────────────── */
 
 function DecomposeSection({ step }: { step: TraceStep }) {
-  const c = step.content as DecomposeContent;
+  const c = step.content as unknown as DecomposeContent;
   const sqs = c?.sub_questions || [];
   return (
     <section className="space-y-6">
@@ -309,7 +310,7 @@ function InvestigateSection({ steps }: { steps: TraceStep[] }) {
                       <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Searches ({searchSteps.length})</p>
                       <div className="space-y-1">
                         {searchSteps.map((s, i) => {
-                          const sc = s.content as SearchContent;
+                          const sc = s.content as unknown as SearchContent;
                           return (
                             <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
                               <Search className="h-3 w-3 shrink-0" />
@@ -364,9 +365,14 @@ function InvestigateSection({ steps }: { steps: TraceStep[] }) {
 
 /* ── Section 3: Analyze ──────────────────────────────────────── */
 
+// Strip internal evidence IDs like (ev_abc123, ev_def456) from display text
+function stripEvidenceIds(text: string): string {
+  return text.replace(/\s*\(ev_[a-f0-9]+(,\s*ev_[a-f0-9]+)*\)/g, "").trim();
+}
+
 function AnalyzeSection({ step }: { step: TraceStep }) {
-  const c = step.content as AnalyzeContent;
-  const findings = c?.key_findings || [];
+  const c = step.content as unknown as AnalyzeContent;
+  const findings = (c?.key_findings || []).map(stripEvidenceIds);
   const judgments = c?.judgments || [];
 
   return (
@@ -439,7 +445,7 @@ function AnalyzeSection({ step }: { step: TraceStep }) {
 /* ── Section 4: Quality Gate ─────────────────────────────────── */
 
 function QualitySection({ step }: { step: TraceStep }) {
-  const c = step.content as QualityContent;
+  const c = step.content as unknown as QualityContent;
   const dims = [
     { key: "coverage", label: "Coverage" },
     { key: "evidence_strength", label: "Evidence Strength" },
@@ -498,7 +504,7 @@ function QualitySection({ step }: { step: TraceStep }) {
 /* ── Section 5: Compose ──────────────────────────────────────── */
 
 function ComposeSection({ step }: { step: TraceStep }) {
-  const c = step.content as ComposeContent;
+  const c = step.content as unknown as ComposeContent;
   return (
     <section className="space-y-6">
       <PhaseBadge phase="compose" elapsed={step.elapsed_s} />
@@ -507,10 +513,57 @@ function ComposeSection({ step }: { step: TraceStep }) {
         <strong className="text-foreground">{c?.sections?.length || "several"} sections</strong> and wrote{" "}
         <strong className="text-foreground">{c?.word_count?.toLocaleString() || "the"} words</strong>.
       </p>
-      {c?.sections?.length > 0 && (
+      {(c?.sections?.length ?? 0) > 0 && (
         <ol className="list-decimal list-inside space-y-1 text-sm text-foreground/70">
-          {c.sections.map((s: string, i: number) => <li key={i}>{s}</li>)}
+          {c.sections?.map((s: string, i: number) => <li key={i}>{s}</li>)}
         </ol>
+      )}
+    </section>
+  );
+}
+
+/* ── Section 6: Verify ───────────────────────────────────────── */
+
+function VerifySection({ step }: { step: TraceStep }) {
+  const c = step.content as unknown as VerifyContent;
+  const pct = Math.round((c?.grounding_score ?? 0) * 100);
+  const color = pct >= 80 ? "bg-green-500" : pct >= 60 ? "bg-amber-500" : "bg-red-500";
+  const textColor = pct >= 80 ? "text-green-400" : pct >= 60 ? "text-amber-400" : "text-red-400";
+
+  return (
+    <section className="space-y-6">
+      <PhaseBadge phase="verify" elapsed={step.elapsed_s} />
+      <p className="text-muted-foreground leading-relaxed">
+        Checked <strong className="text-foreground">{c?.total_claims ?? 0} factual claims</strong> in the report against collected evidence.
+      </p>
+
+      <div className="space-y-3 max-w-md">
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground w-40 shrink-0">Grounding Score</span>
+          <div className="flex-1 h-2 rounded-full bg-foreground/10">
+            <div className={cn("h-full rounded-full", color)} style={{ width: `${pct}%` }} />
+          </div>
+          <span className={cn("text-xs font-mono font-bold w-10 text-right", textColor)}>{pct}%</span>
+        </div>
+      </div>
+
+      <div className="flex gap-6 text-sm">
+        <div><span className="text-green-400 font-mono font-bold">{c?.verified_claims ?? 0}</span> <span className="text-muted-foreground">verified</span></div>
+        <div><span className="text-amber-400 font-mono font-bold">{c?.uncertain?.length ?? 0}</span> <span className="text-muted-foreground">uncertain</span></div>
+        <div><span className="text-red-400 font-mono font-bold">{c?.unverified?.length ?? 0}</span> <span className="text-muted-foreground">unverified</span></div>
+      </div>
+
+      {(c?.unverified?.length ?? 0) > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-red-400">Unverified claims:</p>
+          <ul className="space-y-1">
+            {c.unverified.slice(0, 8).map((claim, i) => (
+              <li key={i} className="text-xs text-muted-foreground pl-3 border-l border-red-500/30">
+                {claim}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </section>
   );
@@ -541,6 +594,7 @@ export function AnalystTraceOverlay({ isOpen, onClose, trace }: AnalystTraceOver
   const analyzeStep = trace.steps.find(s => s.phase === "analyze");
   const qualityStep = trace.steps.find(s => s.phase === "quality");
   const composeStep = trace.steps.find(s => s.phase === "compose");
+  const verifyStep = trace.steps.find(s => s.phase === "verify");
   const investigateSteps = trace.steps.filter(s =>
     ["think", "search", "scrape", "reflect", "part_research"].includes(s.phase)
   );
@@ -602,6 +656,14 @@ export function AnalystTraceOverlay({ isOpen, onClose, trace }: AnalystTraceOver
               {/* 5. Compose */}
               {composeStep && <ComposeSection step={composeStep} />}
 
+              {/* 6. Verify */}
+              {verifyStep && (
+                <>
+                  <hr className="border-foreground/5" />
+                  <VerifySection step={verifyStep} />
+                </>
+              )}
+
               {/* Footer */}
               <div className="text-center text-xs text-muted-foreground font-mono pt-8 pb-4">
                 Research complete · {trace.total_steps} reasoning steps
@@ -616,6 +678,6 @@ export function AnalystTraceOverlay({ isOpen, onClose, trace }: AnalystTraceOver
 }
 
 /* ── Legacy export for backward compat ───────────────────────── */
-export function AnalystTraceTimeline({ trace }: { trace: AnalystTrace }) {
+export function AnalystTraceTimeline({ trace: _trace }: { trace: AnalystTrace }) {
   return <div className="text-sm text-muted-foreground p-4">Use AnalystTraceOverlay instead.</div>;
 }

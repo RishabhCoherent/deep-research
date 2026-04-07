@@ -53,19 +53,24 @@ def score_research(board: ResearchBoard, analysis: AnalysisResult) -> QualitySco
 
     # P1 coverage matters most
     p1_cov = p1_answered / p1_total if p1_total else 1.0
-    p2_cov = p2_answered / p2_total if p2_total else 1.0
+    p2_cov = p2_answered / p2_total if p2_total else p1_cov  # no P2 → don't give free points
     coverage = p1_cov * 0.6 + p2_cov * 0.3 + board.coverage * 0.1
 
-    # 2. Evidence strength (20%): prefer T1/T2 sources
+    # 2. Evidence strength (20%): weighted by source tier
+    # T1 (gov/Reuters/Bloomberg) = 1.0, T2 (industry/news) = 0.7, T3 (blogs/unknown) = 0.3
+    # All T3 → 30%, all T1 → 100%, mixed scales linearly between
     if board.evidence:
-        t1_t2 = sum(1 for e in board.evidence if e.source_tier <= 2)
-        evidence_strength = t1_t2 / len(board.evidence)
+        weighted = sum(
+            1.0 if e.source_tier == 1 else 0.7 if e.source_tier == 2 else 0.3
+            for e in board.evidence
+        )
+        evidence_strength = weighted / len(board.evidence)
     else:
         evidence_strength = 0.0
 
     # 3. Evidence depth (20%): do answered questions have ENOUGH evidence for their type?
+    #    Measures whether evidence is diverse and deep, not just present.
     #    A "comparison" question answered with 1 data point is shallow.
-    #    A "numeric" question answered with 1 data point is fine.
     depth_scores = []
     shallow_questions = []
     for sq in board.framework.sub_questions:
@@ -73,9 +78,11 @@ def score_research(board: ResearchBoard, analysis: AnalysisResult) -> QualitySco
             continue
         ev_count = len(board.evidence_for(sq.id))
         min_expected = MIN_EVIDENCE_PER_TYPE.get(sq.answer_type, 2)
-        # Score: 1.0 if at or above minimum, proportional below
-        if min_expected > 0:
-            depth = min(ev_count / min_expected, 1.0)
+        # Score: proportional to target, with a higher "good" bar (4+ pieces)
+        # Having exactly the minimum is adequate (0.7), not perfect
+        target = max(min_expected * 2, 4)  # ideal: double the minimum or 4
+        if target > 0:
+            depth = min(ev_count / target, 1.0)
         else:
             depth = 1.0
         depth_scores.append(depth)
@@ -85,13 +92,23 @@ def score_research(board: ResearchBoard, analysis: AnalysisResult) -> QualitySco
     evidence_depth = sum(depth_scores) / len(depth_scores) if depth_scores else 0.0
 
     # 4. Contradiction resolution (10%)
+    #    If no contradictions detected despite significant evidence, that's suspect —
+    #    real research almost always surfaces some disagreements.
     total_ct = len(board.contradictions)
     resolved_ct = sum(1 for c in board.contradictions if c.resolved)
-    contradiction_resolution = resolved_ct / total_ct if total_ct else 1.0
+    if total_ct > 0:
+        contradiction_resolution = resolved_ct / total_ct
+    elif len(board.evidence) > 30:
+        contradiction_resolution = 0.6  # suspect: lots of evidence, zero disagreements
+    elif len(board.evidence) > 10:
+        contradiction_resolution = 0.8  # small evidence set, plausible
+    else:
+        contradiction_resolution = 1.0
 
     # 5. Judgment formation (15%)
-    has_judgments = min(len(board.judgments) / 3, 1.0)  # Want at least 3 judgments
-    judgment_formation = has_judgments
+    #    Scale with question count — need judgments for roughly half the questions
+    judgment_target = max(total_sq // 2, 3)
+    judgment_formation = min(len(board.judgments) / judgment_target, 1.0)
 
     # 6. Gap acknowledgment (10%)
     # Good if unanswered questions are explicitly marked "gap" rather than left "pending"
@@ -124,7 +141,7 @@ def score_research(board: ResearchBoard, analysis: AnalysisResult) -> QualitySco
     if coverage < 0.7:
         feedback_parts.append(f"Coverage is low ({coverage:.0%}). P1 gaps remain.")
     if evidence_strength < 0.5:
-        feedback_parts.append(f"Too many T3 sources ({evidence_strength:.0%} T1/T2). Scrape better sources.")
+        feedback_parts.append(f"Source quality is low ({evidence_strength:.0%} weighted). Prioritise T1/T2 sources.")
     if evidence_depth < 0.6:
         shallow_labels = [f"{sq.id} ({sq.answer_type})" for sq in shallow_questions[:3]]
         feedback_parts.append(

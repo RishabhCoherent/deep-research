@@ -93,6 +93,8 @@ export interface ComparisonReport {
 export type ResearchNodeStatus = "pending" | "exploring" | "complete" | "dead-end";
 export type ResearchNodeWhy =
   | "root"
+  | "topic_root"
+  | "decomposition"
   | "vague_finding"
   | "contradiction"
   | "thin_data"
@@ -102,7 +104,7 @@ export type ResearchNodeWhy =
 export interface ResearchNodeData {
   id: string;
   parent_id: string | null;
-  depth: number;                    // 0=root, 1=drill-down, 2=deep verification
+  depth: number;                    // 0=topic, 1=question, 2=part, 3=sub-part
   query: string;
   why_created: ResearchNodeWhy;
   trigger_finding: string;
@@ -118,6 +120,7 @@ export interface ResearchNodeData {
 export interface ResearchTreeData {
   total_nodes: number;
   max_depth: number;
+  topic_root_id?: string;
   sq_to_root: Record<string, string>;
   nodes: Record<string, ResearchNodeData>;
 }
@@ -289,7 +292,8 @@ export interface AgentWorkflowData {
 
 export type AnalystPhase =
   | "decompose" | "think" | "search" | "scrape"
-  | "reflect" | "analyze" | "quality" | "compose";
+  | "reflect" | "analyze" | "quality" | "compose" | "verify"
+  | "part_research";
 
 export interface TraceStep {
   phase: AnalystPhase;
@@ -403,6 +407,14 @@ export interface QualityContent {
 export interface ComposeContent {
   word_count: number;
   sections?: string[];
+}
+
+export interface VerifyContent {
+  grounding_score: number;
+  total_claims: number;
+  verified_claims: number;
+  unverified: string[];
+  uncertain: string[];
 }
 
 // ─── Expert Pipeline Phase Progress ─────────────────────────

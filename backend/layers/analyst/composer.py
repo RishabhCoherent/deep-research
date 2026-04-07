@@ -25,6 +25,7 @@ async def compose(
     analysis: AnalysisResult,
     topic: str,
     notify=None,
+    brief: str = "",
 ) -> str:
     """Write the final report in two passes: outline then prose."""
     if notify:
@@ -39,6 +40,9 @@ async def compose(
 
     # Build evidence organized by section/sub-question
     evidence_by_section = _build_evidence_by_section(board)
+
+    # Extract verified numeric facts for mandatory injection
+    key_stats = _extract_key_stats(board)
 
     # Format judgments
     judgment_lines = []
@@ -64,6 +68,13 @@ async def compose(
     # Format analytical frameworks (flexible — whatever the analyze phase produced)
     frameworks_text = _format_frameworks(analysis.analytical_frameworks)
     contrarian_text = "\n".join(f"- {c}" for c in analysis.contrarian_insights) if analysis.contrarian_insights else "None identified."
+
+    # Build brief section for the writer (empty string = no injection)
+    brief_section = (
+        f"CLIENT REQUIREMENTS: {brief}\n"
+        f"Ensure the report explicitly covers all named companies, metrics, and topics mentioned above."
+        if brief else ""
+    )
 
     set_model_tier("standard")
     llm_outline = get_llm("analyst")
@@ -113,8 +124,10 @@ async def compose(
     messages_report = [
         {"role": "user", "content": COMPOSE_REPORT_PROMPT.format(
             topic=topic,
+            brief_section=brief_section,
             outline=outline_text,
             evidence_by_section=evidence_by_section,
+            key_stats=key_stats,
             judgments=judgments_text,
             evidence_gaps=gaps_text,
             analytical_frameworks=frameworks_text,
@@ -150,7 +163,8 @@ async def compose(
             f"Expand each section with more detail, additional case studies, "
             f"deeper analysis, and more specific data points from the evidence. "
             f"IMPORTANT: Only use data from the evidence below. Do NOT fabricate any numbers or statistics.\n\n"
-            f"Here is the current draft to expand:\n\n{draft}\n\n"
+            + (f"MANDATORY STATISTICS — these verified figures must appear in the expanded report:\n{key_stats}\n\n" if key_stats and key_stats != "(none)" else "")
+            + f"Here is the current draft to expand:\n\n{draft}\n\n"
             f"EVIDENCE:\n{truncated_evidence}\n\n"
             f"Write the COMPLETE expanded report. Start with ## Executive Summary."
         )
@@ -191,6 +205,64 @@ def _format_frameworks(frameworks: list[dict]) -> str:
     return "\n".join(parts)
 
 
+def _extract_key_stats(board: ResearchBoard) -> str:
+    """Extract verified numeric facts that must appear in the final report.
+
+    Verified = T1/T2 source OR the same dollar amount corroborated by 2+ independent sources.
+    Relevant = linked to an answered sub-question (claim_id already ensures this).
+    """
+    dollar_pat = re.compile(r'\$[\d,]+(?:\.\d+)?\s*(?:million|billion|[MB])\b', re.I)
+    pct_pat = re.compile(r'\b\d+(?:\.\d+)?%')
+
+    # Collect answered sq ids
+    answered_ids = {sq.id for sq in board.framework.sub_questions if sq.is_answered}
+
+    # Build: amount_key → list of (fact, tier, source_title)
+    amount_index: dict[str, list[tuple[str, int, str]]] = {}
+    candidate_facts: list[tuple[str, int, str, str]] = []  # (fact, tier, source, sq_id)
+
+    for e in board.evidence:
+        if e.sub_question_id not in answered_ids:
+            continue
+        fact = e.fact
+        amounts = dollar_pat.findall(fact) + pct_pat.findall(fact)
+        if not amounts:
+            continue
+        candidate_facts.append((fact, e.source_tier, e.source_title or "", e.sub_question_id))
+        for amt in amounts:
+            key = re.sub(r'[,\s]', '', amt).lower()
+            if key not in amount_index:
+                amount_index[key] = []
+            amount_index[key].append((fact, e.source_tier, e.source_title or ""))
+
+    # Decide which amounts are verified
+    verified_amounts: set[str] = set()
+    for key, entries in amount_index.items():
+        tiers = [t for _, t, _ in entries]
+        unique_sources = len({s for _, _, s in entries})
+        if min(tiers) <= 2 or unique_sources >= 2:
+            verified_amounts.add(key)
+
+    # Build final list — one line per unique fact that contains a verified amount
+    seen_facts: set[str] = set()
+    lines: list[str] = []
+    for fact, tier, source, sq_id in candidate_facts:
+        amounts = dollar_pat.findall(fact) + pct_pat.findall(fact)
+        has_verified = any(
+            re.sub(r'[,\s]', '', a).lower() in verified_amounts for a in amounts
+        )
+        if not has_verified:
+            continue
+        dedup_key = fact[:80].lower()
+        if dedup_key in seen_facts:
+            continue
+        seen_facts.add(dedup_key)
+        src_label = f" ({source})" if source else ""
+        lines.append(f"- {fact[:200]}{src_label}")
+
+    return "\n".join(lines[:25]) if lines else "(none)"
+
+
 def _build_evidence_by_section(board: ResearchBoard) -> str:
     """Organize evidence by section/sub-question for the compose prompt."""
     parts = []
@@ -204,7 +276,10 @@ def _build_evidence_by_section(board: ResearchBoard) -> str:
 
     for section_key, evidence_list in section_evidence.items():
         parts.append(f"\n### {section_key}")
-        for e in evidence_list:
+        # Cap at 5 strongest evidence items per sub-question to stay within TPM limits
+        # Prefer T1/T2 sources; fall back to T3 if needed
+        sorted_ev = sorted(evidence_list, key=lambda e: (e.source_tier, -e.confidence))
+        for e in sorted_ev[:5]:
             # Do NOT include tier labels — they leak into the final report
             line = f"- {e.fact}"
             if e.source_title:

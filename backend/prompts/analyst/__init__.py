@@ -7,5 +7,6 @@ from prompts.analyst.prompts import (
     QUALITY_GATE_PROMPT,
     COMPOSE_OUTLINE_PROMPT,
     COMPOSE_REPORT_PROMPT,
+    VERIFY_PROMPT,
     BANNED_RESEARCH_FIRMS,
 )

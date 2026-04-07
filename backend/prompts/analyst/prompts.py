@@ -30,6 +30,8 @@ Return ONLY valid JSON:
     {{
       "id": "sq_01",
       "question": "A specific research question WITHIN SCOPE",
+      "answer_type": "numeric|trend|comparison|list|causal|opinion|general",
+      "research_strategy": "data_hunt|expert_scan|triangulate",
       "priority": 1,
       "search_queries": ["specific search query 1", "specific search query 2"]
     }}
@@ -39,6 +41,11 @@ Return ONLY valid JSON:
 
 RULES:
 - Generate 8-10 sub-questions. Not fewer than 8, not more than 10.
+- Assign priority: 1 = must-answer (max 4-5), 2 = important supporting context (the rest). Not everything is critical.
+- Assign answer_type: "numeric" for statistics/market sizes/percentages, "trend" for directional changes over time, "comparison" for comparing entities, "list" for cataloguing items, "causal" for cause-effect questions, "opinion" for expert views, "general" for other.
+- Assign research_strategy: "data_hunt" for finding specific numbers/facts, "expert_scan" for finding expert views and analysis, "triangulate" for cross-referencing multiple sources.
+- If the topic mentions specific companies, brands, people, or products by name — generate at least one dedicated sub-question for EACH named entity. These are always priority 1.
+- If the topic requests specific metrics (market size, CAGR, funding rounds, cost, pricing) — include a dedicated sub-question for each metric type. These are priority 1.
 - The search results are context, not a constraint. Research beyond what they show.
 - EVERY question must be specifically about "{topic}" — not a broader or adjacent topic.
 - Do NOT include generic business categories (consumer preferences, digital marketing, sustainability) unless the topic specifically asks for them."""
@@ -276,6 +283,8 @@ IMPORTANT: We are in {current_year}. Use past tense for {last_year} data. Use pr
 
 TOPIC: {topic}
 
+{brief_section}
+
 ARGUMENT STRUCTURE:
 {outline}
 
@@ -287,6 +296,9 @@ ANALYST JUDGMENTS:
 
 EVIDENCE GAPS (be honest about these):
 {evidence_gaps}
+
+MANDATORY STATISTICS — each figure below is verified (T1/T2 source or corroborated by 2+ sources). Every one MUST appear in the report by name and number. Do not omit or collapse into vague language:
+{key_stats}
 
 ANALYTICAL FRAMEWORKS:
 {analytical_frameworks}
@@ -324,7 +336,48 @@ OUTPUT: Start with ## Executive Summary. No preamble."""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 6. COMPETITOR SCRUB LIST (reused from existing system)
+# 6. VERIFY — Check report claims against evidence
+# ═══════════════════════════════════════════════════════════════════════════════
+
+VERIFY_PROMPT = """You are a fact-checker verifying whether claims in a research report are grounded in the collected evidence.
+
+EVIDENCE COLLECTED:
+{evidence_list}
+
+REPORT TO CHECK:
+{report_text}
+
+TASK:
+Extract every specific FACTUAL CLAIM from the report — numbers, named company actions, market figures, funding amounts, dates, certifications, partnerships, product launches. Do NOT include:
+- Analytical opinions or judgments ("the industry is poised to grow")
+- Vague qualitative statements ("significant progress has been made")
+- Predictions or forecasts framed as possibilities
+
+For each factual claim, classify it:
+- "verified": the claim directly matches or is clearly supported by evidence in the list above
+- "uncertain": the claim is plausible given the evidence but not directly stated
+- "fabricated": the claim contradicts evidence OR has no basis in the evidence at all
+
+Compute grounding_score = verified_count / total_claims (0.0–1.0).
+
+Return ONLY valid JSON:
+{{
+  "claims": [
+    {{"text": "the specific claim (max 150 chars)", "status": "verified|uncertain|fabricated"}}
+  ],
+  "grounding_score": 0.0
+}}
+
+Rules:
+- Extract 15–40 claims. If the report has fewer specific facts, extract all of them.
+- Be strict: a claim is only "verified" if the evidence explicitly supports the number or fact.
+- A claim is "fabricated" only if it clearly has no relation to any evidence — not just because it's an inference.
+- Do not check section headings or introductory sentences — only factual claims.
+"""
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 7. COMPETITOR SCRUB LIST (reused from existing system)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 BANNED_RESEARCH_FIRMS = [

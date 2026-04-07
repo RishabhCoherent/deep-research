@@ -9,12 +9,13 @@ Returns ResearchResult compatible with the existing pipeline.
 import logging
 import time
 
-from models.analyst import ResearchBoard, ResearchTrace, AnalysisResult
+from models.analyst import ResearchBoard, ResearchTrace, AnalysisResult, ResearchNode
 from layers.analyst.decomposer import decompose
 from layers.analyst.investigator import investigate
 from layers.analyst.analyzer import analyze
 from layers.analyst.composer import compose
 from layers.analyst.quality_gate import score_research
+from layers.analyst.verifier import verify
 from models.pipeline import ResearchResult, Source
 
 logger = logging.getLogger(__name__)
@@ -91,7 +92,34 @@ async def run_analyst(
     for s in sources:
         pass  # Sources are shared via the list reference
 
+    # ── Create topic root node for the unified tree ──────────────────────
+    topic_root = ResearchNode(
+        parent_id="",
+        depth=0,
+        query=topic,
+        why_created="topic_root",
+        trigger_finding="",
+        sq_id=None,
+        status="exploring",
+    )
+    board.research_tree.add_node(topic_root)
+    board.research_tree.topic_root_id = topic_root.id
+
+    if progress_callback:
+        import json
+        notify("node_created", json.dumps({
+            "node_id": topic_root.id, "parent_id": "",
+            "depth": 0, "query": topic,
+            "why": "topic_root", "sq_id": "",
+        }))
+
     # ── Phase 2: INVESTIGATE (with quality gate loop) ─────────────────────
+
+    # Default in case investigate/analyze fails before assignment
+    analysis_result = AnalysisResult(
+        overall_confidence=0.0,
+        narrative_thread="Research was interrupted before analysis could complete.",
+    )
 
     for iteration in range(board.max_iterations + 1):
         t1 = time.time()
@@ -177,6 +205,7 @@ async def run_analyst(
         trace.add("quality", f"Quality: {quality.overall:.0%} — {'PASS' if quality.passes else 'FAIL'}", {
             "coverage": quality.coverage,
             "evidence_strength": quality.evidence_strength,
+            "evidence_depth": quality.evidence_depth,
             "contradiction_resolution": quality.contradiction_resolution,
             "judgment_formation": quality.judgment_formation,
             "gap_acknowledgment": quality.gap_acknowledgment,
@@ -199,13 +228,20 @@ async def run_analyst(
             if boost > 0:
                 board.tool_calls_budget += boost
 
+    # Update topic root node status
+    topic_root_node = board.research_tree.get_node(board.research_tree.topic_root_id)
+    if topic_root_node:
+        topic_root_node.status = "complete"
+        topic_root_node.confidence = board.coverage
+        topic_root_node.answer = f"{len(board.evidence)} evidence collected, {board.coverage:.0%} coverage"
+
     # ── Phase 5: COMPOSE ──────────────────────────────────────────────────
 
     t3 = time.time()
     notify("compose", "Writing final report...")
 
     try:
-        draft = await compose(board, analysis_result, topic, notify)
+        draft = await compose(board, analysis_result, topic, notify, brief=brief)
     except Exception as e:
         logger.error(f"[Analyst] Compose failed: {e}")
         draft = "## Error\n\nAnalyst pipeline composition failed."
@@ -222,6 +258,35 @@ async def run_analyst(
         "sections": board.framework.report_sections,
     }, elapsed_s=compose_elapsed)
 
+    # ── Phase 6: VERIFY ───────────────────────────────────────────────────
+
+    t4 = time.time()
+    try:
+        verification = await verify(draft, board, notify)
+    except Exception as e:
+        logger.error(f"[Analyst] Verify phase failed: {e}")
+        from models.analyst import VerificationResult
+        verification = VerificationResult()
+
+    verify_elapsed = round(time.time() - t4, 1)
+    phase_timings["verify"] = {
+        "grounding_score": verification.grounding_score,
+        "total_claims": verification.total_claims,
+        "verified_claims": verification.verified_claims,
+        "elapsed_s": verify_elapsed,
+    }
+
+    # Record verify trace
+    trace.add("verify",
+              f"Grounding: {verification.grounding_score:.0%} ({verification.verified_claims}/{verification.total_claims} claims verified)",
+              {
+                  "grounding_score": verification.grounding_score,
+                  "total_claims": verification.total_claims,
+                  "verified_claims": verification.verified_claims,
+                  "unverified": verification.unverified[:10],
+                  "uncertain": verification.uncertain[:10],
+              }, elapsed_s=verify_elapsed)
+
     # ── Build Result ──────────────────────────────────────────────────────
 
     elapsed = time.time() - start_time
@@ -229,7 +294,7 @@ async def run_analyst(
 
     notify("done",
            f"Analyst complete: {word_count} words, {len(board.evidence)} evidence, "
-           f"{board.coverage:.0%} coverage in {elapsed:.0f}s")
+           f"{board.coverage:.0%} coverage, {verification.grounding_score:.0%} grounded in {elapsed:.0f}s")
 
     return ResearchResult(
         layer=2,
@@ -250,6 +315,8 @@ async def run_analyst(
                 "narrative": analysis_result.narrative_thread,
             },
             "quality": board.quality_scores,
+            "verification": verification.to_dict(),
+            "grounding_score": verification.grounding_score,
             "evidence_count": len(board.evidence),
             "searches_count": board.searches_done,
             "scrapes_done": board.scrapes_done,

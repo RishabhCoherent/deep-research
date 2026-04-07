@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Clock,
@@ -13,7 +13,8 @@ import { ResearchLayout } from "@/components/ResearchLayout";
 import { useResearchStore } from "@/lib/store";
 import { useResearch } from "@/hooks/useResearch";
 import { cn } from "@/lib/utils";
-import { LAYER_NAMES, LAYER_DESCRIPTIONS } from "@/lib/types";
+import { LAYER_NAMES, LAYER_DESCRIPTIONS, type ResearchTreeData } from "@/lib/types";
+import { DecompositionTree } from "@/components/DecompositionTree";
 
 export default function ResearchProgressPage() {
   const router = useRouter();
@@ -63,6 +64,31 @@ export default function ResearchProgressPage() {
       router.push("/research");
     }
   }, [jobId, router]);
+
+  // Derive live tree data from graphNodes
+  const liveTreeData = useMemo((): ResearchTreeData | null => {
+    const nodeCount = Object.keys(graphNodes).length;
+    if (nodeCount === 0) return null;
+
+    const topicNode = Object.values(graphNodes).find(
+      (n) => n.depth === 0 || n.why_created === "topic_root"
+    );
+    const sq_to_root: Record<string, string> = {};
+    for (const node of Object.values(graphNodes)) {
+      if (node.depth === 1 && node.sq_id) {
+        sq_to_root[node.sq_id] = node.id;
+      }
+    }
+    const maxDepth = Math.max(0, ...Object.values(graphNodes).map((n) => n.depth));
+
+    return {
+      nodes: graphNodes,
+      total_nodes: nodeCount,
+      max_depth: maxDepth,
+      topic_root_id: topicNode?.id,
+      sq_to_root,
+    };
+  }, [graphNodes]);
 
   if (!jobId) return null;
 
@@ -286,6 +312,26 @@ export default function ResearchProgressPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Live Research Tree ───────────────────────────── */}
+      {liveTreeData && liveTreeData.total_nodes > 0 && (
+        <div className="mt-12">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+                Research Tree
+              </span>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {liveTreeData.total_nodes} node{liveTreeData.total_nodes !== 1 ? "s" : ""}
+                {isResearching && (
+                  <span className="ml-2 text-purple animate-pulse">· building...</span>
+                )}
+              </p>
+            </div>
+          </div>
+          <DecompositionTree treeData={liveTreeData} className="h-130" />
+        </div>
+      )}
 
     </ResearchLayout>
   );

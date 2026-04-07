@@ -42,8 +42,23 @@ How many parts depends on the question's complexity:
 - Moderate question → 2-3 parts
 - Complex multi-faceted question → 3-4 parts
 
+For each part, explain WHY it needs to be researched separately.
+
 Return ONLY valid JSON:
-{{"parts": ["part 1 question", "part 2 question"], "reason": "why this many parts"}}"""
+{{"parts": [
+  {{"question": "part 1 question", "why": "why this part matters for answering the parent question"}}
+], "reason": "overall decomposition rationale"}}"""
+
+
+SUMMARIZE_PART_PROMPT = """QUESTION: {question}
+
+RAW SEARCH DATA:
+{raw_text}
+
+Summarize the key findings that answer the question in 2-4 sentences. Include specific data points, numbers, names, and dates. Drop anything irrelevant. If the data is contradictory, note it.
+
+Return ONLY valid JSON:
+{{"summary": "your concise finding here"}}"""
 
 
 COMBINE_PROMPT = """ORIGINAL QUESTION: {question}
@@ -63,7 +78,7 @@ MAX_DEEP_DIVES = 2  # Max nodes that go deeper than depth 1 per run
 
 def _should_go_deeper(answer: str, evidence: list, sq_priority: int, budget_remaining: int, depth: int) -> bool:
     """Decide if a researched part needs sub-decomposition for richer data."""
-    if depth >= 2:          # Max depth 3 (0→1→2)
+    if depth >= 3:          # Max depth 4 (0→1→2→3)
         return False
     if budget_remaining < 20:
         return False
@@ -80,8 +95,11 @@ def _should_go_deeper(answer: str, evidence: list, sq_priority: int, budget_rema
     return False
 
 
-async def _decompose_question(question: str, llm, budget_lock, board) -> list[str]:
-    """Break a question into 2-3 directly answerable parts."""
+async def _decompose_question(question: str, llm, budget_lock, board) -> list[dict]:
+    """Break a question into 2-4 directly answerable parts with rationale.
+
+    Returns list of {"question": str, "why": str}.
+    """
     messages = [
         {"role": "system", "content": "You output only valid JSON."},
         {"role": "user", "content": DECOMPOSE_PART_PROMPT.format(question=question)},
@@ -94,12 +112,18 @@ async def _decompose_question(question: str, llm, budget_lock, board) -> list[st
 
     data = extract_json(get_content(response))
     if data and isinstance(data.get("parts"), list):
-        parts = [p for p in data["parts"] if isinstance(p, str) and len(p) > 10]
+        parts = []
+        for p in data["parts"]:
+            if isinstance(p, dict) and p.get("question"):
+                parts.append({"question": str(p["question"]), "why": str(p.get("why", ""))})
+            elif isinstance(p, str) and len(p) > 10:
+                # Fallback for old format (plain strings)
+                parts.append({"question": p, "why": ""})
         if len(parts) >= 1:
             return parts[:4]  # Max 4 parts
 
     # Fallback: just return the original question as a single part
-    return [question]
+    return [{"question": question, "why": "Direct research needed"}]
 
 
 async def _research_part(
@@ -196,7 +220,30 @@ async def _research_part(
             except Exception as e:
                 logger.warning(f"[Part] Scrape failed: {e}")
 
-    answer = search_text[:2000] if search_text else "(no data found)"
+    # Summarize raw search text into a clean finding via lightweight LLM
+    if search_text and len(search_text) > 100:
+        try:
+            set_model_tier("budget")
+            mini_llm = get_llm("planner")
+            summary_msgs = [
+                {"role": "system", "content": "You output only valid JSON. Be concise and specific."},
+                {"role": "user", "content": SUMMARIZE_PART_PROMPT.format(
+                    question=part_question,
+                    raw_text=search_text[:3000],
+                )},
+            ]
+            summary_resp = await mini_llm.ainvoke(summary_msgs)
+            track("analyst part_summary", summary_resp)
+            summary_data = extract_json(get_content(summary_resp))
+            if summary_data and summary_data.get("summary"):
+                answer = summary_data["summary"]
+            else:
+                answer = search_text[:5000]
+        except Exception as e:
+            logger.warning(f"[Part] Summary failed, using raw text: {e}")
+            answer = search_text[:5000]
+    else:
+        answer = search_text[:5000] if search_text else "(no data found)"
 
     # Record a single bundled trace step for this part
     if trace:
@@ -219,11 +266,12 @@ async def _research_part(
     return answer, findings
 
 
-async def _combine_answers(question: str, part_questions: list[str], part_answers: list[str], llm, budget_lock, board) -> tuple[str, float]:
+async def _combine_answers(question: str, part_questions: list[dict], part_answers: list[str], llm, budget_lock, board) -> tuple[str, float]:
     """Combine part answers into a single answer for the original question."""
     parts_text = ""
-    for q, a in zip(part_questions, part_answers):
-        parts_text += f"\nPart: {q}\nAnswer: {a[:500]}\n"
+    for pq, a in zip(part_questions, part_answers):
+        q = pq["question"] if isinstance(pq, dict) else pq
+        parts_text += f"\nPart: {q}\nAnswer: {a}\n"
 
     messages = [
         {"role": "system", "content": "You output only valid JSON."},
@@ -261,13 +309,14 @@ async def _research_single_question(
 
     # Step 1: Decompose into parts
     parts = await _decompose_question(sq.question, llm, budget_lock, board)
-    logger.info(f"[Analyst] {sq.id} decomposed into {len(parts)} parts: {[p[:50] for p in parts]}")
+    logger.info(f"[Analyst] {sq.id} decomposed into {len(parts)} parts: {[p['question'][:50] for p in parts]}")
 
-    # Create root node for this sub-question in the tree
+    # Create sub-question node under the topic root
     tree = board.research_tree
+    topic_root_id = tree.topic_root_id or ""
     root_node = ResearchNode(
-        parent_id="",
-        depth=0,
+        parent_id=topic_root_id,
+        depth=1,
         query=sq.question,
         why_created="root",
         trigger_finding="",
@@ -278,10 +327,18 @@ async def _research_single_question(
     tree.sq_to_root[sq.id] = root_node.id
     root_node_id = root_node.id
 
+    if notify:
+        notify("node_created", __import__('json').dumps({
+            "node_id": root_node.id, "parent_id": topic_root_id,
+            "depth": 1, "query": sq.question[:100],
+            "why": "decomposition", "sq_id": sq.id,
+        }))
+
     if trace:
         trace.add("think", f"Decomposed: {sq.question[:50]}", {
             "question": sq.question,
-            "parts": parts,
+            "parts": [p["question"] for p in parts],
+            "part_reasons": [p.get("why", "") for p in parts],
             "part_count": len(parts),
         }, sq_id=sq.id)
 
@@ -291,10 +348,12 @@ async def _research_single_question(
     deep_dive_count = 0  # Track how many parts went deeper
 
     async def _research_part_recursive(
-        part_q: str, parent_node_id: str, depth: int, part_index: int,
+        part: dict, parent_node_id: str, depth: int, part_index: int,
     ) -> tuple[str, list[AnalystEvidence]]:
         """Research a part, optionally going deeper if the answer is weak."""
         nonlocal deep_dive_count
+        part_q = part["question"] if isinstance(part, dict) else part
+        part_why = part.get("why", "") if isinstance(part, dict) else ""
 
         if board.budget_remaining < 4:
             return "(budget exhausted)", []
@@ -305,7 +364,7 @@ async def _research_single_question(
             depth=depth,
             query=part_q,
             why_created="decomposition",
-            trigger_finding=f"{'Sub-p' if depth > 1 else 'P'}art {part_index+1}",
+            trigger_finding=part_why or f"{'Sub-p' if depth > 1 else 'P'}art {part_index+1}",
             sq_id=sq.id,
             status="exploring",
         )
@@ -315,7 +374,7 @@ async def _research_single_question(
             notify("node_created", __import__('json').dumps({
                 "node_id": child_node.id, "parent_id": parent_node_id,
                 "depth": depth, "query": part_q[:100],
-                "why": "decomposition" if depth == 1 else "deep_dive",
+                "why": part_why or ("decomposition" if depth == 1 else "deep_dive"),
                 "sq_id": sq.id,
             }))
 
@@ -338,9 +397,9 @@ async def _research_single_question(
                 # Research sub-parts
                 sub_answers = []
                 sub_evidence = []
-                for j, sub_q in enumerate(sub_parts):
+                for j, sub_part in enumerate(sub_parts):
                     sub_ans, sub_ev = await _research_part_recursive(
-                        sub_q, child_node.id, depth + 1, j
+                        sub_part, child_node.id, depth + 1, j
                     )
                     sub_answers.append(sub_ans)
                     sub_evidence.extend(sub_ev)
@@ -353,10 +412,15 @@ async def _research_single_question(
                     answer = combined
                     evidence = evidence + sub_evidence
 
-        # Update node
-        child_node.answer = answer[:500]
+        # Update node — confidence from evidence quality, not hardcoded
+        child_node.answer = answer
         child_node.status = "complete" if answer and "(budget" not in answer else "dead-end"
-        child_node.confidence = 0.7 if child_node.status == "complete" else 0.0
+        if child_node.status == "complete" and evidence:
+            t1_t2 = sum(1 for e in evidence if e.source_tier <= 2)
+            # 60% base (all T3) → 95% ceiling (all T1/T2), linear gradient
+            child_node.confidence = min(0.95, 0.60 + (t1_t2 / len(evidence)) * 0.35)
+        else:
+            child_node.confidence = 0.0
         child_node.evidence_ids = [e.id for e in evidence]
 
         if notify:
@@ -364,19 +428,19 @@ async def _research_single_question(
                 "node_id": child_node.id, "depth": depth,
                 "status": child_node.status,
                 "confidence": child_node.confidence,
-                "answer": answer[:100],
+                "answer": answer[:500],
                 "evidence_count": len(evidence),
             }))
 
         return answer, evidence
 
-    for i, part_q in enumerate(parts):
+    for i, part in enumerate(parts):
         if board.budget_remaining < 4:
             part_answers.append("(budget exhausted)")
             continue
 
         answer, evidence = await _research_part_recursive(
-            part_q, root_node_id, depth=1, part_index=i
+            part, root_node_id, depth=2, part_index=i
         )
         part_answers.append(answer)
         all_evidence.extend(evidence)
@@ -393,9 +457,9 @@ async def _research_single_question(
         if trace:
             trace.add("reflect", f"Combined: {sq.question[:50]}", {
                 "question": sq.question,
-                "parts": parts,
-                "part_answers": [a[:200] for a in part_answers],
-                "answer": combined_answer[:500],
+                "parts": [p["question"] for p in parts],
+                "part_answers": part_answers,
+                "answer": combined_answer,
                 "confidence": confidence,
             }, sq_id=sq.id)
     else:
@@ -409,10 +473,19 @@ async def _research_single_question(
         sq.evidence_ids.append(ev.id)
 
     # Update root node with combined result
-    root_node.answer = sq.answer[:500] if sq.answer else ""
+    root_node.answer = sq.answer or ""
     root_node.confidence = sq.confidence
     root_node.status = "complete" if sq.status == "answered" else "dead-end"
     root_node.evidence_ids = [e.id for e in all_evidence]
+
+    if notify:
+        notify("node_complete", __import__('json').dumps({
+            "node_id": root_node.id, "depth": 1,
+            "status": root_node.status,
+            "confidence": root_node.confidence,
+            "answer": (sq.answer or "")[:500],
+            "evidence_count": len(all_evidence),
+        }))
 
     logger.info(
         f"[Analyst] {sq.id}: {sq.status} (conf={sq.confidence:.0%}, "
