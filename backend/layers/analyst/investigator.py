@@ -17,7 +17,6 @@ from config import get_llm, set_model_tier
 from models.analyst import (
     ResearchBoard, ResearchTrace, SubQuestion, ResearchNode, AnalystEvidence,
 )
-from workflow.cmi_expert_graph import build_analyst_graph
 from utils.cost_tracker import track
 from utils import get_content, extract_json
 from models.pipeline import Source

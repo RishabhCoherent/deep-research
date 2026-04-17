@@ -1,0 +1,101 @@
+government:
+  suffixes:
+    - ".gov"
+    - ".gov.uk"
+    - ".gov.au"
+    - ".gouv.fr"
+  domains:
+    - "ec.europa.eu"
+    - "europa.eu"
+    - "imf.org"
+    - "worldbank.org"
+    - "oecd.org"
+    - "sec.gov"
+    - "federalreserve.gov"
+    - "bls.gov"
+    - "census.gov"
+    - "energy.gov"
+    - "epa.gov"
+    - "bis.org"
+
+multilateral:
+  domains:
+    - "iea.org"
+    - "wto.org"
+    - "who.int"
+    - "unctad.org"
+    - "iaea.org"
+    - "irena.org"
+    - "opec.org"
+    - "un.org"
+    - "nato.int"
+
+industry_body:
+  domains:
+    - "api.org"
+    - "iata.org"
+    - "acea.auto"
+    - "weforum.org"
+    - "ieee.org"
+    - "isda.org"
+    - "idc.com"
+    - "semiconductors.org"
+    - "statista.com"
+    - "nber.org"
+
+tier1_media:
+  domains:
+    - "ft.com"
+    - "reuters.com"
+    - "bloomberg.com"
+    - "wsj.com"
+    - "nytimes.com"
+    - "economist.com"
+    - "financial-times.com"
+    - "apnews.com"
+    - "bbc.com"
+    - "bbc.co.uk"
+    - "theguardian.com"
+
+analyst_firm:
+  domains:
+    - "mckinsey.com"
+    - "bcg.com"
+    - "bain.com"
+    - "gartner.com"
+    - "forrester.com"
+    - "spglobal.com"
+    - "moodys.com"
+    - "fitchratings.com"
+    - "woodmac.com"
+    - "rystadenergy.com"
+    - "ihs.com"
+    - "ihsmarkit.com"
+    - "benchmarkminerals.com"
+    - "bnef.com"
+    - "about.bnef.com"
+    - "fastmarkets.com"
+    - "refinitiv.com"
+    - "lseg.com"
+    - "argus-media.com"
+    - "platts.com"
+    - "snlmedia.com"
+
+trade_press:
+  domains:
+    - "electrek.co"
+    - "techcrunch.com"
+    - "insideevs.com"
+    - "thedriven.io"
+    - "greentechmedia.com"
+    - "chemicalweek.com"
+    - "mining.com"
+    - "oilprice.com"
+    - "pv-tech.org"
+    - "windpowermonthly.com"
+    - "rechargenews.com"
+    - "semiengineering.com"
+    - "eetimes.com"
+
+blog:
+  default: true

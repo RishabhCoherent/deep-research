@@ -1,4 +1,7 @@
-"""Pydantic request/response schemas for the Deep Research API."""
+"""Pydantic request/response schemas for the FastAPI HTTP surface.
+
+Kept separate from ``api.py`` (the FastAPI app at repo root) so names stay clear.
+"""
 
 from pydantic import BaseModel
 

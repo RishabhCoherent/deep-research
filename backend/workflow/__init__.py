@@ -1,4 +1,9 @@
-"""Workflow package — graph definitions and orchestration."""
+"""Workflow package — L1 LangGraph helpers and optional post-run evaluation.
+
+Full-job orchestration lives in ``workflow.pipeline_graph`` (called from
+``research_manager``). This ``__init__`` re-exports only the L1 graph pieces
+used by ``layers/enhanced_agent``.
+"""
 
 from workflow.state import AgentState
 from workflow.tool_factory import make_tools, _validate_finding_against_source

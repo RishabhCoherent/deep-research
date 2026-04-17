@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import {
   Puzzle, Brain, Search, FileDown, FlipHorizontal,
   Scale, ShieldCheck, PenTool, ChevronDown, ChevronRight,
-  Check, X, BadgeCheck,
+  Check, X, BadgeCheck, Target,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -604,6 +604,23 @@ export function AnalystTraceOverlay({ isOpen, onClose, trace }: AnalystTraceOver
   const totalScrapes = trace.steps.filter(s => s.phase === "scrape").length
     + trace.steps.filter(s => s.phase === "part_research" && (s.content as any)?.scrape?.success).length;
 
+  // Journey summary stats
+  const decomposeContent = decomposeStep?.content as any;
+  const subQuestionCount = (decomposeContent?.sub_questions?.length ?? 0);
+  const analyzeContent = analyzeStep?.content as any;
+  const judgmentCount = analyzeContent?.judgments?.length ?? 0;
+  const keyFindingCount = analyzeContent?.key_findings?.length ?? 0;
+  const qualityContent = qualityStep?.content as any;
+  const qualityScore = qualityContent?.overall != null ? Math.round(qualityContent.overall * 100) : null;
+  const qualityPass = qualityContent?.passes ?? null;
+  const composeContent = composeStep?.content as any;
+  const wordCount = composeContent?.word_count ?? null;
+  const verifyContent = verifyStep?.content as any;
+  const groundingScore = verifyContent?.grounding_score != null ? Math.round(verifyContent.grounding_score * 100) : null;
+  const verifiedClaims = verifyContent?.verified_claims ?? null;
+  const totalClaims = verifyContent?.total_claims ?? null;
+  const questionsAnswered = trace.steps.filter(s => s.phase === "reflect" && (s.content as any)?.confidence >= 0.3).length;
+
   if (!mounted) return null;
 
   return createPortal(
@@ -619,7 +636,13 @@ export function AnalystTraceOverlay({ isOpen, onClose, trace }: AnalystTraceOver
           {/* Header */}
           <header className="shrink-0 flex items-center justify-between border-b border-foreground/10 px-6 lg:px-12 py-4 bg-background/80 backdrop-blur-xl">
             <div>
-              <h1 className="text-lg font-display tracking-tight">Research Trace</h1>
+              <div className="flex items-center gap-2 mb-1">
+                <Target className="h-3.5 w-3.5 text-indigo-400" />
+                <span className="text-[10px] font-mono font-medium uppercase tracking-wider text-indigo-400">
+                  L3 CMI Expert · Agentic AI System
+                </span>
+              </div>
+              <h1 className="text-lg font-display tracking-tight">Research Journey</h1>
               <p className="text-xs text-muted-foreground font-mono">
                 {trace.total_steps} steps · {totalSearches} searches · {totalScrapes} pages read
               </p>
@@ -632,6 +655,49 @@ export function AnalystTraceOverlay({ isOpen, onClose, trace }: AnalystTraceOver
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-3xl px-6 lg:px-0 py-10 space-y-16">
+
+              {/* Journey summary card */}
+              <div className="rounded-2xl border border-indigo-500/15 bg-indigo-500/5 p-6 space-y-4">
+                <p className="text-xs font-mono font-medium uppercase tracking-wider text-indigo-400">Research Journey Summary</p>
+                <p className="text-base text-foreground/80 leading-relaxed">
+                  The CMI Expert agent ran a fully autonomous research process on your topic.
+                  {subQuestionCount > 0 && <> It identified <strong className="text-foreground">{subQuestionCount} research questions</strong> to investigate,</>}
+                  {totalSearches > 0 && <> performed <strong className="text-foreground">{totalSearches} targeted web searches</strong>,</>}
+                  {totalScrapes > 0 && <> read through <strong className="text-foreground">{totalScrapes} web pages</strong>,</>}
+                  {questionsAnswered > 0 && <> and answered <strong className="text-foreground">{questionsAnswered} questions</strong> with evidence.</>}
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {keyFindingCount > 0 && (
+                    <div className="rounded-xl bg-background/60 border border-foreground/8 px-4 py-3 text-center">
+                      <p className="text-2xl font-display font-bold text-foreground">{keyFindingCount}</p>
+                      <p className="text-[10px] font-mono text-muted-foreground mt-0.5">Key Findings</p>
+                    </div>
+                  )}
+                  {judgmentCount > 0 && (
+                    <div className="rounded-xl bg-background/60 border border-foreground/8 px-4 py-3 text-center">
+                      <p className="text-2xl font-display font-bold text-foreground">{judgmentCount}</p>
+                      <p className="text-[10px] font-mono text-muted-foreground mt-0.5">Analyst Judgments</p>
+                    </div>
+                  )}
+                  {qualityScore != null && (
+                    <div className="rounded-xl bg-background/60 border border-foreground/8 px-4 py-3 text-center">
+                      <p className={cn("text-2xl font-display font-bold", qualityPass ? "text-green-400" : "text-amber-400")}>{qualityScore}%</p>
+                      <p className="text-[10px] font-mono text-muted-foreground mt-0.5">Quality Score</p>
+                    </div>
+                  )}
+                  {wordCount != null && (
+                    <div className="rounded-xl bg-background/60 border border-foreground/8 px-4 py-3 text-center">
+                      <p className="text-2xl font-display font-bold text-foreground">{wordCount.toLocaleString()}</p>
+                      <p className="text-[10px] font-mono text-muted-foreground mt-0.5">Words Written</p>
+                    </div>
+                  )}
+                </div>
+                {groundingScore != null && totalClaims != null && (
+                  <p className="text-xs text-muted-foreground">
+                    Final report verified: <strong className="text-foreground">{verifiedClaims} of {totalClaims} factual claims</strong> grounded against collected evidence ({groundingScore}% grounding score).
+                  </p>
+                )}
+              </div>
 
               {/* 1. Decompose */}
               {decomposeStep && <DecomposeSection step={decomposeStep} />}

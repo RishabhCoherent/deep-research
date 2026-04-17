@@ -62,6 +62,7 @@ def run_research_thread(topic: str, brief: str, max_layer: int,
     """Thread target: runs the multi-layer research agent."""
     try:
 
+        # Full multi-layer run (L0∥L1 → L2 → optional eval) — see workflow/pipeline_graph.py
         from workflow.pipeline_graph import run_all_layers
 
         def progress_callback(layer, status, message):

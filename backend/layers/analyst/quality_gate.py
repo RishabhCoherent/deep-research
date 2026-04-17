@@ -1,16 +1,12 @@
 """
 Phase 4: QUALITY GATE — Score the research and decide if it's good enough.
 
-Pure Python scoring + optional LLM review.
+Deterministic scoring only (no LLM calls in this module).
 """
 
 import logging
 
-from config import get_llm, set_model_tier
 from models.analyst import QualityScore, ResearchBoard, AnalysisResult
-from prompts.analyst import QUALITY_GATE_PROMPT
-from utils.cost_tracker import track
-from utils import get_content, extract_json
 
 logger = logging.getLogger(__name__)
 

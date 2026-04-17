@@ -313,9 +313,10 @@ export default function ResearchResultsPage() {
                     <BrainCircuit className="h-6 w-6 text-indigo-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-display">Research Trace</h3>
+                    <p className="text-[10px] font-mono text-indigo-400 mb-0.5">L3 CMI Expert</p>
+                    <h3 className="text-lg font-display">Research Journey</h3>
                     <p className="text-sm text-muted-foreground">
-                      Analyst reasoning journey &middot; Hypotheses, searches, reflections, and judgments
+                      Full reasoning trail &middot; How the agent planned, searched, and formed judgments
                     </p>
                   </div>
                 </div>

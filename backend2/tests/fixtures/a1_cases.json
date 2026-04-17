@@ -1,0 +1,102 @@
+[
+  {
+    "raw": "tell me about the EV battery market",
+    "expected_intent": "market_sizing",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "who are the top cloud computing providers",
+    "expected_intent": "competitive",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "impact of GDPR on data privacy companies",
+    "expected_intent": "regulatory",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "AI adoption trends in healthcare",
+    "expected_intent": "trend",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "solid-state battery technology roadmap",
+    "expected_intent": "technology",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "compare US vs China AI markets",
+    "expected_intent": "geographic",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "renewable energy market size 2025",
+    "expected_intent": "market_sizing",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "Tesla vs BYD market share 2024",
+    "expected_intent": "competitive",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "EV subsidy policies in Europe",
+    "expected_intent": "regulatory",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "remote work software adoption trends",
+    "expected_intent": "trend",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "quantum computing applications finance",
+    "expected_intent": "technology",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "healthcare market differences Germany France",
+    "expected_intent": "geographic",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "SaaS market growth forecast 2026-2030",
+    "expected_intent": "market_sizing",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "top 5 enterprise software companies revenue",
+    "expected_intent": "competitive",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "impact of new data privacy laws",
+    "expected_intent": "regulatory",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "sustainable packaging consumer preferences",
+    "expected_intent": "trend",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "5G technology deployment timeline",
+    "expected_intent": "technology",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "semiconductor market Asia vs North America",
+    "expected_intent": "geographic",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "global cloud computing market size",
+    "expected_intent": "market_sizing",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  },
+  {
+    "raw": "M&A activity in fintech 2024",
+    "expected_intent": "competitive",
+    "must_have_angles": ["size_segmentation", "drivers_constraints", "competitive_share", "outlook_scenarios"]
+  }
+]

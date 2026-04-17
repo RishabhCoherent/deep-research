@@ -1,0 +1,52 @@
+[
+  {
+    "chosen_query": "Key drivers and constraints shaping the global EV battery market 2025-2026: raw-material costs, subsidies, and supply chain",
+    "intent": "market_sizing",
+    "must_cover": ["size", "segmentation", "drivers", "constraints", "geography", "outlook"]
+  },
+  {
+    "chosen_query": "Top 10 EV battery manufacturers 2026 by capacity and global share, with CAPEX roadmap 2026-2028",
+    "intent": "competitive",
+    "must_cover": ["competitive", "segmentation", "geography", "size", "drivers", "constraints"]
+  },
+  {
+    "chosen_query": "Impact of IRA domestic-content rules and EU CBAM on global EV battery supply chain 2025-2026",
+    "intent": "regulatory",
+    "must_cover": ["regulatory", "constraints", "macro", "size", "drivers"]
+  },
+  {
+    "chosen_query": "Global AI adoption trends in enterprise software 2025-2027",
+    "intent": "trend",
+    "must_cover": ["drivers", "constraints", "outlook", "size"]
+  },
+  {
+    "chosen_query": "Solid-state battery technology readiness and commercial deployment timeline 2026-2030",
+    "intent": "technology",
+    "must_cover": ["technology", "competitive", "outlook", "size", "drivers", "constraints"]
+  },
+  {
+    "chosen_query": "US vs China vs EU EV battery market size and competitive dynamics 2026",
+    "intent": "geographic",
+    "must_cover": ["geography", "drivers", "constraints", "size"]
+  },
+  {
+    "chosen_query": "Global renewable energy market size 2025-2030 segmented by solar, wind, and hydro",
+    "intent": "market_sizing",
+    "must_cover": ["size", "segmentation", "geography", "outlook", "drivers", "constraints"]
+  },
+  {
+    "chosen_query": "Pharmaceutical drug pricing regulatory landscape in US and EU 2025-2026",
+    "intent": "regulatory",
+    "must_cover": ["regulatory", "constraints", "macro", "size", "drivers"]
+  },
+  {
+    "chosen_query": "Cloud computing market share by provider (AWS, Azure, GCP) globally 2025-2026",
+    "intent": "competitive",
+    "must_cover": ["competitive", "segmentation", "geography", "size", "drivers", "constraints"]
+  },
+  {
+    "chosen_query": "North America vs Southeast Asia semiconductor manufacturing capacity and investment 2026",
+    "intent": "geographic",
+    "must_cover": ["geography", "drivers", "constraints", "size", "competitive"]
+  }
+]

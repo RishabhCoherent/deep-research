@@ -1,14 +1,20 @@
 """
-Pipeline orchestrator — runs 3 research layers.
+Central job orchestrator for one research run (backend entry: ``research_manager``).
 
-    Layer 0: BASELINE       — Best model prompt, no tools → initial report
-    Layer 1: ENHANCEMENT    — LangGraph agent + web search → enriched report
-    Layer 2: DEEP DIVE      — LangGraph agent + web search → definitive analysis
+This module is the **single place** that defines layer order for the full pipeline:
 
-L0 and L1 run in PARALLEL to save time. L2 receives L1's output.
-All 3 results are visible in the frontend to show improvement progression.
+    Layer 0: BASELINE    — Single LLM, no tools → initial report
+    Layer 1: ENHANCED    — LangGraph + web search (see ``layers/enhanced_agent``)
+    Layer 2: ANALYST     — Structured phases (see ``layers/analyst/run``)
 
-Produces a ComparisonReport compatible with the frontend/API.
+L0 and L1 run in **parallel**. L2 receives L1's output (L0 fallback if L1 failed).
+Optional comparative evaluation runs at the end if ``ENABLE_EVALUATION=true``.
+
+Other files under ``workflow/`` are **not** this orchestrator: they implement
+L1 graph wiring (``enhanced_graph``, ``state``, ``tool_factory``) or optional
+post-run scoring (``evaluator``).
+
+Produces a ``ComparisonReport`` for the API / frontend.
 """
 
 from __future__ import annotations
