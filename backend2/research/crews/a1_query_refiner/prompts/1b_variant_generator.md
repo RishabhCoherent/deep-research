@@ -6,7 +6,7 @@ All 4 angles must appear exactly once: size_segmentation, drivers_constraints,
 competitive_share, outlook_scenarios.
 
 Rules:
-  - Each query ≤ 25 words.
+  - Each query ≤ 35 words.
   - Each must be scope-bounded (geography AND time — e.g. "Global 2025-2026").
   - The classifier identified intent = {intent}. Let this bias the PHRASING of
     each variant while still preserving the four distinct angles.

@@ -4,6 +4,7 @@ from pathlib import Path
 from crewai import Agent
 
 from research.api.model_router import haiku, sonnet
+from research.tools.crew_tool import to_crew_tools
 from research.tools.web_search import web_search
 from research.tools.web_fetch import web_fetch
 from research.tools.scratchpad_rw import scratchpad_read, scratchpad_write
@@ -26,10 +27,11 @@ def build_agents():
         role="Event Hunter",
         goal="Find significant company/product/M&A/earnings events from the last 90 days.",
         backstory="Financial journalist who monitors every press release and earnings call.",
-        llm=haiku(max_tokens=1_200),
-        tools=[web_search, web_fetch],
+        llm=haiku(max_tokens=2_000),
+        tools=to_crew_tools(web_search, web_fetch),
         allow_delegation=False,
         verbose=False,
+        max_iter=5,
         system_template=_fill(_PROMPTS / "5a_event_hunter.md"),
     )
 
@@ -37,10 +39,11 @@ def build_agents():
         role="Regulatory Tracker",
         goal="Track tariff, subsidy, standard, and antitrust changes in the last 90 days.",
         backstory="Policy analyst who reads every Federal Register, Official Journal, and gazette.",
-        llm=haiku(max_tokens=1_200),
-        tools=[web_search, web_fetch],
+        llm=haiku(max_tokens=2_000),
+        tools=to_crew_tools(web_search, web_fetch),
         allow_delegation=False,
         verbose=False,
+        max_iter=5,
         system_template=_fill(_PROMPTS / "5b_regulatory_tracker.md"),
     )
 
@@ -48,10 +51,11 @@ def build_agents():
         role="Geopolitical Scanner",
         goal="Identify supply-chain disruptions targeting value-chain upstream nodes from scratchpad.",
         backstory="Geopolitical risk analyst who tracks conflicts, sanctions, and export controls.",
-        llm=sonnet(max_tokens=1_500),
-        tools=[web_search, scratchpad_read, scratchpad_write],
+        llm=sonnet(max_tokens=2_500),
+        tools=to_crew_tools(web_search, scratchpad_read, scratchpad_write),
         allow_delegation=False,
         verbose=False,
+        max_iter=4,
         system_template=_fill(_PROMPTS / "5c_geopolitical_scanner.md"),
     )
 

@@ -39,14 +39,23 @@ class TestIntentClassification:
                 reasoning="Test"
             )
     
-    def test_invalid_intent(self):
-        """Test invalid intent value."""
-        with pytest.raises(ValidationError):
-            IntentClassification(
-                intent="invalid_intent",
-                confidence=0.8,
-                reasoning="Test"
-            )
+    def test_invalid_intent_maps_to_general(self):
+        """Unknown intent strings fall back to 'general' instead of crashing."""
+        result = IntentClassification(
+            intent="invalid_intent",
+            confidence=0.8,
+            reasoning="Test",
+        )
+        assert result.intent == IntentKind.GENERAL
+
+    def test_supply_chain_intent_maps_to_market_sizing(self):
+        """'supply_chain' — a common LLM mistake — maps to market_sizing."""
+        result = IntentClassification(
+            intent="supply_chain",
+            confidence=0.9,
+            reasoning="Test",
+        )
+        assert result.intent == IntentKind.MARKET_SIZING
 
 
 class TestVariantBundle:
@@ -139,8 +148,8 @@ class TestScoredBundle:
         composites = [sv.composite for sv in bundle.scored]
         assert composites == sorted(composites, reverse=True)
     
-    def test_unsorted_bundle(self):
-        """Test bundle not sorted by composite."""
+    def test_unsorted_bundle_auto_sorts(self):
+        """Unsorted input is auto-sorted descending — no crash."""
         scored_variants = [
             ScoredVariant(
                 variant=Variant(text="Test 1", angle="size_segmentation"),
@@ -175,8 +184,9 @@ class TestScoredBundle:
                 reason="Good score"
             )
         ]
-        with pytest.raises(ValidationError, match="must be sorted desc by composite"):
-            ScoredBundle(scored=scored_variants)
+        bundle = ScoredBundle(scored=scored_variants)
+        composites = [sv.composite for sv in bundle.scored]
+        assert composites == sorted(composites, reverse=True)
 
 
 class TestA1Output:

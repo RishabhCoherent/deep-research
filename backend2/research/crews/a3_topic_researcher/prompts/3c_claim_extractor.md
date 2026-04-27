@@ -20,12 +20,7 @@ CRITICAL RULES:
   - For a range like "$10-12B", emit TWO claims: one with value=10, one with value=12.
   - Do NOT invent numbers — only extract what is explicitly stated in the passages.
   - Prefer quantitative claims over qualitative ones.
-  - Aim for 6-25 claims across all passages.
+  - Aim for 5-10 high-quality claims. Output fewer if passages lack numeric data.
+  - Stop after 10 claims — do not exceed 10.
 
-Return ONLY valid JSON matching ExtractedClaims.
-
-Passages (JSON):
-{passages_json}
-
-Chosen query:
-<<<{chosen_query}>>>
+Return ONLY valid JSON matching ExtractedClaims. Close all brackets properly.

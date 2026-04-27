@@ -40,17 +40,11 @@ class TestSearchPlan:
         with pytest.raises(ValidationError, match="1-8"):
             SearchPlan(plans=[_plan() for _ in range(9)])
 
-    def test_total_queries_over_12_rejected(self):
-        # 7 plans × 2 queries = 14 > 12
-        plans = [_plan(n_queries=2) for _ in range(7)]
-        with pytest.raises(ValidationError, match="12"):
-            SearchPlan(plans=plans)
-
-    def test_exactly_12_queries_ok(self):
-        # 6 plans × 2 = 12
-        plans = [_plan(f"Q{i}", n_queries=2) for i in range(6)]
+    def test_max_queries_sixteen_ok(self):
+        # 8 plans × 2 queries (PlannedSearch max) = 16
+        plans = [_plan(f"Q{i}", n_queries=2) for i in range(8)]
         sp = SearchPlan(plans=plans)
-        assert sum(len(p.queries) for p in sp.plans) == 12
+        assert sum(len(p.queries) for p in sp.plans) == 16
 
 
 class TestFetchedSources:

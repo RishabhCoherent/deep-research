@@ -4,7 +4,7 @@ from typing import TypedDict, Annotated
 from operator import add
 from research.core.types import (
     RunState, IntentKind, ScoredVariant, NumericClaim,
-    Conflict, Causation, SubQuestion, Observation
+    Conflict, Causation, SubQuestion, Observation, ConsolidatedReport
 )
 
 
@@ -13,7 +13,8 @@ def create_initial_state(run_id: str, original_query: str) -> RunState:
     return RunState(
         run_id=run_id,
         original_query=original_query,
-        intent=IntentKind.MARKET_SIZING,  # placeholder
+        topic_profile=None,                # set by a0_node before a1 runs
+        intent=IntentKind.MARKET_SIZING,   # placeholder, set by a1
         query_variants=[],
         chosen_query="",
         sub_questions=[],
@@ -24,10 +25,12 @@ def create_initial_state(run_id: str, original_query: str) -> RunState:
         market_narrative="",
         news_claims=[],
         news_narrative="",
-        consolidated_report="",
+        consolidated=None,
         validated_claims=[],
         conflicts=[],
+        dimensional_clusters=[],
         causations=[],
+        verification=None,
         cost_usd=0.0,
     )
 

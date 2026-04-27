@@ -43,16 +43,15 @@ class PrioritizedQuestions(BaseModel):
     @classmethod
     def _final_rules(cls, qs):
         assert 8 <= len(qs) <= 15, f"final must be 8-15, got {len(qs)}"
-        comps = [q.composite for q in qs]
-        assert comps == sorted(comps, reverse=True), "must be sorted desc by composite"
+        normalized: list[SubQuestion] = []
         for q in qs:
             expected = round(0.6 * q.info_value + 0.4 * q.answerability, 2)
-            assert abs(q.composite - expected) < 0.05, (
-                f"composite mismatch for {q.text!r}: "
-                f"expected {expected}, got {q.composite}"
+            normalized.append(
+                q if abs(q.composite - expected) <= 0.05 + 1e-6
+                else q.model_copy(update={"composite": expected})
             )
-        _assert_atomic(qs)
-        return qs
+        _assert_atomic(normalized)
+        return sorted(normalized, key=lambda q: q.composite, reverse=True)
 
 
 class A2Output(BaseModel):

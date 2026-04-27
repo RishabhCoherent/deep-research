@@ -9,3 +9,13 @@ output/
 *.docx
 frontend/.next/
 .claude/
+
+# runtime artifacts
+out/
+backend2/out/
+backend2/state/
+backend2/.checkpoints.db
+claim_clustering/runs/
+claim_clustering/ab_runs/
+claim_clustering/last_*.log
+

@@ -2,6 +2,7 @@
 
 from crewai import Agent
 from research.api.model_router import haiku, sonnet
+from research.tools.crew_tool import to_crew_tools
 from research.tools.research_search import research_search
 from research.tools.web_fetch import web_fetch
 from research.tools.scratchpad_rw import scratchpad_read, scratchpad_write
@@ -37,10 +38,11 @@ def build_agents():
         role="Source Fetcher",
         goal="Execute searches, fetch passages, deduplicate, keep best 12 by authority×relevance.",
         backstory="Diligent research analyst who reads everything before writing a single word.",
-        llm=sonnet(),
-        tools=[research_search, web_fetch, scratchpad_read, assess_source],
+        llm=sonnet(max_tokens=2_000),
+        tools=to_crew_tools(research_search, web_fetch, scratchpad_read, assess_source),
         allow_delegation=False,
         verbose=False,
+        max_iter=8,
         system_template=_fill(_PROMPTS / "3b_source_fetcher.md"),
     )
 
@@ -48,7 +50,7 @@ def build_agents():
         role="Claim Extractor",
         goal="Extract verbatim numeric claims with exact citations from fetched passages.",
         backstory="Fact-checker who copies sentences verbatim and never paraphrases numbers.",
-        llm=haiku(max_tokens=4_000),
+        llm=haiku(max_tokens=8_000),
         tools=[],
         allow_delegation=False,
         verbose=False,
@@ -57,10 +59,10 @@ def build_agents():
 
     topic_summarizer = Agent(
         role="Topic Summarizer",
-        goal="Write a 400-800 word analyst narrative citing claims; push observations to scratchpad.",
+        goal="Write a 400-800 word analyst narrative citing claims; include observations in JSON.",
         backstory="Senior analyst who writes tight, number-first briefing notes for partners.",
-        llm=sonnet(),
-        tools=[scratchpad_write],
+        llm=sonnet(max_tokens=6_000),
+        tools=[],
         allow_delegation=False,
         verbose=False,
         system_template=_fill(_PROMPTS / "3d_topic_summarizer.md"),

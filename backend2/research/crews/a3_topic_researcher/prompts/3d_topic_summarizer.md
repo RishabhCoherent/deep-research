@@ -25,12 +25,3 @@ Scratchpad writes:
   - citation: attach if the observation has a specific source
 
 Return ONLY valid JSON matching TopicSummary.
-
-Validated claims (JSON):
-{claims_json}
-
-Passage map (JSON, url → {publisher, title, authority_tier}):
-{passage_map_json}
-
-Chosen query:
-<<<{chosen_query}>>>

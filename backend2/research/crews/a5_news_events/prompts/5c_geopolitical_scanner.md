@@ -31,6 +31,3 @@ Rules:
   - Only include disruptions with at least one news source from the last 90 days.
   - Return ONLY valid JSON matching GeopoliticalBundle:
     {disruptions: [Disruption, ...], scratchpad_writes: [Observation, ...]}.
-
-Intent: {intent}
-Chosen query: <<<{chosen_query}>>>

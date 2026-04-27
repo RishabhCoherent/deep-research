@@ -14,7 +14,7 @@ def build_tasks(planner, fetcher, extractor, summarizer):
             "intent={intent}, chosen_query={chosen_query}, "
             "sub_questions_json={sub_questions_json}"
         ),
-        expected_output="JSON matching SearchPlan (1-8 plans, total queries ≤ 12).",
+        expected_output="JSON matching SearchPlan (1-5 plans, total queries ≤ 10).",
         agent=planner,
         output_pydantic=SearchPlan,
     )
@@ -24,7 +24,7 @@ def build_tasks(planner, fetcher, extractor, summarizer):
             "Execute the search plan, fetch passages, deduplicate, keep best 12. "
             "chosen_query={chosen_query}, plan_json={plan_json}"
         ),
-        expected_output="JSON matching FetchedSources (≤ 12 unique passages).",
+        expected_output="JSON matching FetchedSources (≤ 8 unique passages).",
         agent=fetcher,
         context=[t_plan],
         output_pydantic=FetchedSources,

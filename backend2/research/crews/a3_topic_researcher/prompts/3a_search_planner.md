@@ -19,9 +19,3 @@ Valid SearchQuery fields:
   - text: str (max 200 chars)
   - time_window_days: int | null
   - site_filter: str | null (e.g. "site:iea.org")
-
-Intent: {intent}
-Chosen query: <<<{chosen_query}>>>
-
-Top sub-questions (JSON):
-{sub_questions_json}

@@ -47,7 +47,9 @@ class TestDecomposedQuestions:
 
     def test_compound_question_rejected(self):
         drafts = [_make_draft(f"Q {i} global 2026?") for i in range(9)]
-        drafts.append(_make_draft("What is the size and share of the market 2026?"))
+        drafts.append(_make_draft(
+            "What is the EV battery TAM in 2026 and what is the NMC chemistry share?",
+        ))
         with pytest.raises(ValidationError, match="compound question rejected"):
             DecomposedQuestions(questions=drafts)
 
@@ -92,20 +94,21 @@ class TestPrioritizedQuestions:
         with pytest.raises(ValidationError, match="8-15"):
             PrioritizedQuestions(questions=self._valid_scored_list(16))
 
-    def test_unsorted_rejected(self):
+    def test_unsorted_normalized(self):
         items = self._valid_scored_list(8)
         items[0], items[-1] = items[-1], items[0]  # swap best and worst
-        with pytest.raises(ValidationError, match="sorted desc"):
-            PrioritizedQuestions(questions=items)
+        pq = PrioritizedQuestions(questions=items)
+        comps = [q.composite for q in pq.questions]
+        assert comps == sorted(comps, reverse=True)
 
-    def test_composite_mismatch_rejected(self):
+    def test_composite_mismatch_normalized(self):
         items = self._valid_scored_list(8)
-        # nudge composite by +0.5 on every item so sort order is preserved
-        # but the formula check (0.6*iv + 0.4*av) will not match
         fixed = [q.model_copy(update={"composite": round(q.composite + 0.5, 2)})
                  for q in items]
-        with pytest.raises(ValidationError, match="composite mismatch"):
-            PrioritizedQuestions(questions=fixed)
+        pq = PrioritizedQuestions(questions=fixed)
+        for q in pq.questions:
+            exp = round(0.6 * q.info_value + 0.4 * q.answerability, 2)
+            assert abs(q.composite - exp) < 0.01
 
     def test_composite_formula_correct(self):
         item = _make_scored(iv=8.0, av=6.0)

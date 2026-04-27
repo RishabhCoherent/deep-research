@@ -2,7 +2,6 @@
 
 from crewai import Agent
 from research.api.model_router import haiku
-from research.api.cache import cache_control_for_system
 from pathlib import Path
 
 

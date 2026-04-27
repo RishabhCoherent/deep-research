@@ -5,11 +5,44 @@ from typing import Optional
 from research.core.types import IntentKind, AngleKind, Variant, ScoredVariant
 
 
+_INTENT_FALLBACK_MAP: dict[str, IntentKind] = {
+    "supply_chain":  IntentKind.MARKET_SIZING,
+    "market":        IntentKind.MARKET_SIZING,
+    "forecast":      IntentKind.MARKET_SIZING,
+    "sizing":        IntentKind.MARKET_SIZING,
+    "competition":   IntentKind.COMPETITIVE,
+    "landscape":     IntentKind.COMPETITIVE,
+    "policy":        IntentKind.REGULATORY,
+    "regulation":    IntentKind.REGULATORY,
+    "geo":           IntentKind.GEOGRAPHIC,
+    "region":        IntentKind.GEOGRAPHIC,
+    "tech":          IntentKind.TECHNOLOGY,
+    "innovation":    IntentKind.TECHNOLOGY,
+    "trend":         IntentKind.TREND,
+}
+
+
 class IntentClassification(BaseModel):
     """Output of the intent classifier sub-agent."""
     intent: IntentKind
     confidence: float = Field(..., ge=0, le=1)
-    reasoning: str = Field(..., max_length=400)
+    reasoning: str = Field(..., max_length=600)
+
+    @field_validator("intent", mode="before")
+    @classmethod
+    def _coerce_intent(cls, v: str) -> str:
+        """Map LLM-invented intent strings to the nearest valid IntentKind."""
+        if isinstance(v, str) and v not in IntentKind._value2member_map_:
+            v_lower = v.lower().replace("-", "_")
+            # exact match after normalisation
+            if v_lower in IntentKind._value2member_map_:
+                return v_lower
+            # keyword fallback
+            for keyword, mapped in _INTENT_FALLBACK_MAP.items():
+                if keyword in v_lower:
+                    return mapped.value
+            return IntentKind.GENERAL.value
+        return v
 
 
 class VariantBundle(BaseModel):
@@ -35,11 +68,9 @@ class ScoredBundle(BaseModel):
     @field_validator("scored")
     @classmethod
     def _sorted_desc(cls, s):
-        """Validate exactly 4 variants sorted by composite score."""
+        """Validate exactly 4 variants — auto-sort desc by composite so LLM order doesn't matter."""
         assert len(s) == 4, "must have exactly 4 scored variants"
-        comps = [x.composite for x in s]
-        assert comps == sorted(comps, reverse=True), "must be sorted desc by composite"
-        return s
+        return sorted(s, key=lambda x: x.composite, reverse=True)
 
 
 class A1Output(BaseModel):

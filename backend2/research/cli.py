@@ -165,47 +165,121 @@ def debug_a3(
 
 @app.command()
 def run(
-    query: str,
+    query: Optional[str] = typer.Argument(None, help="Research query (required unless --resume)"),
     budget: float = typer.Option(3.0, "--budget", help="Budget limit in USD"),
     no_interactive: bool = typer.Option(False, "--no-interactive", help="Skip user interaction"),
     pick: Optional[int] = typer.Option(None, "--pick", help="Auto-pick Nth variant (1-based)"),
-    use_opus: bool = typer.Option(False, "--use-opus", help="Use Opus model for deep reasoning"),
-    debate: bool = typer.Option(False, "--debate", help="Enable AutoGen validator debate"),
-    out: Optional[str] = typer.Option("./out", "--out", help="Output directory"),
-    format: str = typer.Option("md", "--format", help="Output format: md, json")
+    out: Optional[str] = typer.Option("./out", "--out", help="Output directory for the Markdown brief"),
+    resume: Optional[str] = typer.Option(None, "--resume",
+        help="Resume a previously-saved run by its thread_id. The graph picks "
+             "up from the last completed node (LangGraph SqliteSaver checkpoints "
+             "after every node). Run `... runs` to see saved runs."),
 ):
-    """Run A1 → A2 pipeline (Agents 3-8 stubbed)."""
+    """Run the full A0 -> A8 pipeline and write a Markdown brief.
+
+    Checkpointing: the graph saves state to backend2/.checkpoints.db after
+    EVERY node completes. If a node crashes (or you Ctrl-C), re-run with
+    `--resume <thread_id>` and the graph picks up from the last successful
+    node — so an a5 failure doesn't waste a3 + a4's work.
+    """
 
     async def run_pipeline():
-        run_id = str(uuid.uuid4())
-        state = create_initial_state(run_id, query)
+        from pathlib import Path
+        from research.graph.build import build_graph, open_async_checkpointer
+        from research.report.markdown_renderer import render_to_file
 
-        config: dict = {}
+        if resume:
+            run_id = resume
+            # When resuming, LangGraph reads state from the checkpoint DB; we
+            # don't need to construct an initial_state. Pass `None` to ainvoke
+            # so it picks up where the saved state left off.
+            initial_state = None
+            console.print(Panel(
+                f"Resuming run thread_id={run_id[:8]}...",
+                style="bold yellow",
+            ))
+        else:
+            if not query:
+                console.print("[bold red]Error:[/bold red] either provide a query or use --resume <thread_id>")
+                raise typer.Exit(2)
+            run_id = str(uuid.uuid4())
+            initial_state = create_initial_state(run_id, query)
+            console.print(Panel(
+                f"Research Pipeline  thread_id={run_id}  budget=${budget:.2f}\n"
+                f"(saved after every node; resume with --resume {run_id})",
+                style="bold blue",
+            ))
+
+        configurable: dict = {"thread_id": run_id}
         if no_interactive and pick:
-            config["configurable"] = {"auto_pick": pick}
+            configurable["auto_pick"] = pick
+        config = {"configurable": configurable, "recursion_limit": 50}
 
-        console.print(Panel(f"Research Pipeline  run_id={run_id[:8]}…  budget=${budget:.2f}",
-                            style="bold blue"))
+        # Open the async SQLite checkpointer for the duration of the run.
+        # AsyncSqliteSaver writes checkpoints after every node completes.
+        async with open_async_checkpointer() as saver:
+            graph = build_graph(checkpointer=saver)
 
-        # A1 — Query Refiner
-        console.print("\n[cyan]▶ A1 refiner…[/cyan]")
-        a1_patch = await a1_node(state, config=config)
-        state.update(a1_patch)
-        console.print(f"[green]✔ A1[/green]  intent={state['intent']}  "
-                      f"chosen={state['chosen_query'][:60]}…")
+            console.print("\n[cyan]> Running A0 -> A8 (may take several minutes)...[/cyan]")
+            try:
+                final_state = await graph.ainvoke(initial_state, config=config)
+            except Exception as e:
+                console.print(f"[bold red]Pipeline error:[/bold red] {e}")
+                console.print(
+                    f"[yellow]State has been checkpointed up to the last completed node. "
+                    f"Resume with: --resume {run_id}[/yellow]"
+                )
+                raise typer.Exit(1)
 
-        # A2 — Question Generator
-        console.print("\n[cyan]▶ A2 questions…[/cyan]")
-        a2_patch = await a2_node(state)
-        state.update(a2_patch)
-        console.print(f"[green]✔ A2[/green]  {len(state['sub_questions'])} sub-questions generated")
+        # Summary
+        console.print("\n[bold green]✔ Pipeline complete[/bold green]")
+        console.print(f"  intent:           {final_state.get('intent')}")
+        console.print(f"  chosen query:     {final_state.get('chosen_query', '')[:80]}")
+        console.print(f"  sub-questions:    {len(final_state.get('sub_questions', []))}")
+        console.print(f"  topic claims:     {len(final_state.get('topic_claims', []))}")
+        console.print(f"  market claims:    {len(final_state.get('market_claims', []))}")
+        console.print(f"  news claims:      {len(final_state.get('news_claims', []))}")
+        console.print(f"  validated claims: {len(final_state.get('validated_claims', []))}")
+        console.print(f"  conflicts:        {len(final_state.get('conflicts', []))}")
+        console.print(f"  causations:       {len(final_state.get('causations', []))}")
 
-        console.print("\n[dim]Agents 3–8 not yet implemented.[/dim]")
-        console.print("\n[bold]Sub-questions:[/bold]")
-        for i, sq in enumerate(state["sub_questions"], 1):
-            console.print(f"  {i:2}. [{sq.composite:.2f}] {sq.text}")
+        # Write brief
+        out_dir = Path(out or "./out")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"brief_{run_id[:8]}.md"
+        render_to_file(final_state, str(out_path))
+        console.print(f"\n[bold]Brief written:[/bold] {out_path}")
 
     asyncio.run(run_pipeline())
+
+
+@app.command(name="runs")
+def list_runs_cmd(
+    limit: int = typer.Option(20, "--limit", help="Max runs to list (most recent first)"),
+):
+    """List checkpointed runs with their latest reached node and topic.
+
+    Use the printed thread_id with `run --resume <thread_id>` to pick up.
+    """
+    from research.graph.build import list_checkpointed_runs
+
+    runs = list_checkpointed_runs(limit=limit)
+    if not runs:
+        console.print("[dim]No checkpointed runs found.[/dim]")
+        return
+    table = Table(title=f"Checkpointed runs (showing {len(runs)})", show_lines=False)
+    table.add_column("thread_id", style="cyan", no_wrap=True)
+    table.add_column("latest_node", style="yellow")
+    table.add_column("topic", style="white")
+    table.add_column("ts", style="dim")
+    for r in runs:
+        table.add_row(
+            r["thread_id"][:12] + "...",
+            r.get("latest_node", "?"),
+            (r.get("topic") or "")[:60],
+            (r.get("ts") or "")[:19],
+        )
+    console.print(table)
 
 
 if __name__ == "__main__":

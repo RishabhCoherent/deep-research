@@ -29,7 +29,10 @@ class TestAssertAtomic:
         _assert_atomic(drafts)
 
     def test_compound_and_rejected(self):
-        drafts = [_draft("What is the size and share of the EV battery market?", "size")]
+        drafts = [_draft(
+            "What is the size of the EV battery market and what is the share of NMC chemistries?",
+            "size",
+        )]
         with pytest.raises(AssertionError, match="compound question rejected"):
             _assert_atomic(drafts)
 
@@ -40,6 +43,21 @@ class TestAssertAtomic:
 
     def test_plus_marker_rejected(self):
         drafts = [_draft("What is the size plus the growth rate?", "size")]
+        with pytest.raises(AssertionError, match="compound question rejected"):
+            _assert_atomic(drafts)
+
+    def test_single_and_noun_list_allowed(self):
+        drafts = [_draft(
+            "Who are the leading vendors in warehouse automation and AMR systems in Southeast Asia?",
+            "competitive",
+        )]
+        _assert_atomic(drafts)
+
+    def test_multiple_bare_and_rejected(self):
+        drafts = [_draft(
+            "What is the 2026 TAM for AMRs and conveyors and sorters and robots in Singapore?",
+            "size",
+        )]
         with pytest.raises(AssertionError, match="compound question rejected"):
             _assert_atomic(drafts)
 
@@ -54,6 +72,7 @@ class TestChecklistCoverage:
             QuestionCategory.SIZE, QuestionCategory.SEGMENTATION,
             QuestionCategory.GEOGRAPHY, QuestionCategory.OUTLOOK,
             QuestionCategory.DRIVERS, QuestionCategory.CONSTRAINTS,
+            QuestionCategory.MACRO,
         )
         assert_checklist_coverage(IntentKind.MARKET_SIZING, qs)
 
@@ -79,6 +98,7 @@ class TestChecklistCoverage:
             QuestionCategory.COMPETITIVE, QuestionCategory.SEGMENTATION,
             QuestionCategory.GEOGRAPHY, QuestionCategory.SIZE,
             QuestionCategory.DRIVERS, QuestionCategory.CONSTRAINTS,
+            QuestionCategory.MACRO,
         )
         assert_checklist_coverage(IntentKind.COMPETITIVE, qs)
 
@@ -87,6 +107,7 @@ class TestChecklistCoverage:
             QuestionCategory.TECHNOLOGY, QuestionCategory.COMPETITIVE,
             QuestionCategory.OUTLOOK, QuestionCategory.SIZE,
             QuestionCategory.DRIVERS, QuestionCategory.CONSTRAINTS,
+            QuestionCategory.MACRO, QuestionCategory.SUBSTITUTION,
         )
         assert_checklist_coverage(IntentKind.TECHNOLOGY, qs)
 

@@ -25,6 +25,7 @@ dependencies = [
     "crewai>=0.28.0",
     "langchain>=0.1.0",
     "langchain-anthropic>=0.1.0",
+    "langchain-openai>=0.1.0",
     "langgraph>=0.0.26",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
@@ -36,10 +37,17 @@ dependencies = [
     "pyyaml>=6.0.0",
     "tavily-python>=0.3.0",
     "trafilatura>=1.6.0",
+    "ddgs>=9.0.0",
     "structlog>=23.0.0",
 ]
 
 [project.optional-dependencies]
+bot-bypass = [
+    # Tier 2: curl_cffi Chrome TLS fingerprint (bypasses Cloudflare / Akamai)
+    # Tier 3: headless Playwright for JS-gated SPAs (requires `playwright install chromium`)
+    "scrapling>=0.2.0",
+    "playwright>=1.40.0",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",

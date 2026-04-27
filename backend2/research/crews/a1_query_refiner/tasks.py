@@ -16,8 +16,8 @@ def build_tasks(ic, vg, cs):
     
     t_variants = Task(
         description=(
-            "Using intent={intent} and reasoning={reasoning}, produce exactly 4 "
-            "refined queries (one per angle). Raw query: {raw_query}"
+            "Using the intent and reasoning from the previous task's context, "
+            "produce exactly 4 refined queries (one per angle). Raw query: {raw_query}"
         ),
         expected_output="JSON matching VariantBundle.",
         agent=vg,

@@ -3,7 +3,8 @@
 from pathlib import Path
 from crewai import Agent
 
-from research.api.model_router import sonnet
+from research.api.model_router import haiku, sonnet
+from research.tools.crew_tool import to_crew_tools
 from research.tools.research_search import research_search
 from research.tools.web_fetch import web_fetch
 from research.tools.scratchpad_rw import scratchpad_read, scratchpad_write
@@ -26,11 +27,12 @@ def build_agents():
     parent_market_identifier = Agent(
         role="Parent Market Identifier",
         goal="Place the child market in its global hierarchy with citations.",
-        backstory="Industry analyst who maps markets using GICS, NAICS, and analyst convention.",
-        llm=sonnet(max_tokens=800),
-        tools=[research_search, web_fetch],
+        backstory="Industry analyst who maps markets using plain-English analyst convention.",
+        llm=haiku(max_tokens=1_500),
+        tools=to_crew_tools(research_search, web_fetch),
         allow_delegation=False,
         verbose=False,
+        max_iter=2,  # prompt enforces one search + optional fetch; cap keeps it honest
         system_template=_fill(_PROMPTS / "4a_parent_market_identifier.md"),
     )
 
@@ -38,10 +40,13 @@ def build_agents():
         role="Value Chain Mapper",
         goal="Map upstream/midstream/downstream players with shares; write to scratchpad immediately.",
         backstory="Supply chain strategist who has mapped 200+ industrial value chains.",
-        llm=sonnet(max_tokens=2_000),
-        tools=[research_search, web_fetch, scratchpad_read, scratchpad_write, assess_source],
+        llm=sonnet(max_tokens=3_000),
+        tools=to_crew_tools(
+            research_search, web_fetch, scratchpad_read, scratchpad_write, assess_source
+        ),
         allow_delegation=False,
         verbose=False,
+        max_iter=5,
         system_template=_fill(_PROMPTS / "4b_value_chain_mapper.md"),
     )
 
@@ -49,10 +54,11 @@ def build_agents():
         role="Impact Analyst",
         goal="Quantify how parent-market forces pass through to child market with numeric evidence.",
         backstory="Macro economist specialising in input-output pass-through analysis.",
-        llm=sonnet(max_tokens=2_000),
-        tools=[research_search, scratchpad_read],
+        llm=sonnet(max_tokens=4_000),
+        tools=to_crew_tools(research_search, scratchpad_read),
         allow_delegation=False,
         verbose=False,
+        max_iter=4,
         system_template=_fill(_PROMPTS / "4c_impact_analyst.md"),
     )
 

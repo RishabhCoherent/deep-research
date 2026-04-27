@@ -31,7 +31,7 @@ _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 _TIMEOUT_SECONDS = 10
 _MAX_BYTES = 5 * 1024 * 1024  # 5 MB
 _MAX_TEXT_CHARS = 20_000       # stored in Passage / disk cache
-_AGENT_CONTEXT_CHARS = 4_000  # returned to the LLM to prevent context blowup in 3b
+_AGENT_CONTEXT_CHARS = 2_000  # returned to the LLM to prevent context blowup in 3b
 
 _ROBOTS_CACHE: dict[str, bool] = {}
 
