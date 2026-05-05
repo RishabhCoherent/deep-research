@@ -40,15 +40,27 @@ class TopicProfile(BaseModel):
     profile_reasoning: str = ""
 
     def is_market_research(self) -> bool:
-        """Heuristic: does this profile describe a market-research topic?
+        """Heuristic: does this profile describe a topic where a4's
+        value-chain / parent-market / pass-through framing is useful?
 
-        Used by crews like a4_market_context that only make sense for market
-        topics. Substring match on topic_domain so variants like
-        'market_research', 'market_analysis', 'industry_market' all qualify;
-        clinical / policy / social_science / engineering / etc. all return False.
+        Used by crews like a4_market_context. Matches:
+          - 'market_*' / '*_market' / industry topics — the core case
+          - 'supply_chain_*' / 'value_chain_*' / 'trade_*' / 'commerce_*' —
+            a4's value-chain mapping is exactly what these need
+          - 'macroeconomic_*' / 'economy_*' — pass-through framing applies
+
+        Excludes: clinical / policy / social_science / engineering / scientific
+        / generic research topics where market context doesn't apply.
         """
         d = (self.topic_domain or "").lower()
-        return "market" in d or "industry" in d
+        for token in (
+            "market", "industry",
+            "supply_chain", "value_chain", "trade", "commerce",
+            "macroeconom", "economy",
+        ):
+            if token in d:
+                return True
+        return False
 
     def to_user_message_block(self) -> str:
         """Compact rendering for injection into LLM user messages downstream."""

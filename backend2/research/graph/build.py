@@ -76,9 +76,9 @@ def _get_checkpointer(persist: bool = True):
 def build_graph(*, checkpointer=None, persist: bool = True):
     """Compile and return the LangGraph StateGraph.
 
-    Full pipeline: a0_topic_profile -> a1_refiner -> a2_questions -> a3_topic
-    -> a4_market -> a5_news -> a6_consolidator -> a7_validator -> a8_causation
-    -> END.
+    Full pipeline: a0_topic_profile -> a1_refiner -> a2_questions ->
+    {a3_topic || a4_market || a5_news} -> a6_5_clusterer -> a6_consolidator
+    -> a7_validator -> a8_causation -> a8_5_verifier -> END.
 
     a0 runs ONCE up front: produces a TopicProfile (topic_domain,
     expected_metric_kinds, key_dimensions, positive/negative_signals) that
@@ -86,9 +86,15 @@ def build_graph(*, checkpointer=None, persist: bool = True):
     code handle market / clinical / policy / social-science topics without
     per-domain hardcoded vocabulary.
 
-    A3-A5 run sequentially (not in parallel) to reduce peak Anthropic token
-    usage and 429s. a4 is now domain-conditional and skips itself for
-    non-market topics (returns empty market_context bucket).
+    A3-A5 fan out in parallel from a2 (each only reads sub_questions /
+    topic_profile / chosen_query — all written by a0/a1/a2). They use
+    operator.add reducers so concurrent writes to scratchpad_notes / claim
+    buckets merge cleanly. Original sequential wiring existed to throttle
+    Anthropic 429s; with OpenAI (current model_router pin) there is no such
+    constraint, and the parallel fan-out roughly halves end-to-end wall time.
+
+    a4 remains domain-conditional and skips itself for non-market topics
+    (returns empty market_context bucket).
     """
     workflow = StateGraph(RunState)
 
@@ -110,16 +116,23 @@ def build_graph(*, checkpointer=None, persist: bool = True):
     workflow.add_edge("a0_topic_profile", "a1_refiner")
     workflow.add_edge("a1_refiner", "a2_questions")
 
-    # Sequential research branches (lowers parallel LLM calls vs fan-out)
+    # Parallel research branches: a3, a4, a5 fan out from a2 and merge at
+    # a6.5. They read independent slices of RunState (chosen_query, intent,
+    # sub_questions, topic_profile) and write into reducer-safe buckets
+    # (topic_claims/market_claims/news_claims/scratchpad_notes all use
+    # operator.add). LangGraph waits for ALL three to complete before
+    # advancing to a6.5.
     workflow.add_edge("a2_questions", "a3_topic")
-    workflow.add_edge("a3_topic", "a4_market")
-    workflow.add_edge("a4_market", "a5_news")
+    workflow.add_edge("a2_questions", "a4_market")
+    workflow.add_edge("a2_questions", "a5_news")
 
     # Sequential tail. NOTE: a6.5 (dimensional clustering) runs BEFORE a6
     # (consolidator) so a6's compose phase can read dimensional_clusters from
     # state and inject multi-source consensus values into the prose. Without
     # this ordering, the clusters would only appear as a tacked-on section
     # rather than being woven into the analyst narrative.
+    workflow.add_edge("a3_topic", "a6_5_clusterer")
+    workflow.add_edge("a4_market", "a6_5_clusterer")
     workflow.add_edge("a5_news", "a6_5_clusterer")
     workflow.add_edge("a6_5_clusterer", "a6_consolidator")
     workflow.add_edge("a6_consolidator", "a7_validator")
@@ -130,7 +143,15 @@ def build_graph(*, checkpointer=None, persist: bool = True):
     if checkpointer is None:
         checkpointer = _get_checkpointer(persist=persist)
 
-    return workflow.compile(checkpointer=checkpointer)
+    # interrupt_before a2_questions: a1 produces 4 ranked query variants and
+    # the user MUST pick one before research starts. The HTTP layer detects
+    # the pause, surfaces the variants over SSE, and resumes once
+    # /select_variant fires with the chosen index. The CLI path uses a
+    # configurable `auto_pick` (set in the run config) to skip the pause.
+    return workflow.compile(
+        checkpointer=checkpointer,
+        interrupt_before=["a2_questions"],
+    )
 
 
 def list_checkpointed_runs(limit: int = 20) -> list[dict]:
@@ -168,9 +189,11 @@ def list_checkpointed_runs(limit: int = 20) -> list[dict]:
                 if state.get("market_claims") is not None and state.get("market_narrative") != "":
                     latest_node = "a4_market"
                 if state.get("news_claims"):                    latest_node = "a5_news"
+                if state.get("dimensional_clusters"):           latest_node = "a6_5_clusterer"
                 if state.get("consolidated") is not None:       latest_node = "a6_consolidator"
                 if state.get("validated_claims"):               latest_node = "a7_validator"
                 if state.get("causations"):                     latest_node = "a8_causation"
+                if state.get("verification") is not None:       latest_node = "a8_5_verifier"
                 runs[tid] = {
                     "thread_id":  tid,
                     "ts":         ts,

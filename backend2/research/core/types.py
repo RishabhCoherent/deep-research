@@ -336,7 +336,6 @@ class OutlineSection(BaseModel):
     framework_table: FrameworkTable | None = None
     causal_chain_rows: list[CausalChainRow] = Field(default_factory=list)
     case_studies: list[CaseStudy] = Field(default_factory=list)
-    so_what: str = Field(default="", max_length=400)
     evidence_ids_to_cite: list[str] = Field(default_factory=list)
     prose: str = ""   # filled by compose-prose pass
 

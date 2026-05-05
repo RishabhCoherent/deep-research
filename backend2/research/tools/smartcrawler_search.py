@@ -38,6 +38,7 @@ import concurrent.futures
 import hashlib
 import json
 import logging
+import math
 import re
 from datetime import date
 from pathlib import Path
@@ -71,7 +72,8 @@ _CF_RE = re.compile(
 _FETCH_TIMEOUT   = 12.0   # seconds per URL fetch
 _MAX_WORKERS     = 5      # parallel URL fetches
 _SNIPPET_LEN     = 800    # chars returned in the `snippet` field
-_FULL_TEXT_LEN   = 8_000  # chars returned in the `full_text` field
+_FULL_TEXT_LEN     = 16_000  # chars returned in the `full_text` field
+_MIN_CONTENT_CHARS = 200     # below this, escalate to the next fetch tier
 
 _CACHE_DIR = Path.home() / ".research" / "cache" / "smartcrawler"
 _CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -139,6 +141,8 @@ def _httpx_fetch(url: str) -> str:
 
     if resp.status_code != 200 or len(resp.content) < 500:
         return ""
+    if "application/pdf" in resp.headers.get("content-type", ""):
+        return "__PDF__"   # sentinel — caller routes to Jina
     html = resp.text
     if _CF_RE.search(html[:2_000]):
         log.debug("[smartcrawler_search] Tier-1 CF-blocked: %s", url[:80])
@@ -146,48 +150,46 @@ def _httpx_fetch(url: str) -> str:
     return html
 
 
-def _fetch_and_extract(url: str, pw_budget: object | None = None) -> dict:
-    """Fetch a URL through the tier cascade and extract article text.
+def _bm25_rerank(seed: list[dict], query: str, k1: float = 1.5, b: float = 0.75) -> list[dict]:
+    """Re-rank seed URL list by BM25 score against the query.
 
-    Tier cascade:
-      1. httpx + browser headers          (smartcrawler_search.py)
-      2. scrapling curl_cffi (TLS)        (bot_bypass.scrapling_fetch)
-      3. scrapling DynamicFetcher (JS)    (bot_bypass.playwright_fetch, bounded)
-
-    Returns {"url", "title", "content", "published", "success", "tier"}.
-    Never raises — all errors swallowed to DEBUG.
+    Uses title + snippet as the document text. Preserves original order when
+    the corpus is too small to score meaningfully (< 2 items).
+    No external dependencies — pure stdlib.
     """
-    from research.tools import bot_bypass
+    if len(seed) < 2:
+        return seed
 
-    html = ""
-    tier = "none"
+    query_terms = re.findall(r"\w+", query.lower())
+    if not query_terms:
+        return seed
 
-    # Tier 1: httpx
-    html = _httpx_fetch(url)
-    if html:
-        tier = "httpx"
+    docs = [re.findall(r"\w+", (r.get("title", "") + " " + r.get("snippet", "")).lower())
+            for r in seed]
+    N = len(docs)
+    avg_dl = sum(len(d) for d in docs) / N if N else 1.0
 
-    # Tier 2: scrapling curl_cffi (only if Tier 1 returned nothing)
-    if not html:
-        html = bot_bypass.scrapling_fetch(url, timeout=15)
-        if html and not bot_bypass._looks_blocked(html):
-            tier = "scrapling"
-        elif html:
-            html = ""  # still blocked — force escalation
+    scores: list[float] = []
+    for terms in docs:
+        tf_map: dict[str, int] = {}
+        for t in terms:
+            tf_map[t] = tf_map.get(t, 0) + 1
+        dl = len(terms)
+        score = 0.0
+        for qt in query_terms:
+            tf = tf_map.get(qt, 0)
+            df = sum(1 for d in docs if qt in d)
+            idf = math.log((N - df + 0.5) / (df + 0.5) + 1.0)
+            denom = tf + k1 * (1.0 - b + b * dl / max(avg_dl, 1.0))
+            score += idf * (tf * (k1 + 1.0)) / max(denom, 1e-9)
+        scores.append(score)
 
-    # Tier 3: Playwright (budget-bounded; only if Tiers 1-2 failed)
-    if not html and pw_budget is not None:
-        html = bot_bypass.playwright_fetch(url, pw_budget, timeout=20)
-        if html:
-            tier = "playwright"
+    ranked = sorted(zip(scores, seed), key=lambda x: -x[0])
+    return [r for _, r in ranked]
 
-    if not html:
-        return {
-            "url": url, "title": "", "content": "", "published": None,
-            "success": False, "tier": "none",
-        }
 
-    # ── Extraction: trafilatura → regex strip fallback ──────────────────
+def _extract_from_html(html: str, url: str) -> tuple[str, str, str | None]:
+    """Extract (text, title, published) from raw HTML via trafilatura → regex fallback."""
     title = ""
     published = None
     text = ""
@@ -209,15 +211,8 @@ def _fetch_and_extract(url: str, pw_budget: object | None = None) -> dict:
     except Exception as exc:
         log.debug("[smartcrawler_search] trafilatura error %s: %s", url[:80], exc)
 
-    if text and len(text) > 100:
-        return {
-            "url": url,
-            "title": title,
-            "content": text[:_FULL_TEXT_LEN],
-            "published": published,
-            "success": True,
-            "tier": tier,
-        }
+    if len(text) > 100:
+        return text, title, published
 
     # Regex tag-strip fallback
     title_m = re.search(r"<title[^>]*>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
@@ -228,21 +223,150 @@ def _fetch_and_extract(url: str, pw_budget: object | None = None) -> dict:
     )
     stripped = re.sub(r"<[^>]+>", " ", stripped)
     stripped = re.sub(r"\s+", " ", stripped).strip()
-
     if len(stripped) > 100:
+        return stripped, fallback_title, None
+
+    return "", title or fallback_title, None
+
+
+def _do_fetch_and_extract(url: str, pw_budget: object | None = None) -> dict:
+    """Inner tier cascade (no caching). Called only by _fetch_and_extract.
+
+    Tier cascade:
+      1.   httpx + browser headers          (fast, no JS)
+      1.5. Jina Reader                      (handles JS / paywalls, free API)
+      2.   scrapling curl_cffi (TLS)        (bot_bypass.scrapling_fetch)
+      3.   scrapling DynamicFetcher (JS)    (bot_bypass.playwright_fetch, bounded)
+
+    Escalates when the current tier yields thin/no content (< _MIN_CONTENT_CHARS),
+    not just when it returns no HTML — handles JS-shell pages where httpx gets a
+    200 response but the article is rendered client-side.
+
+    Returns {"url", "title", "content", "published", "success", "tier"}.
+    Never raises — all errors swallowed to DEBUG.
+    """
+    from research.tools import bot_bypass, jina_reader
+
+    best_text, best_title, best_published, best_tier = "", "", None, "none"
+
+    # ── PDF fast-path: skip httpx/scrapling, go straight to Jina ──────────
+    # httpx and scrapling return raw binary for PDFs which trafilatura/regex
+    # can't parse — they produce garbage content. Jina handles PDFs natively.
+    _is_pdf = url.lower().endswith(".pdf") or "/pdf/" in url.lower()
+    if _is_pdf:
+        jina_md = jina_reader.jina_fetch(url)
+        if jina_md and len(jina_md) >= _MIN_CONTENT_CHARS:
+            jina_t = jina_reader.jina_title(jina_md)
+            return {
+                "url": url, "title": jina_t,
+                "content": jina_md[:_FULL_TEXT_LEN],
+                "published": None, "success": True, "tier": "jina-pdf",
+            }
+        log.debug("[smartcrawler_search] PDF fetch failed/thin via Jina: %s", url[:80])
+        return {"url": url, "title": "", "content": "", "published": None,
+                "success": False, "tier": "none"}
+
+    # ── Tier 1: httpx ─────────────────────────────────────────────────────
+    html = _httpx_fetch(url)
+    if html == "__PDF__":
+        # httpx detected application/pdf Content-Type — skip to Jina
+        html = ""
+        _is_pdf = True
+    if _is_pdf:
+        jina_md = jina_reader.jina_fetch(url)
+        if jina_md and len(jina_md) >= _MIN_CONTENT_CHARS:
+            jina_t = jina_reader.jina_title(jina_md)
+            return {
+                "url": url, "title": jina_t,
+                "content": jina_md[:_FULL_TEXT_LEN],
+                "published": None, "success": True, "tier": "jina-pdf",
+            }
+        return {"url": url, "title": "", "content": "", "published": None,
+                "success": False, "tier": "none"}
+    if html:
+        text, title, published = _extract_from_html(html, url)
+        if len(text) >= _MIN_CONTENT_CHARS:
+            return {
+                "url": url, "title": title, "content": text[:_FULL_TEXT_LEN],
+                "published": published, "success": True, "tier": "httpx",
+            }
+        if len(text) > len(best_text):
+            best_text, best_title, best_published, best_tier = text, title, published, "httpx"
+
+    # ── Tier 1.5: Jina Reader ─────────────────────────────────────────────
+    # Handles JS-rendered pages and many paywalls without a local browser.
+    # Used as fallback when httpx returns thin content, saving scrapling/
+    # Playwright budget for sites Jina also can't handle.
+    jina_md = jina_reader.jina_fetch(url)
+    if jina_md:
+        jina_t = jina_reader.jina_title(jina_md)
+        if len(jina_md) >= _MIN_CONTENT_CHARS:
+            return {
+                "url": url, "title": jina_t or best_title,
+                "content": jina_md[:_FULL_TEXT_LEN],
+                "published": best_published, "success": True, "tier": "jina",
+            }
+        if len(jina_md) > len(best_text):
+            best_text, best_title, best_tier = jina_md, jina_t or best_title, "jina"
+
+    # ── Tier 2: scrapling curl_cffi ────────────────────────────────────────
+    scrapling_html = bot_bypass.scrapling_fetch(url, timeout=15)
+    if scrapling_html and not bot_bypass._looks_blocked(scrapling_html):
+        text, title, published = _extract_from_html(scrapling_html, url)
+        if len(text) >= _MIN_CONTENT_CHARS:
+            return {
+                "url": url, "title": title, "content": text[:_FULL_TEXT_LEN],
+                "published": published, "success": True, "tier": "scrapling",
+            }
+        if len(text) > len(best_text):
+            best_text, best_title, best_published, best_tier = text, title, published, "scrapling"
+
+    # ── Tier 3: Playwright (budget-bounded) ────────────────────────────────
+    if pw_budget is not None:
+        playwright_html = bot_bypass.playwright_fetch(url, pw_budget, timeout=20)
+        if playwright_html:
+            text, title, published = _extract_from_html(playwright_html, url)
+            if len(text) >= _MIN_CONTENT_CHARS:
+                return {
+                    "url": url, "title": title, "content": text[:_FULL_TEXT_LEN],
+                    "published": published, "success": True, "tier": "playwright",
+                }
+            if len(text) > len(best_text):
+                best_text, best_title, best_published, best_tier = text, title, published, "playwright"
+
+    if best_text:
         return {
-            "url": url,
-            "title": fallback_title,
-            "content": stripped[:_FULL_TEXT_LEN],
-            "published": None,
-            "success": True,
-            "tier": tier,
+            "url": url, "title": best_title, "content": best_text[:_FULL_TEXT_LEN],
+            "published": best_published, "success": True, "tier": best_tier,
         }
 
+    log.debug("[smartcrawler_search] all tiers failed: %s", url[:80])
     return {
         "url": url, "title": "", "content": "", "published": None,
-        "success": False, "tier": tier,
+        "success": False, "tier": "none",
     }
+
+
+def _fetch_and_extract(url: str, pw_budget: object | None = None) -> dict:
+    """Passage-cached wrapper around _do_fetch_and_extract.
+
+    1. Returns immediately from passage_cache if the URL was fetched recently.
+    2. Runs the full tier cascade via _do_fetch_and_extract.
+    3. Saves a successful result to passage_cache for future runs.
+    """
+    from research.tools import passage_cache
+
+    cached = passage_cache.get_cached_passage(url)
+    if cached:
+        log.debug("[smartcrawler_search] cache hit: %s", url[:80])
+        return cached
+
+    result = _do_fetch_and_extract(url, pw_budget)
+
+    if result.get("success"):
+        passage_cache.save_passage(url, result)
+
+    return result
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -357,6 +481,9 @@ def search_with_smartcrawler(
 
     log.debug("[smartcrawler_search] using backend=%s for: %s", backend_used, query[:60])
 
+    # ── Step 1.5: BM25 re-rank seed by query relevance ──────────────────────
+    seed = _bm25_rerank(seed, query)
+
     # ── Step 2: Parallel content fetch with tier cascade ────────────────
     from research.tools.bot_bypass import PlaywrightBudget
 
@@ -394,17 +521,21 @@ def search_with_smartcrawler(
         title = fetch.get("title") or seed_item.get("title", "")
         published = fetch.get("published") or seed_item.get("published")
 
+        content_len = len(content)
+        quality_score = min(1.0, content_len / 5000) if content_len > 0 else 0.05
+
         enriched.append({
             "url":       url,
             "title":     title,
             "snippet":   snippet,
-            "score":     seed_item.get("score", 0.5),
+            "score":     quality_score,
             "published": published,
             "full_text": content,
             "tier":      fetch.get("tier", "none"),
         })
-        if len(enriched) >= max_results:
-            break
+
+    enriched.sort(key=lambda r: r["score"], reverse=True)
+    enriched = enriched[:max_results]
 
     log.debug(
         "[smartcrawler_search] %d results (news=%s, backend=%s) for: %s",

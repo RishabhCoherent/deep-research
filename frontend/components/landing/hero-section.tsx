@@ -20,7 +20,7 @@ const ROLE_DISPLAY = 2500;  // how long each role stays
 const PHASE2_HOLD = 1500;   // hold after last role before looping
 
 export function HeroSection() {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
 
   // Phase: "negation" | "role"
   const [phase, setPhase] = useState<"negation" | "role">("negation");

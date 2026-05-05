@@ -1,0 +1,2541 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Claim Clusters - global EV battery cell prices 2024</title>
+<style>
+:root {
+  --bg:#0f1115; --panel:#161a22; --border:#242937; --text:#e5e7eb;
+  --muted:#8b92a8; --accent:#00bcd4; --good:#4ade80; --warn:#fbbf24;
+  --bad:#f87171; --outlier:#ef4444;
+}
+* { box-sizing: border-box; }
+body { margin:0; padding:24px; background:var(--bg); color:var(--text);
+       font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+h1 { margin:0 0 4px 0; font-size:22px; font-weight:600; }
+h2 { margin:32px 0 12px; font-size:16px; font-weight:600; color:var(--muted);
+     border-bottom:1px solid var(--border); padding-bottom:6px; }
+.topic { color:var(--accent); font-weight:600; }
+.meta { color:var(--muted); font-size:12px; margin-bottom:18px; }
+.summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+                gap:12px; margin:16px 0 28px; }
+.stat { background:var(--panel); border:1px solid var(--border);
+        border-radius:8px; padding:12px; }
+.stat-label { color:var(--muted); font-size:11px; text-transform:uppercase;
+              letter-spacing:0.4px; }
+.stat-value { font-size:22px; font-weight:600; margin-top:4px; }
+.cluster { background:var(--panel); border:1px solid var(--border);
+           border-radius:10px; margin-bottom:14px; overflow:hidden; }
+.cluster-header { padding:14px 16px; cursor:pointer; display:flex;
+                  align-items:center; justify-content:space-between;
+                  user-select:none; gap:12px; }
+.cluster-header:hover { background:#1b1f2a; }
+.cluster-title { font-weight:600; font-size:14px; flex:1; min-width:0; }
+.cluster-dim { color:var(--muted); font-size:11px; font-family:monospace;
+               margin-top:2px; }
+.cluster-qchips { margin-top:6px; display:flex; flex-wrap:wrap; gap:4px 6px; }
+.qchip { display:inline-flex; align-items:center; background:#1b1f2a;
+         border:1px solid var(--border); border-radius:4px; overflow:hidden;
+         font-family:monospace; font-size:11px; }
+.qchip .qk { padding:2px 6px; color:var(--muted); background:#12151c;
+             border-right:1px solid var(--border); }
+.qchip .qv { padding:2px 6px; color:var(--text); }
+.cluster-stats { display:flex; gap:14px; align-items:center;
+                 font-size:12px; color:var(--muted); white-space:nowrap; }
+.badge { padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;
+         border:1px solid transparent; }
+.badge-high { background:rgba(74,222,128,0.15); color:var(--good);
+              border-color:rgba(74,222,128,0.3); }
+.badge-medium { background:rgba(251,191,36,0.12); color:var(--warn);
+                border-color:rgba(251,191,36,0.3); }
+.badge-low, .badge-contested {
+  background:rgba(248,113,113,0.12); color:var(--bad);
+  border-color:rgba(248,113,113,0.3);
+}
+.badge-single_source { background:rgba(139,146,168,0.15); color:var(--muted);
+                       border-color:rgba(139,146,168,0.3); }
+.badge-trend { background:rgba(0,188,212,0.12); color:var(--accent);
+               border-color:rgba(0,188,212,0.3); }
+.cluster-body { display:none; padding:14px 16px; border-top:1px solid var(--border);
+                background:#12151c; }
+.cluster.open .cluster-body { display:block; }
+.cluster-caret { transition:transform .15s; }
+.cluster.open .cluster-caret { transform:rotate(90deg); }
+
+.kpi-row { display:flex; flex-wrap:wrap; gap:12px 20px; margin-bottom:14px; }
+.kpi { font-size:12px; }
+.kpi .k { color:var(--muted); text-transform:uppercase; letter-spacing:0.3px; }
+.kpi .v { font-size:18px; font-weight:600; margin-top:2px; }
+
+.bar-chart { display:flex; align-items:flex-end; gap:2px; height:70px;
+             margin:8px 0 14px; border-bottom:1px solid var(--border);
+             padding-bottom:4px; }
+.bar { flex:1; background:var(--accent); min-width:6px; border-radius:2px 2px 0 0;
+       position:relative; transition:background .15s; }
+.bar:hover { background:#22d3ee; }
+.bar.outlier { background:var(--outlier); }
+.bar-label { position:absolute; top:-18px; left:50%; transform:translateX(-50%);
+             font-size:10px; color:var(--muted); white-space:nowrap; }
+
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th, td { padding:6px 8px; text-align:left; border-bottom:1px solid var(--border);
+         vertical-align:top; }
+th { color:var(--muted); font-weight:500; text-transform:uppercase;
+     letter-spacing:0.3px; font-size:11px; }
+td.num { font-family:monospace; text-align:right; white-space:nowrap; }
+tr.outlier-row { background:rgba(239,68,68,0.05); }
+tr.outlier-row td.num { color:var(--outlier); font-weight:600; }
+.tier { display:inline-block; padding:1px 6px; border-radius:4px;
+        font-size:10px; font-weight:600; }
+.tier-government, .tier-multilateral, .tier-industry_body {
+  background:rgba(74,222,128,0.15); color:var(--good);
+}
+.tier-tier1_media, .tier-analyst_firm {
+  background:rgba(0,188,212,0.12); color:var(--accent);
+}
+.tier-trade_press { background:rgba(251,191,36,0.12); color:var(--warn); }
+.tier-blog, .tier-unknown {
+  background:rgba(139,146,168,0.15); color:var(--muted);
+}
+.url { color:var(--muted); font-size:11px; word-break:break-all; }
+.url:hover { color:var(--accent); }
+.excerpt { color:var(--muted); font-style:italic; font-size:11px;
+           max-width:400px; }
+
+/* Topic-profile + off-topic blocks */
+.profile-card { background:var(--panel); border:1px solid var(--border);
+                border-radius:10px; padding:14px 16px; margin:0 0 18px;
+                font-size:13px; line-height:1.6; }
+.profile-card .pk { color:var(--muted); display:inline-block; min-width:130px;
+                    font-size:11px; text-transform:uppercase;
+                    letter-spacing:0.4px; }
+.profile-card .pv { color:var(--text); }
+.offtopic-toggle { background:var(--panel); border:1px solid var(--border);
+                   border-radius:10px; padding:12px 16px; cursor:pointer;
+                   user-select:none; display:flex; align-items:center;
+                   justify-content:space-between; gap:12px;
+                   margin: 24px 0 10px; }
+.offtopic-toggle:hover { background:#1b1f2a; }
+.offtopic-list { display:none; background:#12151c;
+                 border:1px solid var(--border); border-radius:10px;
+                 padding:6px 0; margin-bottom:14px; }
+.offtopic-toggle.open + .offtopic-list { display:block; }
+.offtopic-row { padding:8px 16px; border-bottom:1px solid var(--border);
+                display:grid;
+                grid-template-columns: 80px 80px 180px 1fr;
+                gap: 10px; align-items:start; font-size:12px; }
+.offtopic-row:last-child { border-bottom:none; }
+.offtopic-row .rs { color:var(--muted); font-family:monospace; }
+</style></head>
+<body>
+<h1>Claim Clusters</h1>
+<div class="meta">
+  <span class="topic">global EV battery cell prices 2024</span> &middot;
+  started 2026-04-29T11:59:38 &middot;
+  finished 2026-04-29T12:02:28
+</div>
+
+<h2>Summary</h2>
+<div class="summary-grid"><div class="stat"><div class="stat-label">Topic</div><div class="stat-value"><span class="topic">global EV battery cell prices 2024</span></div></div><div class="stat"><div class="stat-label">Sources searched</div><div class="stat-value">15</div></div><div class="stat"><div class="stat-label">Sources with claims</div><div class="stat-value">15</div></div><div class="stat"><div class="stat-label">Raw claims</div><div class="stat-value">62</div></div><div class="stat"><div class="stat-label">Dimensions (clusters)</div><div class="stat-value">51</div></div><div class="stat"><div class="stat-label">Multi-source clusters</div><div class="stat-value">3</div></div><div class="stat"><div class="stat-label">Total cost</div><div class="stat-value">$0.0000</div></div><div class="stat"><div class="stat-label">LLM judge calls</div><div class="stat-value">0</div></div></div>
+
+<h2>Topic Profile (what this run is optimising for)</h2>
+
+    <div class="profile-card">
+      <div><span class="pk">Subject</span> <span class="pv">global EV battery cell prices</span></div>
+      <div><span class="pk">Domain</span> <span class="pv">market_analysis</span></div>
+      <div><span class="pk">Expected metrics</span> <span class="pv">average_price_per_kWh, price_trend, cost_reduction_rate</span></div>
+      <div><span class="pk">Key dimensions</span> <span class="pv">geography, as_of, battery_type, manufacturer</span></div>
+      <div><span class="pk">Positive signals</span> <span class="pv">decline in battery costs, price forecast for EV batteries, analysis of battery cell pricing trends, impact of raw material costs on battery prices</span></div>
+      <div><span class="pk">Off-topic signals</span> <span class="pv">consumer sentiment on EVs, government incentives for EV adoption, battery recycling methods, EV sales statistics</span></div>
+      <div><span class="pk">Reasoning</span> <span class="pv">The topic focuses on the pricing of EV battery cells, which fits within market analysis, and the expected metrics and dimensions reflect the economic aspects of battery pricing.</span></div>
+    </div>
+
+<h2>Consensus Distribution</h2>
+<div class="summary-grid"><div class="stat"><div class="stat-label">low</div><div class="stat-value">1</div></div><div class="stat"><div class="stat-label">contested</div><div class="stat-value">2</div></div><div class="stat"><div class="stat-label">single_source</div><div class="stat-value">48</div></div></div>
+
+<h2>Clusters (sorted by claim count, then consensus quality)</h2>
+
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#1. global average price per kwh for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">100 kWh, 135 kWh, 40 kWh, 60 kWh +1</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">battery_type</span><span class="qv">R&amp;D</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-contested">contested</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>7 claims</span>
+          <span>3 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$6767.14B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$6900.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$103.00B
+               &nbsp;&rarr;&nbsp; $15525.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">227.9%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$5290.17B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$103.00B — anl.gov"></div><div class="bar" style="height:20%" title="$117.00B — energy-storage.news"></div><div class="bar" style="height:43%" title="$4600.00B — recharged.com"></div><div class="bar" style="height:55%" title="$6900.00B — recharged.com"></div><div class="bar" style="height:64%" title="$8625.00B — recharged.com"></div><div class="bar" style="height:79%" title="$11500.00B — recharged.com"></div><div class="bar" style="height:100%" title="$15525.00B — recharged.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$103.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.anl.gov/sites/www/files/2025-09/GPRA2025_%2011Sep2025.pdf" target="_blank">anl.gov</a></td>
+      <td>2025</td>
+      <td class="excerpt">For 2025, the volume-weighted R&amp;D battery pack cost estimate is $103/kWh of rated energy.</td>
+    </tr>
+    <tr class="">
+      <td class="num">$117.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.energy-storage.news/battery-storage-system-prices-continue-to-fall-sharply-bnef-and-ember-reports-find/" target="_blank">energy-storage.news</a></td>
+      <td>2025</td>
+      <td class="excerpt">In 2025, the global average price of a turnkey battery energy storage system (BESS) is US$117/kWh, according to the Energy Storage Systems Cost Survey 2025 from BloombergNEF (BNEF), published last week (10 December).</td>
+    </tr>
+    <tr class="">
+      <td class="num">$4600.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://recharged.com/articles/how-much-do-ev-batteries-cost?srsltid=AfmBOoqr51_QOUw_uFOZxlCZClEGZCOKgzKgba1DBNf6BCMW30xiohUu" target="_blank">recharged.com</a></td>
+      <td>2025</td>
+      <td class="excerpt">| Pack size | Approx. pack value at $115/kWh | Typical vehicle type | |---|---|---| | 40 kWh | ≈$4,600 | Smaller hatchbacks, city EVs | | 60 kWh | ≈$6,900 | Compact crossovers, some sedans | | 75 kWh | ≈$8,625 | Mainstream sedans and SUVs | | 100 kWh | ≈$11,50</td>
+    </tr>
+    <tr class="">
+      <td class="num">$6900.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://recharged.com/articles/how-much-do-ev-batteries-cost?srsltid=AfmBOoqr51_QOUw_uFOZxlCZClEGZCOKgzKgba1DBNf6BCMW30xiohUu" target="_blank">recharged.com</a></td>
+      <td>2025</td>
+      <td class="excerpt">| Pack size | Approx. pack value at $115/kWh | Typical vehicle type | |---|---|---| | 40 kWh | ≈$4,600 | Smaller hatchbacks, city EVs | | 60 kWh | ≈$6,900 | Compact crossovers, some sedans | | 75 kWh | ≈$8,625 | Mainstream sedans and SUVs | | 100 kWh | ≈$11,50</td>
+    </tr>
+    <tr class="">
+      <td class="num">$8625.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://recharged.com/articles/how-much-do-ev-batteries-cost?srsltid=AfmBOoqr51_QOUw_uFOZxlCZClEGZCOKgzKgba1DBNf6BCMW30xiohUu" target="_blank">recharged.com</a></td>
+      <td>2025</td>
+      <td class="excerpt">| Pack size | Approx. pack value at $115/kWh | Typical vehicle type | |---|---|---| | 40 kWh | ≈$4,600 | Smaller hatchbacks, city EVs | | 60 kWh | ≈$6,900 | Compact crossovers, some sedans | | 75 kWh | ≈$8,625 | Mainstream sedans and SUVs | | 100 kWh | ≈$11,50</td>
+    </tr>
+    <tr class="">
+      <td class="num">$11500.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://recharged.com/articles/how-much-do-ev-batteries-cost?srsltid=AfmBOoqr51_QOUw_uFOZxlCZClEGZCOKgzKgba1DBNf6BCMW30xiohUu" target="_blank">recharged.com</a></td>
+      <td>2025</td>
+      <td class="excerpt">| Pack size | Approx. pack value at $115/kWh | Typical vehicle type | |---|---|---| | 40 kWh | ≈$4,600 | Smaller hatchbacks, city EVs | | 60 kWh | ≈$6,900 | Compact crossovers, some sedans | | 75 kWh | ≈$8,625 | Mainstream sedans and SUVs | | 100 kWh | ≈$11,50</td>
+    </tr>
+    <tr class="">
+      <td class="num">$15525.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://recharged.com/articles/how-much-do-ev-batteries-cost?srsltid=AfmBOoqr51_QOUw_uFOZxlCZClEGZCOKgzKgba1DBNf6BCMW30xiohUu" target="_blank">recharged.com</a></td>
+      <td>2025</td>
+      <td class="excerpt">| Pack size | Approx. pack value at $115/kWh | Typical vehicle type | |---|---|---| | 40 kWh | ≈$4,600 | Smaller hatchbacks, city EVs | | 60 kWh | ≈$6,900 | Compact crossovers, some sedans | | 75 kWh | ≈$8,625 | Mainstream sedans and SUVs | | 100 kWh | ≈$11,50</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#2. global cost reduction rate for 2024</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">cost_reduction_rate</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-low">low</span>
+          <span class="badge badge-trend">trend +26.53%/yr</span>
+          <span class="badge badge-trend">time-series</span>
+          <span>2 claims</span>
+          <span>2 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">24.5 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">24.5 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">20 unknown
+               &nbsp;&rarr;&nbsp; 29 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">36.7%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">4.5 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="20 unknown — recharged.com"></div><div class="bar" style="height:100%" title="29 unknown — energy-storage.news"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">20 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://recharged.com/articles/how-much-do-ev-batteries-cost?srsltid=AfmBOoqr51_QOUw_uFOZxlCZClEGZCOKgzKgba1DBNf6BCMW30xiohUu" target="_blank">recharged.com</a></td>
+      <td>2024</td>
+      <td class="excerpt">In 2024, industry analysts put the global average around $115/kWh, down about 20% year‑over‑year and getting closer to the long‑discussed $100/kWh threshold.</td>
+    </tr>
+    <tr class="">
+      <td class="num">29 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.energy-storage.news/battery-storage-system-prices-continue-to-fall-sharply-bnef-and-ember-reports-find/" target="_blank">energy-storage.news</a></td>
+      <td>2024</td>
+      <td class="excerpt">Although the annual survey last year found a global average of US$165/kWh, which would imply a 29% difference, BNEF is understood to adjust figures for inflation and revised its 2024 number to US$169/kWh.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#3. global average price per kwh for 2024</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">fully electric car</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024</span></span><span class="qchip"><span class="qk">battery_type</span><span class="qv">fully electric car</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-contested">contested</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>2 claims</span>
+          <span>2 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">4.6e+10 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">4.6e+10 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">65 unknown
+               &nbsp;&rarr;&nbsp; 9.19e+10 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">200.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">4.6e+10 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:100%" title="9.19e+10 unknown — finance.yahoo.com"></div><div class="bar" style="height:20%" title="65 unknown — arenaev.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">9.19e+10 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://finance.yahoo.com/sectors/technology/articles/ev-battery-market-worth-251-233000352.html" target="_blank">finance.yahoo.com</a></td>
+      <td>2024</td>
+      <td class="excerpt">According to MarketsandMarkets™, the global EV battery market is projected to reach from USD 91.93 Billion in 2024 to USD 251.33 Billion in 2035, at a CAGR of 9.6%.</td>
+    </tr>
+    <tr class="">
+      <td class="num">65 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.arenaev.com/ev_batteries_are_getting_cheaper_sparking_hope_and_fierce_global_competition-news-4764.php" target="_blank">arenaev.com</a></td>
+      <td>2024</td>
+      <td class="excerpt">The report noted that in 2024, the average price of a 20 kWh battery pack for a plug-in hybrid EV (a common size) was roughly the same as a much larger 65 kWh battery pack designed for a fully electric car.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#4. global replacement cost (full EV battery replacements in the U.S.) for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">replacement_cost</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">full EV battery replacements in the U.S.</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>2 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">1.35e+04 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">1.35e+04 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">5e+03 unknown
+               &nbsp;&rarr;&nbsp; 2.2e+04 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">125.9%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">8.5e+03 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="5e+03 unknown — recharged.com"></div><div class="bar" style="height:100%" title="2.2e+04 unknown — recharged.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">5e+03 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://recharged.com/articles/how-much-do-ev-batteries-cost?srsltid=AfmBOoqoxwmtUPN5T-MtT1gd9smlVxcW7O67RDBt9eLKofeeEbhSnAps" target="_blank">recharged.com</a></td>
+      <td>2025</td>
+      <td class="excerpt">Key takeaway on EV battery costs In 2025, most full EV battery replacements in the U.S. fall roughly between $5,000 and $22,000 depending on vehicle and pack size.</td>
+    </tr>
+    <tr class="">
+      <td class="num">2.2e+04 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://recharged.com/articles/how-much-do-ev-batteries-cost?srsltid=AfmBOoqoxwmtUPN5T-MtT1gd9smlVxcW7O67RDBt9eLKofeeEbhSnAps" target="_blank">recharged.com</a></td>
+      <td>2025</td>
+      <td class="excerpt">Key takeaway on EV battery costs In 2025, most full EV battery replacements in the U.S. fall roughly between $5,000 and $22,000 depending on vehicle and pack size.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#5. global average price per kwh as of unknown 2024</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024</span></span><span class="qchip"><span class="qk">fiscal_period</span><span class="qv">unknown</span></span><span class="qchip"><span class="qk">battery_type</span><span class="qv">lithium-ion</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>2 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$8300.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$8300.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$8000.00B
+               &nbsp;&rarr;&nbsp; $8600.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">7.2%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$300.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:100%" title="$8600.00B — recharged.com"></div><div class="bar" style="height:20%" title="$8000.00B — recharged.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$8600.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://recharged.com/articles/how-much-do-ev-batteries-cost?srsltid=AfmBOookiQDyFUfBPcWJ-1I6xRdiFuzczEEIny5T_pn-c7e-qfB3BWdB" target="_blank">recharged.com</a></td>
+      <td>unknown 2024</td>
+      <td class="excerpt">That means a 75 kWh pack might represent around $8,600 of the vehicle’s build cost.</td>
+    </tr>
+    <tr class="">
+      <td class="num">$8000.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://recharged.com/articles/how-much-do-ev-batteries-cost?srsltid=AfmBOookiQDyFUfBPcWJ-1I6xRdiFuzczEEIny5T_pn-c7e-qfB3BWdB" target="_blank">recharged.com</a></td>
+      <td>unknown 2024</td>
+      <td class="excerpt">EV battery cost snapshot for 2024–2025 $115 Avg. $/kWh Global average EV battery pack price per kWh in 2024. $5k–$8k Smaller packs Typical replacement range for compact EVs with 40–60 kWh batteries. $10k–$22k Larger packs Common replacement range for 70–100+ k</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#6. global ev battery prices average price per kwh (2-hour duration systems) for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global ev battery prices</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">2-hour duration systems, 4-hour duration systems</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">battery_type</span><span class="qv">2-hour duration systems, 4-hour duration systems</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>2 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$117.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$117.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$110.00B
+               &nbsp;&rarr;&nbsp; $124.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">12.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$7.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:100%" title="$124.00B — energy-storage.news"></div><div class="bar" style="height:20%" title="$110.00B — energy-storage.news"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$124.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.energy-storage.news/battery-storage-system-prices-continue-to-fall-sharply-bnef-and-ember-reports-find/" target="_blank">energy-storage.news</a></td>
+      <td>2025</td>
+      <td class="excerpt">Exclusive event discounts BNEF collected system costs and project data from 596 unique submissions, finding global averages for 2-hour duration systems at US$124/kWh and US$110/kWh for 4-hour duration systems.</td>
+    </tr>
+    <tr class="">
+      <td class="num">$110.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.energy-storage.news/battery-storage-system-prices-continue-to-fall-sharply-bnef-and-ember-reports-find/" target="_blank">energy-storage.news</a></td>
+      <td>2025</td>
+      <td class="excerpt">Exclusive event discounts BNEF collected system costs and project data from 596 unique submissions, finding global averages for 2-hour duration systems at US$124/kWh and US$110/kWh for 4-hour duration systems.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#7. global total revenue (Panasonic)</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">total_revenue</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">Panasonic</span></span><span class="qchip"><span class="qk">manufacturer</span><span class="qv">Panasonic</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">3.54e+20 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">3.54e+20 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">3.54e+20 unknown
+               &nbsp;&rarr;&nbsp; 3.54e+20 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="3.54e+20 unknown — energydigital.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">3.54e+20 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://energydigital.com/top10/top-10-ev-battery-manufacturers-2025" target="_blank">energydigital.com</a></td>
+      <td>-</td>
+      <td class="excerpt">Panasonic Headquarters: Kadoma-shi, Osaka, Japan CEO: Yuki Kusumi Total revenue: US$354bn 1.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#8. global total revenue (BYD)</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">total_revenue</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">BYD</span></span><span class="qchip"><span class="qk">manufacturer</span><span class="qv">BYD</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">1.09e+20 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">1.09e+20 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">1.09e+20 unknown
+               &nbsp;&rarr;&nbsp; 1.09e+20 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="1.09e+20 unknown — energydigital.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">1.09e+20 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://energydigital.com/top10/top-10-ev-battery-manufacturers-2025" target="_blank">energydigital.com</a></td>
+      <td>-</td>
+      <td class="excerpt">BYD Headquarters: Shenzhen, Guangdong, China CEO: Wang Chuanfu Total revenue: US$109.1bn</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#9. sunwoda total revenue (Sunwoda)</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">sunwoda</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">total_revenue</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">Sunwoda</span></span><span class="qchip"><span class="qk">manufacturer</span><span class="qv">Sunwoda</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">5.6e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">5.6e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">5.6e+19 unknown
+               &nbsp;&rarr;&nbsp; 5.6e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="5.6e+19 unknown — energydigital.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">5.6e+19 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://energydigital.com/top10/top-10-ev-battery-manufacturers-2025" target="_blank">energydigital.com</a></td>
+      <td>-</td>
+      <td class="excerpt">Sunwoda Headquarters: Shenzhen, Guangdong, China CEO: Wang Wei Total revenue: US$56bn 6.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#10. global total revenue (Contemporary Amperex Technology Co. Limited (CATL))</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">total_revenue</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">Contemporary Amperex Technology Co. Limited (CATL)</span></span><span class="qchip"><span class="qk">manufacturer</span><span class="qv">CATL</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">5.45e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">5.45e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">5.45e+19 unknown
+               &nbsp;&rarr;&nbsp; 5.45e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="5.45e+19 unknown — energydigital.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">5.45e+19 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://energydigital.com/top10/top-10-ev-battery-manufacturers-2025" target="_blank">energydigital.com</a></td>
+      <td>-</td>
+      <td class="excerpt">Contemporary Amperex Technology Co. Limited (CATL) Headquarters: Ningde, Fujian province, China CEO: Zeng Yuqun Total revenue: US$54.5bn 2.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#11. global total revenue (SK On)</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">total_revenue</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">SK On</span></span><span class="qchip"><span class="qk">manufacturer</span><span class="qv">SK On</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">5.4e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">5.4e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">5.4e+19 unknown
+               &nbsp;&rarr;&nbsp; 5.4e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="5.4e+19 unknown — energydigital.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">5.4e+19 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://energydigital.com/top10/top-10-ev-battery-manufacturers-2025" target="_blank">energydigital.com</a></td>
+      <td>-</td>
+      <td class="excerpt">SK On Headquarters: Jong-ro, Jongno-gu, Seoul CEO: Seok-Hee Lee Total revenue: US$53.95bn 4.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#12. erev market market size for 2034</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">erev market</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2034</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          <span class="badge badge-trend">trend +15.5%/yr</span>
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">3.17e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">3.17e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">3.17e+19 unknown
+               &nbsp;&rarr;&nbsp; 3.17e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="3.17e+19 unknown — towardsautomotive.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">3.17e+19 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.towardsautomotive.com/insights/extended-range-electric-vehicles-market-sizing" target="_blank">towardsautomotive.com</a></td>
+      <td>2034</td>
+      <td class="excerpt">October 2025 The extended-range electric vehicles (EREVs) market is projected to reach USD 31.69 billion by 2034, growing from USD 8.66 billion in 2025, at a CAGR of 15.5% during the forecast period from 2025 to 2034.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#13. global total revenue (LG Energy Solution)</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">total_revenue</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">LG Energy Solution</span></span><span class="qchip"><span class="qk">manufacturer</span><span class="qv">LG Energy Solution</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">1.85e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">1.85e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">1.85e+19 unknown
+               &nbsp;&rarr;&nbsp; 1.85e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="1.85e+19 unknown — energydigital.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">1.85e+19 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://energydigital.com/top10/top-10-ev-battery-manufacturers-2025" target="_blank">energydigital.com</a></td>
+      <td>-</td>
+      <td class="excerpt">LG Energy Solution Headquarters: Yeoui-daero, Yeongdeungpo-gu, Seoul CEO: Dong Myung Kim Total revenue: US$18.48bn 3.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#14. samsung sdi total revenue (Samsung SDI)</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">samsung sdi</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">total_revenue</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">Samsung SDI</span></span><span class="qchip"><span class="qk">manufacturer</span><span class="qv">Samsung SDI</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">1.2e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">1.2e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">1.2e+19 unknown
+               &nbsp;&rarr;&nbsp; 1.2e+19 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="1.2e+19 unknown — energydigital.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">1.2e+19 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://energydigital.com/top10/top-10-ev-battery-manufacturers-2025" target="_blank">energydigital.com</a></td>
+      <td>-</td>
+      <td class="excerpt">Samsung SDI Headquarters: Yongin, Gyeonggi-do, South Korea CEO: Joo-Sun Choi Total revenue: US$11.97bn 5.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#15. erev market market size for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">erev market</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          <span class="badge badge-trend">trend +15.5%/yr</span>
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">8.66e+18 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">8.66e+18 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">8.66e+18 unknown
+               &nbsp;&rarr;&nbsp; 8.66e+18 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="8.66e+18 unknown — towardsautomotive.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">8.66e+18 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.towardsautomotive.com/insights/extended-range-electric-vehicles-market-sizing" target="_blank">towardsautomotive.com</a></td>
+      <td>2025</td>
+      <td class="excerpt">October 2025 The extended-range electric vehicles (EREVs) market is projected to reach USD 31.69 billion by 2034, growing from USD 8.66 billion in 2025, at a CAGR of 15.5% during the forecast period from 2025 to 2034.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#16. eve energy total revenue (EVE Energy)</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">eve energy</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">total_revenue</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">EVE Energy</span></span><span class="qchip"><span class="qk">manufacturer</span><span class="qv">EVE Energy</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">7.2e+18 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">7.2e+18 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">7.2e+18 unknown
+               &nbsp;&rarr;&nbsp; 7.2e+18 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="7.2e+18 unknown — energydigital.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">7.2e+18 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://energydigital.com/top10/top-10-ev-battery-manufacturers-2025" target="_blank">energydigital.com</a></td>
+      <td>-</td>
+      <td class="excerpt">EVE Energy Headquarters: Huizhou City, Guangdong Province, China CEO: Liu Jincheng Total revenue: US$7.2bn 7.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#17. gotion high-tech total revenue (Gotion High-Tech)</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">gotion high-tech</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">total_revenue</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">Gotion High-Tech</span></span><span class="qchip"><span class="qk">manufacturer</span><span class="qv">Gotion High-Tech</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">4.9e+18 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">4.9e+18 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">4.9e+18 unknown
+               &nbsp;&rarr;&nbsp; 4.9e+18 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="4.9e+18 unknown — energydigital.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">4.9e+18 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://energydigital.com/top10/top-10-ev-battery-manufacturers-2025" target="_blank">energydigital.com</a></td>
+      <td>-</td>
+      <td class="excerpt">Gotion High-Tech Headquarters: Fremont, California, US CEO: Li Zhen Total revenue: US$4.9bn 8.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#18. calb total revenue (CALB)</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">calb</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">total_revenue</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">CALB</span></span><span class="qchip"><span class="qk">manufacturer</span><span class="qv">CALB</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">3.89e+18 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">3.89e+18 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">3.89e+18 unknown
+               &nbsp;&rarr;&nbsp; 3.89e+18 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="3.89e+18 unknown — energydigital.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">3.89e+18 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://energydigital.com/top10/top-10-ev-battery-manufacturers-2025" target="_blank">energydigital.com</a></td>
+      <td>-</td>
+      <td class="excerpt">CALB Headquarters: Changzhou, Jiangsu province, China CEO: Liu Jingyu Total revenue: US$3.89bn 9.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#19. electric vehicle battery cell market market size for 2032</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">electric vehicle battery cell market</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2032</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          <span class="badge badge-trend">trend +20.9%/yr</span>
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">2.04e+17 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">2.04e+17 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">2.04e+17 unknown
+               &nbsp;&rarr;&nbsp; 2.04e+17 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="2.04e+17 unknown — credenceresearch.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">2.04e+17 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.credenceresearch.com/report/electric-vehicle-battery-cell-market" target="_blank">credenceresearch.com</a></td>
+      <td>2032</td>
+      <td class="excerpt">Download Sample Market Insights: The Electric Vehicle Battery Cell Market was valued at USD 44,740 million in 2024 and is projected to reach USD 204,224 million by 2032, registering a CAGR of 20.9% during the forecast period due to rising electric vehicle adop</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#20. electric vehicle battery cell market market size for 2024</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">electric vehicle battery cell market</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          <span class="badge badge-trend">trend +20.9%/yr</span>
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">4.47e+16 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">4.47e+16 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">4.47e+16 unknown
+               &nbsp;&rarr;&nbsp; 4.47e+16 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="4.47e+16 unknown — credenceresearch.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">4.47e+16 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.credenceresearch.com/report/electric-vehicle-battery-cell-market" target="_blank">credenceresearch.com</a></td>
+      <td>2024</td>
+      <td class="excerpt">Download Sample Market Insights: The Electric Vehicle Battery Cell Market was valued at USD 44,740 million in 2024 and is projected to reach USD 204,224 million by 2032, registering a CAGR of 20.9% during the forecast period due to rising electric vehicle adop</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#21. global average price per kwh for 2035</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2035</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">2.51e+11 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">2.51e+11 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">2.51e+11 unknown
+               &nbsp;&rarr;&nbsp; 2.51e+11 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="2.51e+11 unknown — finance.yahoo.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">2.51e+11 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://finance.yahoo.com/sectors/technology/articles/ev-battery-market-worth-251-233000352.html" target="_blank">finance.yahoo.com</a></td>
+      <td>2035</td>
+      <td class="excerpt">According to MarketsandMarkets™, the global EV battery market is projected to reach from USD 91.93 Billion in 2024 to USD 251.33 Billion in 2035, at a CAGR of 9.6%.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#22. global average price per kwh (U.S.) for 2024-2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">U.S.</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024-2025</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">2.02e+03 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">2.02e+03 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">2.02e+03 unknown
+               &nbsp;&rarr;&nbsp; 2.02e+03 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="2.02e+03 unknown — recharged.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">2.02e+03 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://recharged.com/articles/how-much-do-ev-batteries-cost?srsltid=AfmBOoqr51_QOUw_uFOZxlCZClEGZCOKgzKgba1DBNf6BCMW30xiohUu" target="_blank">recharged.com</a></td>
+      <td>2024-2025</td>
+      <td class="excerpt">EV battery cost snapshot for 2024–2025 Those ranges are broad, but they frame the conversation: a compact EV with a 40 kWh pack lives in a very different cost universe than a 135 kWh electric pickup.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#23. global ev battery prices average price per kwh (United States) for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global ev battery prices</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">United States</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$219.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$219.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$219.00B
+               &nbsp;&rarr;&nbsp; $219.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$219.00B — energy-storage.news"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$219.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.energy-storage.news/battery-storage-system-prices-continue-to-fall-sharply-bnef-and-ember-reports-find/" target="_blank">energy-storage.news</a></td>
+      <td>2025</td>
+      <td class="excerpt">Unsurprisingly, turnkey system prices in China continue to be the lowest in the world by far, with an average of US$73/kWh this year versus US$177/kWh in Europe or US$219/kWh in the US.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#24. lfp battery packs energy density (LFP battery packs) for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">lfp battery packs</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">energy_density</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">LFP battery packs</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">200 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">200 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">200 unknown
+               &nbsp;&rarr;&nbsp; 200 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="200 unknown — battery-tech.net"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">200 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://battery-tech.net/battery-markets-news/europe-pushes-ev-market-with-lfp-batteries-local-production/" target="_blank">battery-tech.net</a></td>
+      <td>2025</td>
+      <td class="excerpt">On average, LFP battery packs now cost around $94 per kWh—compared with roughly $130 per kWh for nickel-rich NMC chemistries—and recent improvements have pushed energy density above 200 Wh per kg.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#25. global ev battery prices average price per kwh (Europe) for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global ev battery prices</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">Europe</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$177.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$177.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$177.00B
+               &nbsp;&rarr;&nbsp; $177.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$177.00B — energy-storage.news"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$177.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.energy-storage.news/battery-storage-system-prices-continue-to-fall-sharply-bnef-and-ember-reports-find/" target="_blank">energy-storage.news</a></td>
+      <td>2025</td>
+      <td class="excerpt">Unsurprisingly, turnkey system prices in China continue to be the lowest in the world by far, with an average of US$73/kWh this year versus US$177/kWh in Europe or US$219/kWh in the US.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#26. global ev battery prices average price per kwh for 2024</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global ev battery prices</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$169.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$169.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$169.00B
+               &nbsp;&rarr;&nbsp; $169.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$169.00B — energy-storage.news"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$169.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.energy-storage.news/battery-storage-system-prices-continue-to-fall-sharply-bnef-and-ember-reports-find/" target="_blank">energy-storage.news</a></td>
+      <td>2024</td>
+      <td class="excerpt">Although the annual survey last year found a global average of US$165/kWh, which would imply a 29% difference, BNEF is understood to adjust figures for inflation and revised its 2024 number to US$169/kWh.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#27. global average price per kwh for 2024</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$165.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$165.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$165.00B
+               &nbsp;&rarr;&nbsp; $165.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$165.00B — energy-storage.news"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$165.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.energy-storage.news/battery-storage-system-prices-continue-to-fall-sharply-bnef-and-ember-reports-find/" target="_blank">energy-storage.news</a></td>
+      <td>2024</td>
+      <td class="excerpt">Although the annual survey last year found a global average of US$165/kWh, which would imply a 29% difference, BNEF is understood to adjust figures for inflation and revised its 2024 number to US$169/kWh.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#28. ev battery prices average price per kwh for 2024</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">ev battery prices</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$139.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$139.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$139.00B
+               &nbsp;&rarr;&nbsp; $139.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$139.00B — energy-storage.news"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$139.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.energy-storage.news/li-ion-battery-pack-prices-fell-8-since-last-year-despite-metals-prices-rising-bloombergnef-says/" target="_blank">energy-storage.news</a></td>
+      <td>2024</td>
+      <td class="excerpt">While this was less than the 20% drop recorded in last year’s survey, when the average fell from US$139/kWh in 2023 to US$115/kWh toward the end of 2024, BNEF analysts noted that the fall to 2025’s all-time low came despite price increases in battery metals, s</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#29. nickel-rich nmc chemistries average price per kwh (nickel-rich NMC chemistries) for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">nickel-rich nmc chemistries</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">nickel-rich NMC chemistries</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$130.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$130.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$130.00B
+               &nbsp;&rarr;&nbsp; $130.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$130.00B — battery-tech.net"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$130.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://battery-tech.net/battery-markets-news/europe-pushes-ev-market-with-lfp-batteries-local-production/" target="_blank">battery-tech.net</a></td>
+      <td>2025</td>
+      <td class="excerpt">On average, LFP battery packs now cost around $94 per kWh—compared with roughly $130 per kWh for nickel-rich NMC chemistries—and recent improvements have pushed energy density above 200 Wh per kg.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#30. bess capex average price per kwh for 2025-10</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">bess capex</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025-10</span></span><span class="qchip"><span class="qk">battery_type</span><span class="qv">lithium iron phosphate</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$125.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$125.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$125.00B
+               &nbsp;&rarr;&nbsp; $125.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$125.00B — energy-storage.news"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$125.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.energy-storage.news/battery-storage-system-prices-continue-to-fall-sharply-bnef-and-ember-reports-find/" target="_blank">energy-storage.news</a></td>
+      <td>2025-10</td>
+      <td class="excerpt">‘Batteries now cheap enough to make solar dispatchable’ Also, last week (11 December), climate solutions think tank Ember released new analysis assessing the all-inclusive BESS capex required for a 4-hour+ duration project across all global markets, excluding </td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#31. global ev battery market market size for 2034</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global ev battery market</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2034</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          <span class="badge badge-trend">trend +8.1%/yr</span>
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$116.81B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$116.81B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$116.81B
+               &nbsp;&rarr;&nbsp; $116.81B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$116.81B — fortunebusinessinsights.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$116.81B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.fortunebusinessinsights.com/industry-reports/electric-vehicle-battery-market-101700" target="_blank">fortunebusinessinsights.com</a></td>
+      <td>2034</td>
+      <td class="excerpt">The market is projected to grow from USD 86.52 billion in 2026 to USD 116.81 billion by 2034, exhibiting a CAGR of 3.82% during the forecast period.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#32. lithium-ion battery prices average price per kwh for 2024</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">lithium-ion battery prices</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$115.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$115.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$115.00B
+               &nbsp;&rarr;&nbsp; $115.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$115.00B — recharged.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$115.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://recharged.com/articles/how-much-do-ev-batteries-cost?srsltid=AfmBOoqoxwmtUPN5T-MtT1gd9smlVxcW7O67RDBt9eLKofeeEbhSnAps" target="_blank">recharged.com</a></td>
+      <td>2024</td>
+      <td class="excerpt">From a manufacturing standpoint, industry data in late 2024 shows average lithium‑ion pack prices around $115 per kWh.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#33. global average price per kwh for 2025-12-09</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025-12-09</span></span><span class="qchip"><span class="qk">battery_type</span><span class="qv">lithium-ion</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$108.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$108.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$108.00B
+               &nbsp;&rarr;&nbsp; $108.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$108.00B — about.bnef.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$108.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://about.bnef.com/insights/clean-transport/lithium-ion-battery-pack-prices-fall-to-108-per-kilowatt-hour-despite-rising-metal-prices-bloombergnef/" target="_blank">about.bnef.com</a></td>
+      <td>2025-12-09</td>
+      <td class="excerpt">New York, December 9, 2025 – lithium-ion battery pack prices have dropped 8% since 2024 to a record low of $108 per kilowatt-hour, according to latest analysis by research provider BloombergNEF (BNEF).</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#34. battery pack price average price per kwh (average battery pack price) for 2024</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">battery pack price</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">average battery pack price</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$97.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$97.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$97.00B
+               &nbsp;&rarr;&nbsp; $97.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$97.00B — evinfrastructurenews.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$97.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.evinfrastructurenews.com/ev-technology/bloomberg-nef-lithium-ion-battery-pack-prices-drop-worldwide-ev-applications-hit-by-higher-materials-cost" target="_blank">evinfrastructurenews.com</a></td>
+      <td>2024</td>
+      <td class="excerpt">BNEF’s executive summary for the report says that the average battery pack price decreased 1% from the year before; when the 2024 report was published, it put the figure at US$97/kWh, which accounting for inflation is higher than this year&#x27;s cost, BNEF specifi</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#35. lfp battery packs average price per kwh (LFP battery packs) for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">lfp battery packs</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">LFP battery packs</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$94.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$94.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$94.00B
+               &nbsp;&rarr;&nbsp; $94.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$94.00B — battery-tech.net"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$94.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://battery-tech.net/battery-markets-news/europe-pushes-ev-market-with-lfp-batteries-local-production/" target="_blank">battery-tech.net</a></td>
+      <td>2025</td>
+      <td class="excerpt">On average, LFP battery packs now cost around $94 per kWh—compared with roughly $130 per kWh for nickel-rich NMC chemistries—and recent improvements have pushed energy density above 200 Wh per kg.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#36. ev battery pack prices cost reduction rate</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">ev battery pack prices</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">cost_reduction_rate</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">93 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">93 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">93 unknown
+               &nbsp;&rarr;&nbsp; 93 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="93 unknown — energy-storage.news"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">93 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.energy-storage.news/li-ion-battery-pack-prices-fell-8-since-last-year-despite-metals-prices-rising-bloombergnef-says/" target="_blank">energy-storage.news</a></td>
+      <td>-</td>
+      <td class="excerpt">Overall, battery pack prices have fallen by 93% since 2010, when the averag</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#37. global market share growth (Europe) for 2024</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_share_growth</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">Europe</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024</span></span><span class="qchip"><span class="qk">battery_type</span><span class="qv">LFP</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">90 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">90 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">90 unknown
+               &nbsp;&rarr;&nbsp; 90 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="90 unknown — arenaev.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">90 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.arenaev.com/ev_batteries_are_getting_cheaper_sparking_hope_and_fierce_global_competition-news-4764.php" target="_blank">arenaev.com</a></td>
+      <td>2024</td>
+      <td class="excerpt">Europe saw LFP battery use grow by about 90% in 2024.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#38. global ev battery market market size for 2026</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global ev battery market</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2026</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          <span class="badge badge-trend">trend +8.1%/yr</span>
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$86.52B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$86.52B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$86.52B
+               &nbsp;&rarr;&nbsp; $86.52B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$86.52B — fortunebusinessinsights.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$86.52B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.fortunebusinessinsights.com/industry-reports/electric-vehicle-battery-market-101700" target="_blank">fortunebusinessinsights.com</a></td>
+      <td>2026</td>
+      <td class="excerpt">The market is projected to grow from USD 86.52 billion in 2026 to USD 116.81 billion by 2034, exhibiting a CAGR of 3.82% during the forecast period.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#39. bev cells percentage (total pack price) for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">bev cells</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">percentage</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">total pack price</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">80 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">80 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">80 unknown
+               &nbsp;&rarr;&nbsp; 80 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="80 unknown — evinfrastructurenews.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">80 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.evinfrastructurenews.com/ev-technology/bloomberg-nef-lithium-ion-battery-pack-prices-drop-worldwide-ev-applications-hit-by-higher-materials-cost" target="_blank">evinfrastructurenews.com</a></td>
+      <td>2025</td>
+      <td class="excerpt">The 2025 Battery Price Survey, conducted by the clean energy market intelligence arm of media company Bloomberg, found that the average cost of BEV cells was US$79/kWh, which represented 80% of the total pack price.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#40. global ev battery market market size for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global ev battery market</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          <span class="badge badge-trend">trend +8.1%/yr</span>
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$76.99B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$76.99B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$76.99B
+               &nbsp;&rarr;&nbsp; $76.99B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$76.99B — fortunebusinessinsights.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$76.99B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.fortunebusinessinsights.com/industry-reports/electric-vehicle-battery-market-101700" target="_blank">fortunebusinessinsights.com</a></td>
+      <td>2025</td>
+      <td class="excerpt">The global electric vehicle battery market size was valued at USD 76.99 billion in 2025.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#41. ev battery cell prices average price per kwh for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">ev battery cell prices</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$74.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$74.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$74.00B
+               &nbsp;&rarr;&nbsp; $74.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$74.00B — energy-storage.news"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$74.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.energy-storage.news/li-ion-battery-pack-prices-fell-8-since-last-year-despite-metals-prices-rising-bloombergnef-says/" target="_blank">energy-storage.news</a></td>
+      <td>2025</td>
+      <td class="excerpt">Cell prices, meanwhile, fell by 5% to US$74/kWh.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#42. global ev battery prices average price per kwh (China) for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global ev battery prices</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">average_price_per_kwh</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">China</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$73.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$73.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$73.00B
+               &nbsp;&rarr;&nbsp; $73.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$73.00B — energy-storage.news"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$73.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.energy-storage.news/battery-storage-system-prices-continue-to-fall-sharply-bnef-and-ember-reports-find/" target="_blank">energy-storage.news</a></td>
+      <td>2025</td>
+      <td class="excerpt">Unsurprisingly, turnkey system prices in China continue to be the lowest in the world by far, with an average of US$73/kWh this year versus US$177/kWh in Europe or US$219/kWh in the US.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#43. global manufacturing capacity growth (Korean companies in the US) for 2024</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">manufacturing_capacity_growth</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">Korean companies in the US</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">70 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">70 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">70 unknown
+               &nbsp;&rarr;&nbsp; 70 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="70 unknown — arenaev.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">70 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.arenaev.com/ev_batteries_are_getting_cheaper_sparking_hope_and_fierce_global_competition-news-4764.php" target="_blank">arenaev.com</a></td>
+      <td>2024</td>
+      <td class="excerpt">Much of this growth, nearly 70 percent, came from Korean companies setting up shop in the US, attracted by government tax credits.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#44. global market share (global) for 2024</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_share</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">global</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024</span></span><span class="qchip"><span class="qk">battery_type</span><span class="qv">LFP</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">50 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">50 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">50 unknown
+               &nbsp;&rarr;&nbsp; 50 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="50 unknown — arenaev.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">50 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.arenaev.com/ev_batteries_are_getting_cheaper_sparking_hope_and_fierce_global_competition-news-4764.php" target="_blank">arenaev.com</a></td>
+      <td>2024</td>
+      <td class="excerpt">In emerging markets like Southeast Asia, Brazil, and India, LFP batteries captured over 50% of the EV market share, largely thanks to imports of Chinese electric cars, especially from BYD, and in India&#x27;s case, domestically produced vehicles led by Tata Motors.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#45. global ev battery market market share for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global ev battery market</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_share</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">44.4 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">44.4 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">44.4 unknown
+               &nbsp;&rarr;&nbsp; 44.4 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="44.4 unknown — fortunebusinessinsights.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">44.4 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.fortunebusinessinsights.com/industry-reports/electric-vehicle-battery-market-101700" target="_blank">fortunebusinessinsights.com</a></td>
+      <td>2025</td>
+      <td class="excerpt">Asia Pacific dominated the global market with a share of 44.37% in 2025.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#46. global cost reduction rate for 2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">cost_reduction_rate</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          <span class="badge badge-trend">trend +26.53%/yr</span>
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">31 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">31 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">31 unknown
+               &nbsp;&rarr;&nbsp; 31 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="31 unknown — energy-storage.news"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">31 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.energy-storage.news/battery-storage-system-prices-continue-to-fall-sharply-bnef-and-ember-reports-find/" target="_blank">energy-storage.news</a></td>
+      <td>2025</td>
+      <td class="excerpt">That was a 31% decline from 2024 numbers.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#47. electric vehicle battery cell market cagr</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">electric vehicle battery cell market</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">cagr</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">percent</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">20.9%</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">20.9%</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">20.9%
+               &nbsp;&rarr;&nbsp; 20.9%</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0.0%</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="20.9% — credenceresearch.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">20.9%</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.credenceresearch.com/report/electric-vehicle-battery-cell-market" target="_blank">credenceresearch.com</a></td>
+      <td>-</td>
+      <td class="excerpt">Download Sample Market Insights: The Electric Vehicle Battery Cell Market was valued at USD 44,740 million in 2024 and is projected to reach USD 204,224 million by 2032, registering a CAGR of 20.9% during the forecast period due to rising electric vehicle adop</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#48. erev market cagr</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">erev market</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">cagr</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">percent</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">15.5%</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">15.5%</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">15.5%
+               &nbsp;&rarr;&nbsp; 15.5%</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0.0%</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="15.5% — towardsautomotive.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">15.5%</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.towardsautomotive.com/insights/extended-range-electric-vehicles-market-sizing" target="_blank">towardsautomotive.com</a></td>
+      <td>-</td>
+      <td class="excerpt">October 2025 The extended-range electric vehicles (EREVs) market is projected to reach USD 31.69 billion by 2034, growing from USD 8.66 billion in 2025, at a CAGR of 15.5% during the forecast period from 2025 to 2034.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#49. global cost reduction rate</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">cost_reduction_rate</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">percent</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">9.6%</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">9.6%</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">9.6%
+               &nbsp;&rarr;&nbsp; 9.6%</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0.0%</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="9.6% — finance.yahoo.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">9.6%</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://finance.yahoo.com/sectors/technology/articles/ev-battery-market-worth-251-233000352.html" target="_blank">finance.yahoo.com</a></td>
+      <td>-</td>
+      <td class="excerpt">Delray Beach, FL, April 01, 2026 (GLOBE NEWSWIRE) -- According to MarketsandMarkets™, the global EV battery market is projected to reach from USD 91.93 Billion in 2024 to USD 251.33 Billion in 2035, at a CAGR of 9.6%.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#50. global cost reduction rate for 2025-12-09</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">cost_reduction_rate</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025-12-09</span></span><span class="qchip"><span class="qk">battery_type</span><span class="qv">lithium-ion</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">8 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">8 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">8 unknown
+               &nbsp;&rarr;&nbsp; 8 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="8 unknown — about.bnef.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">8 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://about.bnef.com/insights/clean-transport/lithium-ion-battery-pack-prices-fall-to-108-per-kilowatt-hour-despite-rising-metal-prices-bloombergnef/" target="_blank">about.bnef.com</a></td>
+      <td>2025-12-09</td>
+      <td class="excerpt">New York, December 9, 2025 – lithium-ion battery pack prices have dropped 8% since 2024 to a record low of $108 per kilowatt-hour, according to latest analysis by research provider BloombergNEF (BNEF).</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#51. global ev battery market cagr</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global ev battery market</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">cagr</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">percent</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">3.8%</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">3.8%</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">3.8%
+               &nbsp;&rarr;&nbsp; 3.8%</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0.0%</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="3.8% — fortunebusinessinsights.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">3.8%</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.fortunebusinessinsights.com/industry-reports/electric-vehicle-battery-market-101700" target="_blank">fortunebusinessinsights.com</a></td>
+      <td>-</td>
+      <td class="excerpt">The market is projected to grow from USD 86.52 billion in 2026 to USD 116.81 billion by 2034, exhibiting a CAGR of 3.82% during the forecast period.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+
+
+
+<script>
+document.querySelectorAll('.cluster-header').forEach(h => {
+  h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
+});
+document.querySelectorAll('.offtopic-toggle').forEach(h => {
+  h.addEventListener('click', () => h.classList.toggle('open'));
+});
+// auto-open first cluster
+const first = document.querySelector('.cluster');
+if (first) first.classList.add('open');
+</script>
+</body></html>

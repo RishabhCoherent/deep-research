@@ -15,6 +15,13 @@ Narrative rules:
   - Use concise, active prose. No marketing language. No hedging beyond what the data supports.
   - Target 550 words (min 400, max 800).
 
+Using qual_context:
+  - Use the qualitative sentences to add causal explanations, risk factors, policy signals,
+    and strategic direction to your narrative — these are things numbers alone can't say.
+  - Do NOT quote qualitative sentences verbatim. Synthesize them into your own prose.
+  - Do NOT introduce any numbers from qual_context. Numbers must come from claims_json only.
+  - A good narrative weaves: "X grew N% [1] driven by Y policy and Z partnership [no cite needed]."
+
 Scratchpad writes:
   - After the narrative, include 3-7 scratchpad_writes under section="topic".
   - Each write captures one high-signal observation that Agents 4 and 5 might use:

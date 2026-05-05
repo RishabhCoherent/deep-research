@@ -1,0 +1,1246 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Claim Clusters - India semiconductor manufacturing push — fab investments, government incentives, supply chain readiness</title>
+<style>
+:root {
+  --bg:#0f1115; --panel:#161a22; --border:#242937; --text:#e5e7eb;
+  --muted:#8b92a8; --accent:#00bcd4; --good:#4ade80; --warn:#fbbf24;
+  --bad:#f87171; --outlier:#ef4444;
+}
+* { box-sizing: border-box; }
+body { margin:0; padding:24px; background:var(--bg); color:var(--text);
+       font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+h1 { margin:0 0 4px 0; font-size:22px; font-weight:600; }
+h2 { margin:32px 0 12px; font-size:16px; font-weight:600; color:var(--muted);
+     border-bottom:1px solid var(--border); padding-bottom:6px; }
+.topic { color:var(--accent); font-weight:600; }
+.meta { color:var(--muted); font-size:12px; margin-bottom:18px; }
+.summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+                gap:12px; margin:16px 0 28px; }
+.stat { background:var(--panel); border:1px solid var(--border);
+        border-radius:8px; padding:12px; }
+.stat-label { color:var(--muted); font-size:11px; text-transform:uppercase;
+              letter-spacing:0.4px; }
+.stat-value { font-size:22px; font-weight:600; margin-top:4px; }
+.cluster { background:var(--panel); border:1px solid var(--border);
+           border-radius:10px; margin-bottom:14px; overflow:hidden; }
+.cluster-header { padding:14px 16px; cursor:pointer; display:flex;
+                  align-items:center; justify-content:space-between;
+                  user-select:none; gap:12px; }
+.cluster-header:hover { background:#1b1f2a; }
+.cluster-title { font-weight:600; font-size:14px; flex:1; min-width:0; }
+.cluster-dim { color:var(--muted); font-size:11px; font-family:monospace;
+               margin-top:2px; }
+.cluster-qchips { margin-top:6px; display:flex; flex-wrap:wrap; gap:4px 6px; }
+.qchip { display:inline-flex; align-items:center; background:#1b1f2a;
+         border:1px solid var(--border); border-radius:4px; overflow:hidden;
+         font-family:monospace; font-size:11px; }
+.qchip .qk { padding:2px 6px; color:var(--muted); background:#12151c;
+             border-right:1px solid var(--border); }
+.qchip .qv { padding:2px 6px; color:var(--text); }
+.cluster-stats { display:flex; gap:14px; align-items:center;
+                 font-size:12px; color:var(--muted); white-space:nowrap; }
+.badge { padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;
+         border:1px solid transparent; }
+.badge-high { background:rgba(74,222,128,0.15); color:var(--good);
+              border-color:rgba(74,222,128,0.3); }
+.badge-medium { background:rgba(251,191,36,0.12); color:var(--warn);
+                border-color:rgba(251,191,36,0.3); }
+.badge-low, .badge-contested {
+  background:rgba(248,113,113,0.12); color:var(--bad);
+  border-color:rgba(248,113,113,0.3);
+}
+.badge-single_source { background:rgba(139,146,168,0.15); color:var(--muted);
+                       border-color:rgba(139,146,168,0.3); }
+.badge-trend { background:rgba(0,188,212,0.12); color:var(--accent);
+               border-color:rgba(0,188,212,0.3); }
+.cluster-body { display:none; padding:14px 16px; border-top:1px solid var(--border);
+                background:#12151c; }
+.cluster.open .cluster-body { display:block; }
+.cluster-caret { transition:transform .15s; }
+.cluster.open .cluster-caret { transform:rotate(90deg); }
+
+.kpi-row { display:flex; flex-wrap:wrap; gap:12px 20px; margin-bottom:14px; }
+.kpi { font-size:12px; }
+.kpi .k { color:var(--muted); text-transform:uppercase; letter-spacing:0.3px; }
+.kpi .v { font-size:18px; font-weight:600; margin-top:2px; }
+
+.bar-chart { display:flex; align-items:flex-end; gap:2px; height:70px;
+             margin:8px 0 14px; border-bottom:1px solid var(--border);
+             padding-bottom:4px; }
+.bar { flex:1; background:var(--accent); min-width:6px; border-radius:2px 2px 0 0;
+       position:relative; transition:background .15s; }
+.bar:hover { background:#22d3ee; }
+.bar.outlier { background:var(--outlier); }
+.bar-label { position:absolute; top:-18px; left:50%; transform:translateX(-50%);
+             font-size:10px; color:var(--muted); white-space:nowrap; }
+
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th, td { padding:6px 8px; text-align:left; border-bottom:1px solid var(--border);
+         vertical-align:top; }
+th { color:var(--muted); font-weight:500; text-transform:uppercase;
+     letter-spacing:0.3px; font-size:11px; }
+td.num { font-family:monospace; text-align:right; white-space:nowrap; }
+tr.outlier-row { background:rgba(239,68,68,0.05); }
+tr.outlier-row td.num { color:var(--outlier); font-weight:600; }
+.tier { display:inline-block; padding:1px 6px; border-radius:4px;
+        font-size:10px; font-weight:600; }
+.tier-government, .tier-multilateral, .tier-industry_body {
+  background:rgba(74,222,128,0.15); color:var(--good);
+}
+.tier-tier1_media, .tier-analyst_firm {
+  background:rgba(0,188,212,0.12); color:var(--accent);
+}
+.tier-trade_press { background:rgba(251,191,36,0.12); color:var(--warn); }
+.tier-blog, .tier-unknown {
+  background:rgba(139,146,168,0.15); color:var(--muted);
+}
+.url { color:var(--muted); font-size:11px; word-break:break-all; }
+.url:hover { color:var(--accent); }
+.excerpt { color:var(--muted); font-style:italic; font-size:11px;
+           max-width:400px; }
+
+/* Topic-profile + off-topic blocks */
+.profile-card { background:var(--panel); border:1px solid var(--border);
+                border-radius:10px; padding:14px 16px; margin:0 0 18px;
+                font-size:13px; line-height:1.6; }
+.profile-card .pk { color:var(--muted); display:inline-block; min-width:130px;
+                    font-size:11px; text-transform:uppercase;
+                    letter-spacing:0.4px; }
+.profile-card .pv { color:var(--text); }
+.offtopic-toggle { background:var(--panel); border:1px solid var(--border);
+                   border-radius:10px; padding:12px 16px; cursor:pointer;
+                   user-select:none; display:flex; align-items:center;
+                   justify-content:space-between; gap:12px;
+                   margin: 24px 0 10px; }
+.offtopic-toggle:hover { background:#1b1f2a; }
+.offtopic-list { display:none; background:#12151c;
+                 border:1px solid var(--border); border-radius:10px;
+                 padding:6px 0; margin-bottom:14px; }
+.offtopic-toggle.open + .offtopic-list { display:block; }
+.offtopic-row { padding:8px 16px; border-bottom:1px solid var(--border);
+                display:grid;
+                grid-template-columns: 80px 80px 180px 1fr;
+                gap: 10px; align-items:start; font-size:12px; }
+.offtopic-row:last-child { border-bottom:none; }
+.offtopic-row .rs { color:var(--muted); font-family:monospace; }
+</style></head>
+<body>
+<h1>Claim Clusters</h1>
+<div class="meta">
+  <span class="topic">India semiconductor manufacturing push — fab investments, government incentives, supply chain readiness</span> &middot;
+  started 2026-04-28T10:26:28 &middot;
+  finished 2026-04-28T10:26:28
+</div>
+
+<h2>Summary</h2>
+<div class="summary-grid"><div class="stat"><div class="stat-label">Topic</div><div class="stat-value"><span class="topic">India semiconductor manufacturing push — fab investments, government incentives, supply chain readiness</span></div></div><div class="stat"><div class="stat-label">Sources searched</div><div class="stat-value">21</div></div><div class="stat"><div class="stat-label">Sources with claims</div><div class="stat-value">21</div></div><div class="stat"><div class="stat-label">Raw claims</div><div class="stat-value">39</div></div><div class="stat"><div class="stat-label">Dimensions (clusters)</div><div class="stat-value">23</div></div><div class="stat"><div class="stat-label">Multi-source clusters</div><div class="stat-value">3</div></div><div class="stat"><div class="stat-label">Total cost</div><div class="stat-value">$0.0000</div></div><div class="stat"><div class="stat-label">LLM judge calls</div><div class="stat-value">0</div></div></div>
+
+<h2>Topic Profile (what this run is optimising for)</h2>
+
+    <div class="profile-card">
+      <div><span class="pk">Subject</span> <span class="pv">India semiconductor manufacturing</span></div>
+      <div><span class="pk">Domain</span> <span class="pv">industrial_policy_analysis</span></div>
+      <div><span class="pk">Expected metrics</span> <span class="pv">investment_amount, incentive_value, supply_chain_readiness_index, fab_capacity, job_creation_count</span></div>
+      <div><span class="pk">Key dimensions</span> <span class="pv">as_of, region, government_policy, technology_type</span></div>
+      <div><span class="pk">Positive signals</span> <span class="pv">government incentives for semiconductor fabs, investment in semiconductor manufacturing, supply chain improvements, expansion of semiconductor capacity</span></div>
+      <div><span class="pk">Off-topic signals</span> <span class="pv">consumer electronics market trends, global semiconductor market share, retail sales of semiconductors, market analysis of semiconductor stocks</span></div>
+      <div><span class="pk">Reasoning</span> <span class="pv">The topic focuses on government policies and investments in semiconductor manufacturing in India, which aligns with industrial policy analysis rather than market research.</span></div>
+    </div>
+
+<h2>Consensus Distribution</h2>
+<div class="summary-grid"><div class="stat"><div class="stat-label">contested</div><div class="stat-value">3</div></div><div class="stat"><div class="stat-label">single_source</div><div class="stat-value">20</div></div></div>
+
+<h2>Clusters (sorted by claim count, then consensus quality)</h2>
+
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#1. global investment amount (Semicon India Program)</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">investment_amount</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">Semicon India Program, Tata Electronics + Taiwan&#x27;s PSMC</span></span><span class="qchip"><span class="qk">government_policy</span><span class="qv">domestic chip production</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">INR</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-contested">contested</span>
+          
+          
+          <span>3 claims</span>
+          <span>2 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">INR 590.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">INR 760.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">INR 100.00B
+               &nbsp;&rarr;&nbsp; INR 910.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">137.3%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">INR 351.85B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:85%" title="INR 760.00B — educaretaiwan.com"></div><div class="bar" style="height:100%" title="INR 910.00B — educaretaiwan.com"></div><div class="bar" style="height:20%" title="INR 100.00B — facebook.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">INR 760.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://educaretaiwan.com/major-semiconductor-investments-and-projects-in-india-2024-2025/" target="_blank">educaretaiwan.com</a></td>
+      <td>-</td>
+      <td class="excerpt">The Semicon India Program (₹76,000 crore / $10B+) aims to boost local manufacturing.</td>
+    </tr>
+    <tr class="">
+      <td class="num">INR 910.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://educaretaiwan.com/major-semiconductor-investments-and-projects-in-india-2024-2025/" target="_blank">educaretaiwan.com</a></td>
+      <td>-</td>
+      <td class="excerpt">Investment: ₹91,000 crore (~$11 billion)</td>
+    </tr>
+    <tr class="">
+      <td class="num">INR 100.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.facebook.com/Inc42/posts/the-indian-government-is-reportedly-planning-to-launch-a-massive-1-lakh-cr-1084-/1494952398895544/" target="_blank">facebook.com</a></td>
+      <td>-</td>
+      <td class="excerpt">The Indian government is reportedly planning to launch a massive ₹1 Lakh Cr ($10.84 Bn) fund to strengthen domestic chip production in the country.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#2. global market size (India semiconductor manufacturing market) in India as of unknown 2024</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">India semiconductor manufacturing market, India semiconductor market</span></span><span class="qchip"><span class="qk">geography</span><span class="qv">India</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024</span></span><span class="qchip"><span class="qk">fiscal_period</span><span class="qv">unknown</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-contested">contested</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>2 claims</span>
+          <span>2 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$30.41B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$30.41B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$6.67B
+               &nbsp;&rarr;&nbsp; $54.14B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">156.1%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$23.73B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:100%" title="$54.14B — datamintelligence.com"></div><div class="bar" style="height:20%" title="$6.67B — custommarketinsights.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$54.14B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.datamintelligence.com/research-report/india-semiconductor-manufacturing-market" target="_blank">datamintelligence.com</a></td>
+      <td>unknown 2024</td>
+      <td class="excerpt">with a rise to US$ 54.14 billion in 2024</td>
+    </tr>
+    <tr class="">
+      <td class="num">$6.67B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.custommarketinsights.com/report/india-semiconductor-market/" target="_blank">custommarketinsights.com</a></td>
+      <td>unknown 2024</td>
+      <td class="excerpt">| Market Size in 2024 | USD 6.67 Billion |</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#3. global market size (India semiconductor market) for 2035</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">India semiconductor market</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2035</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          <span class="badge badge-trend">trend +20.11%/yr</span>
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">3e+11 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">3e+11 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">3e+11 unknown
+               &nbsp;&rarr;&nbsp; 3e+11 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="3e+11 unknown — youtube.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">3e+11 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.youtube.com/watch?v=xC1Reu-a7Oo" target="_blank">youtube.com</a></td>
+      <td>2035</td>
+      <td class="excerpt">India Semiconductor Market Set to Hit $300 Billion, Projected Sixfold Growth by 2035 | WION - YouTube</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#4. global market size (India semiconductor market) for 2030</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">India semiconductor market</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2030</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          <span class="badge badge-trend">trend +20.11%/yr</span>
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">1.2e+11 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">1.2e+11 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">1.2e+11 unknown
+               &nbsp;&rarr;&nbsp; 1.2e+11 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="1.2e+11 unknown — cio.economictimes.indiatimes.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">1.2e+11 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://cio.economictimes.indiatimes.com/news/next-gen-technologies/indias-semiconductor-push-to-drive-300-billion-market-by-2035/129647743" target="_blank">cio.economictimes.indiatimes.com</a></td>
+      <td>2030</td>
+      <td class="excerpt">India&#x27;s semiconductor markis projected to nearly triple to USD 120 billion by 2030 and reach USD 300 billion by 2035, driven by the exponential adoption of artificial intelligence (AI), automotive growth, and data centre expansion, according to a report by Del</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#5. global market size (India semiconductor market) for FY2024-25</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">India semiconductor market</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">FY2024-25</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">4.5e+10 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">4.5e+10 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">4.5e+10 unknown
+               &nbsp;&rarr;&nbsp; 4.5e+10 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="4.5e+10 unknown — cio.economictimes.indiatimes.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">4.5e+10 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://cio.economictimes.indiatimes.com/news/next-gen-technologies/indias-semiconductor-push-to-drive-300-billion-market-by-2035/129647743" target="_blank">cio.economictimes.indiatimes.com</a></td>
+      <td>FY2024-25</td>
+      <td class="excerpt">India&#x27;s semiconductor market is estimated at USD 45-50 billion in FY2024-25 and has been growing at a CAGR of 20 per cent over the past three years.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#6. global investment amount (Assembly, Testing, Marking &amp; Packaging (ATMP))</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">investment_amount</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">Assembly, Testing, Marking &amp; Packaging (ATMP)</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">2.75e+09 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">2.75e+09 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">2.75e+09 unknown
+               &nbsp;&rarr;&nbsp; 2.75e+09 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="2.75e+09 unknown — educaretaiwan.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">2.75e+09 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://educaretaiwan.com/major-semiconductor-investments-and-projects-in-india-2024-2025/" target="_blank">educaretaiwan.com</a></td>
+      <td>-</td>
+      <td class="excerpt">Investment: $2.75 billion</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#7. global fab capacity (second semiconductor plant)</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">fab_capacity</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">second semiconductor plant</span></span><span class="qchip"><span class="qk">technology_type</span><span class="qv">semiconductor</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">6e+06 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">6e+06 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">6e+06 unknown
+               &nbsp;&rarr;&nbsp; 6e+06 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="6e+06 unknown — youtube.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">6e+06 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.youtube.com/watch?v=FxmlQeoFt9A" target="_blank">youtube.com</a></td>
+      <td>-</td>
+      <td class="excerpt">6 Million Chips a Day</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#8. global fab capacity (Tata Electronics fab plant)</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">fab_capacity</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">Tata Electronics fab plant</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">5e+04 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">5e+04 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">5e+04 unknown
+               &nbsp;&rarr;&nbsp; 5e+04 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="5e+04 unknown — educaretaiwan.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">5e+04 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://educaretaiwan.com/major-semiconductor-investments-and-projects-in-india-2024-2025/" target="_blank">educaretaiwan.com</a></td>
+      <td>-</td>
+      <td class="excerpt">Output: 50,000 wafers/month</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#9. global job creation count (Tata Electronics fab plant)</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">job_creation_count</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">Tata Electronics fab plant</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">2e+04 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">2e+04 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">2e+04 unknown
+               &nbsp;&rarr;&nbsp; 2e+04 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="2e+04 unknown — educaretaiwan.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">2e+04 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://educaretaiwan.com/major-semiconductor-investments-and-projects-in-india-2024-2025/" target="_blank">educaretaiwan.com</a></td>
+      <td>-</td>
+      <td class="excerpt">The facility will have a production capacity of 50,000 wafers per month and is expected to create over 20,000 jobs.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#10. global investment amount (total projects) in India as of unknown 2025-08-12</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">investment_amount</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">total projects</span></span><span class="qchip"><span class="qk">geography</span><span class="qv">India</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025-08-12</span></span><span class="qchip"><span class="qk">fiscal_period</span><span class="qv">unknown</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">INR</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">INR 1600.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">INR 1600.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">INR 1600.00B
+               &nbsp;&rarr;&nbsp; INR 1600.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">INR 0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="INR 1600.00B — india-briefing.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">INR 1600.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.india-briefing.com/news/india-4-new-semiconductor-plants-approved-2025-39180.html/" target="_blank">india-briefing.com</a></td>
+      <td>unknown 2025-08-12</td>
+      <td class="excerpt">Collectively, these projects reflect an investment commitment of approximately INR 1.60 trillion (US$18.23 billion).</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#11. global investment amount (India Semiconductor Mission) for 2025-09-23</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">investment_amount</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">India Semiconductor Mission</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025-09-23</span></span><span class="qchip"><span class="qk">government_policy</span><span class="qv">India Semiconductor Mission</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">INR</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">INR 760.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">INR 760.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">INR 760.00B
+               &nbsp;&rarr;&nbsp; INR 760.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">INR 0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="INR 760.00B — csis.org"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">INR 760.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.csis.org/analysis/semiconductor-clusters-making-indias-push-global-competitiveness" target="_blank">csis.org</a></td>
+      <td>2025-09-23</td>
+      <td class="excerpt">Backed by the ₹76,000 crore ($9.1 billion) India Semiconductor Mission (ISM)</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#12. global market size (India semiconductor manufacturing market) in India as of unknown 2033</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">India semiconductor manufacturing market</span></span><span class="qchip"><span class="qk">geography</span><span class="qv">India</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2033</span></span><span class="qchip"><span class="qk">fiscal_period</span><span class="qv">unknown</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$132.11B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$132.11B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$132.11B
+               &nbsp;&rarr;&nbsp; $132.11B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$132.11B — datamintelligence.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$132.11B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.datamintelligence.com/research-report/india-semiconductor-manufacturing-market" target="_blank">datamintelligence.com</a></td>
+      <td>unknown 2033</td>
+      <td class="excerpt">and is expected to reach US$ 132.11 billion by 2033</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#13. global market size (Indian semiconductor market) in India as of unknown 2030</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">Indian semiconductor market</span></span><span class="qchip"><span class="qk">geography</span><span class="qv">India</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2030</span></span><span class="qchip"><span class="qk">fiscal_period</span><span class="qv">unknown</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          <span class="badge badge-trend">trend +14.23%/yr</span>
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$100.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$100.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$100.00B
+               &nbsp;&rarr;&nbsp; $100.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$100.00B — cfo.economictimes.indiatimes.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$100.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://cfo.economictimes.indiatimes.com/news/indias-semiconductor-market-set-to-surge-to-96-lakh-crore-by-2030/123088569" target="_blank">cfo.economictimes.indiatimes.com</a></td>
+      <td>unknown 2030</td>
+      <td class="excerpt">is expected to reach $100-110 billion by 2030</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#14. global expected metric kinds (semiconductor sector) in India as of unknown 2030</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">expected_metric_kinds</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">semiconductor sector</span></span><span class="qchip"><span class="qk">geography</span><span class="qv">India</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2030</span></span><span class="qchip"><span class="qk">fiscal_period</span><span class="qv">unknown</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$100.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$100.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$100.00B
+               &nbsp;&rarr;&nbsp; $100.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$100.00B — builtin.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$100.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://builtin.com/articles/semiconductor-companies-in-india" target="_blank">builtin.com</a></td>
+      <td>unknown 2030</td>
+      <td class="excerpt">As demand for semiconductors heats up, India expects its semiconductor sector to be worth between $100 billion to $110 billion by 2030.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#15. global market size (Indian semiconductor market) in India as of unknown 2024-2025</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">Indian semiconductor market</span></span><span class="qchip"><span class="qk">geography</span><span class="qv">India</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024-2025</span></span><span class="qchip"><span class="qk">fiscal_period</span><span class="qv">unknown</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          <span class="badge badge-trend">trend +14.23%/yr</span>
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$45.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$45.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$45.00B
+               &nbsp;&rarr;&nbsp; $45.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$45.00B — cfo.economictimes.indiatimes.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$45.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://cfo.economictimes.indiatimes.com/news/indias-semiconductor-market-set-to-surge-to-96-lakh-crore-by-2030/123088569" target="_blank">cfo.economictimes.indiatimes.com</a></td>
+      <td>unknown 2024-2025</td>
+      <td class="excerpt">the Indian semiconductor market was about $45-50 billion in 2024-2025</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#16. global projected market size (India semiconductor market) in India as of unknown 2032</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">projected_market_size</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">India semiconductor market</span></span><span class="qchip"><span class="qk">geography</span><span class="qv">India</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2032</span></span><span class="qchip"><span class="qk">fiscal_period</span><span class="qv">unknown</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$14.09B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$14.09B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$14.09B
+               &nbsp;&rarr;&nbsp; $14.09B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$14.09B — custommarketinsights.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$14.09B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.custommarketinsights.com/report/india-semiconductor-market/" target="_blank">custommarketinsights.com</a></td>
+      <td>unknown 2032</td>
+      <td class="excerpt">| Projected Market Size in 2032 | USD 14.09 Billion |</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#17. global market size (India semiconductor market) in India as of unknown 2026</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">India semiconductor market</span></span><span class="qchip"><span class="qk">geography</span><span class="qv">India</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2026</span></span><span class="qchip"><span class="qk">fiscal_period</span><span class="qv">unknown</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$12.41B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$12.41B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$12.41B
+               &nbsp;&rarr;&nbsp; $12.41B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$12.41B — mordorintelligence.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$12.41B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.mordorintelligence.com/industry-reports/india-semiconductor-market" target="_blank">mordorintelligence.com</a></td>
+      <td>unknown 2026</td>
+      <td class="excerpt">The India semiconductor market size stood at USD 12.41 billion in 2026 and is projected to reach USD 17.42 billion by 2031, advancing at a 7.02% CAGR during 2026-2031.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#18. global cagr (India semiconductor market) in India as of unknown 2024-2032</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">cagr</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">India semiconductor market</span></span><span class="qchip"><span class="qk">geography</span><span class="qv">India</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2024-2032</span></span><span class="qchip"><span class="qk">fiscal_period</span><span class="qv">unknown</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">percent</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">10.1%</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">10.1%</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">10.1%
+               &nbsp;&rarr;&nbsp; 10.1%</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0.0%</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="10.1% — custommarketinsights.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">10.1%</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.custommarketinsights.com/report/india-semiconductor-market/" target="_blank">custommarketinsights.com</a></td>
+      <td>unknown 2024-2032</td>
+      <td class="excerpt">| CAGR Growth Rate | 10.1% CAGR |</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#19. global budget allocation (India Semiconductor Mission 2.0) in India as of unknown 2026-27</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">budget_allocation</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">India Semiconductor Mission 2.0</span></span><span class="qchip"><span class="qk">geography</span><span class="qv">India</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2026-27</span></span><span class="qchip"><span class="qk">fiscal_period</span><span class="qv">unknown</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">INR</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">INR 10.00B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">INR 10.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">INR 10.00B
+               &nbsp;&rarr;&nbsp; INR 10.00B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">INR 0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="INR 10.00B — pib.gov.in"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">INR 10.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.pib.gov.in/PressReleasePage.aspx?PRID=2224839&amp;reg=3&amp;lang=1" target="_blank">pib.gov.in</a></td>
+      <td>unknown 2026-27</td>
+      <td class="excerpt">A provision of Rs. 1,000 crore has been made for ISM 2.0 for FY 2026-27</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#20. global job creation count (approved projects) for 2026-04-16</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">job_creation_count</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">approved projects</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2026-04-16</span></span><span class="qchip"><span class="qk">government_policy</span><span class="qv">India Semiconductor Mission</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">unknown</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">10 unknown</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">10 unknown</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">10 unknown
+               &nbsp;&rarr;&nbsp; 10 unknown</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">0 unknown</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="10 unknown — india-briefing.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">10 unknown</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.india-briefing.com/news/setting-up-a-semiconductor-fabrication-plant-in-india-what-foreign-investors-should-know-22009.html/" target="_blank">india-briefing.com</a></td>
+      <td>2026-04-16</td>
+      <td class="excerpt">India is building a semiconductor ecosystem with 10 approved projects under the India Semiconductor Mission.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#21. global investment amount (new projects) in India as of unknown 2025-08-12</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">investment_amount</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">new projects</span></span><span class="qchip"><span class="qk">geography</span><span class="qv">India</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2025-08-12</span></span><span class="qchip"><span class="qk">fiscal_period</span><span class="qv">unknown</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$0.52B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$0.52B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$0.52B
+               &nbsp;&rarr;&nbsp; $0.52B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$0.52B — india-briefing.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$524.00M</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.india-briefing.com/news/india-4-new-semiconductor-plants-approved-2025-39180.html/" target="_blank">india-briefing.com</a></td>
+      <td>unknown 2025-08-12</td>
+      <td class="excerpt">This represents a combined investment of approximately INR 46 billion (US$524.39 million) and is expected to generate employment for over 2,000 skilled professionals.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#22. global market size (India semiconductor manufacturing market) in India as of unknown 2023</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">market_size</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">India semiconductor manufacturing market, India semiconductor market, Indian semiconductor market</span></span><span class="qchip"><span class="qk">geography</span><span class="qv">India</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2023</span></span><span class="qchip"><span class="qk">fiscal_period</span><span class="qv">unknown</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-contested">contested</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>4 claims</span>
+          <span>4 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$32.83B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$38.00B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$5.92B
+               &nbsp;&rarr;&nbsp; $49.41B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">132.5%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$16.22B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:100%" title="$49.41B — datamintelligence.com"></div><div class="bar" style="height:79%" title="$38.00B — cfo.economictimes.indiatimes.com"></div><div class="bar" style="height:79%" title="$38.00B — investindia.gov.in"></div><div class="bar outlier" style="height:20%" title="$5.92B — custommarketinsights.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$49.41B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.datamintelligence.com/research-report/india-semiconductor-manufacturing-market" target="_blank">datamintelligence.com</a></td>
+      <td>unknown 2023</td>
+      <td class="excerpt">The India semiconductor manufacturing market reached US$ 49.41 billion in 2023</td>
+    </tr>
+    <tr class="">
+      <td class="num">$38.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://cfo.economictimes.indiatimes.com/news/indias-semiconductor-market-set-to-surge-to-96-lakh-crore-by-2030/123088569" target="_blank">cfo.economictimes.indiatimes.com</a></td>
+      <td>unknown 2023</td>
+      <td class="excerpt">the size of the Indian semiconductor market was about $38 billion in 2023</td>
+    </tr>
+    <tr class="">
+      <td class="num">$38.00B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.investindia.gov.in/team-india-blogs/semiconductor-opportunity-india-semicon-india-mission-new-fabs-global-partnerships" target="_blank">investindia.gov.in</a></td>
+      <td>unknown 2023</td>
+      <td class="excerpt">India&#x27;s domestic semiconductor market, valued at about USD 38 billion in 2023, is projected to cross USD</td>
+    </tr>
+    <tr class="outlier-row">
+      <td class="num">$5.92B ⚠️</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://www.custommarketinsights.com/report/india-semiconductor-market/" target="_blank">custommarketinsights.com</a></td>
+      <td>unknown 2023</td>
+      <td class="excerpt">| Market Size in 2023 | USD 5.92 Billion |</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="cluster-header">
+        <div style="flex:1;min-width:0;">
+          <div class="cluster-title">#23. global investment amount (India Semiconductor Mission) in India as of unknown 2021</div>
+          <div class="cluster-qchips"><span class="qchip"><span class="qk">subject</span><span class="qv">global</span></span><span class="qchip"><span class="qk">metric_kind</span><span class="qv">investment_amount</span></span><span class="qchip"><span class="qk">scope</span><span class="qv">India Semiconductor Mission</span></span><span class="qchip"><span class="qk">geography</span><span class="qv">India</span></span><span class="qchip"><span class="qk">as_of</span><span class="qv">2021</span></span><span class="qchip"><span class="qk">fiscal_period</span><span class="qv">unknown</span></span><span class="qchip"><span class="qk">unit</span><span class="qv">USD</span></span></div>
+        </div>
+        <div class="cluster-stats">
+          <span class="badge badge-single_source">single_source</span>
+          
+          <span class="badge badge-trend">time-series</span>
+          <span>1 claims</span>
+          <span>1 sources</span>
+          <span class="cluster-caret">▶</span>
+        </div>
+      </div>
+      <div class="cluster-body">
+        <div class="kpi-row">
+          <div class="kpi"><div class="k">Weighted mean</div>
+               <div class="v">$10.20B</div></div>
+          <div class="kpi"><div class="k">Median</div>
+               <div class="v">$10.20B</div></div>
+          <div class="kpi"><div class="k">Range</div>
+               <div class="v" style="font-size:14px;">$10.20B
+               &nbsp;&rarr;&nbsp; $10.20B</div></div>
+          <div class="kpi"><div class="k">Spread</div>
+               <div class="v">0.0%</div></div>
+          <div class="kpi"><div class="k">StdDev</div>
+               <div class="v">$0.00B</div></div>
+        </div>
+        <div class="bar-chart"><div class="bar" style="height:20%" title="$10.20B — builtin.com"></div></div>
+        <table>
+          <thead><tr>
+            <th>Value</th><th>Tier</th><th>Source</th><th>As-of</th><th>Excerpt</th>
+          </tr></thead>
+          <tbody>
+    <tr class="">
+      <td class="num">$10.20B</td>
+      <td><span class="tier tier-blog">blog</span></td>
+      <td><a class="url" href="https://builtin.com/articles/semiconductor-companies-in-india" target="_blank">builtin.com</a></td>
+      <td>unknown 2021</td>
+      <td class="excerpt">In 2021, it unveiled its $10.2 billion India Semiconductor Mission, which aims to incentivize chip manufacturing in the country.</td>
+    </tr></tbody>
+        </table>
+      </div>
+    </div>
+
+
+
+<script>
+document.querySelectorAll('.cluster-header').forEach(h => {
+  h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
+});
+document.querySelectorAll('.offtopic-toggle').forEach(h => {
+  h.addEventListener('click', () => h.classList.toggle('open'));
+});
+// auto-open first cluster
+const first = document.querySelector('.cluster');
+if (first) first.classList.add('open');
+</script>
+</body></html>

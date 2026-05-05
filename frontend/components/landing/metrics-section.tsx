@@ -46,7 +46,7 @@ const metrics = [
 
 export function MetricsSection() {
   const [time, setTime] = useState<Date | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {

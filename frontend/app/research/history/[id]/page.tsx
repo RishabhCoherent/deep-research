@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Layers,
   Globe,
@@ -27,13 +27,15 @@ import { LayerPopupContent } from "@/components/LayerPopupContent";
 import { ComparatorContent } from "@/components/ComparatorContent";
 import { AnalystTraceOverlay } from "@/components/AnalystTrace";
 import { DecompositionTree } from "@/components/DecompositionTree";
+import Backend2Results from "@/components/backend2/Backend2Results";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LAYER_NAMES, LAYER_DESCRIPTIONS } from "@/lib/types";
 import type { ResearchTreeData } from "@/lib/types";
-import { getResearchHistoryDetail } from "@/lib/api";
+import { getResearchHistoryDetail, AGENTIC_API_BASE } from "@/lib/api";
 import { extractAnalystTrace } from "@/lib/extract-agent-steps";
 import type { ComparisonReport } from "@/lib/types";
+import type { Backend2Report } from "@/lib/types-backend2";
 
 function AnimatedCounter({ value }: { value: number }) {
   const [display, setDisplay] = useState(0);
@@ -91,7 +93,11 @@ export default function HistoryDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const source = searchParams.get("source") === "agentic" ? "agentic" : "legacy";
+
   const [report, setReport] = useState<ComparisonReport | null>(null);
+  const [b2Report, setB2Report] = useState<Backend2Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [openPopup, setOpenPopup] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -101,11 +107,29 @@ export default function HistoryDetailPage({
   }, []);
 
   useEffect(() => {
-    getResearchHistoryDetail(id)
-      .then((data) => setReport(data.report))
-      .catch(() => router.push("/research/history"))
-      .finally(() => setLoading(false));
-  }, [id, router]);
+    let cancelled = false;
+    async function load() {
+      try {
+        if (source === "agentic") {
+          const res = await fetch(`${AGENTIC_API_BASE}/api/research/history/${id}`);
+          if (!res.ok) throw new Error(`status ${res.status}`);
+          const data: Backend2Report = await res.json();
+          if (!cancelled) setB2Report(data);
+        } else {
+          const data = await getResearchHistoryDetail(id);
+          if (!cancelled) setReport(data.report);
+        }
+      } catch {
+        if (!cancelled) router.push("/research/history");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, source, router]);
 
   if (loading) {
     return (
@@ -117,6 +141,57 @@ export default function HistoryDetailPage({
     );
   }
 
+  // ── Backend2 (agentic) detail path ──────────────────────────
+  if (source === "agentic") {
+    if (!b2Report) return null;
+
+    function handleDownloadJsonB2() {
+      if (!b2Report) return;
+      const blob = new Blob([JSON.stringify(b2Report, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const name = (b2Report.chosen_query || b2Report.original_query || "research")
+        .slice(0, 40)
+        .replace(/\s+/g, "_");
+      a.download = `backend2_${name}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    return (
+      <ResearchLayout>
+        <div
+          className={`mb-8 flex items-center justify-end gap-3 transition-all duration-700 ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          }`}
+        >
+          <Button
+            onClick={handleDownloadJsonB2}
+            variant="outline"
+            size="sm"
+            className="gap-1.5 rounded-full border-foreground/20 hover:bg-foreground/5"
+          >
+            <Download className="h-3.5 w-3.5" />
+            JSON
+          </Button>
+          <Button
+            onClick={() => router.push("/research/history")}
+            size="sm"
+            className="gap-1.5 bg-foreground hover:bg-foreground/90 text-background rounded-full group"
+          >
+            <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1" />
+            Back to History
+          </Button>
+        </div>
+        <Backend2Results report={b2Report} />
+      </ResearchLayout>
+    );
+  }
+
+  // ── Legacy detail path ──────────────────────────────────────
   if (!report) return null;
 
   const totalSources = report.layers.reduce((s, l) => s + l.source_count, 0);

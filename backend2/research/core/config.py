@@ -16,9 +16,6 @@ class Settings(BaseSettings):
     langsmith_api_key: Optional[str] = None
 
     # LLM provider: "anthropic" or "openai"
-    # TEMP: pinned to openai + gpt-4o-mini across all tiers for cheap end-to-end
-    # debugging. Flip back to "anthropic" (or raise the openai tiers to gpt-4o)
-    # once architecture is stable.
     llm_provider: str = "openai"
 
     # Anthropic model names

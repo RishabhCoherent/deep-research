@@ -10,7 +10,7 @@ const phases = [
 ];
 
 export function InfrastructureSection() {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const [activePhase, setActivePhase] = useState(0);
   const sectionRef = useRef<HTMLElement>(null);
 

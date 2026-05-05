@@ -1,12 +1,14 @@
-"""CrewAI agents for Agent 3 - Topic Researcher."""
+"""CrewAI agents for Agent 3 - Topic Researcher.
+
+source_fetcher (Sonnet, max_iter=8 tool loop) was removed because it was
+unused — the live path uses pure-Python search+scrape via
+`_recursive_fetch_passages` / `_deep_fetch_passages` in crew.py. Keeping
+the agent forced an unnecessary Sonnet model instantiation and confused
+the LLM-call budget reporting.
+"""
 
 from crewai import Agent
 from research.api.model_router import haiku, sonnet
-from research.tools.crew_tool import to_crew_tools
-from research.tools.research_search import research_search
-from research.tools.web_fetch import web_fetch
-from research.tools.scratchpad_rw import scratchpad_read, scratchpad_write
-from research.tools.assess_source import assess_source
 from pathlib import Path
 
 _PROMPTS = Path(__file__).parent / "prompts"
@@ -21,7 +23,13 @@ def _fill(path: Path) -> str:
 
 
 def build_agents():
-    """Build the four sub-agents for Agent 3."""
+    """Build the three sub-agents actually used by Agent 3.
+
+    Returns (search_planner, claim_extractor, topic_summarizer). The
+    legacy `source_fetcher` slot has been removed — fetching is done in
+    pure-Python (no LLM) by `_recursive_fetch_passages` /
+    `_deep_fetch_passages` in crew.py.
+    """
 
     search_planner = Agent(
         role="Search Planner",
@@ -34,23 +42,12 @@ def build_agents():
         system_template=_fill(_PROMPTS / "3a_search_planner.md"),
     )
 
-    source_fetcher = Agent(
-        role="Source Fetcher",
-        goal="Execute searches, fetch passages, deduplicate, keep best 12 by authority×relevance.",
-        backstory="Diligent research analyst who reads everything before writing a single word.",
-        llm=sonnet(max_tokens=2_000),
-        tools=to_crew_tools(research_search, web_fetch, scratchpad_read, assess_source),
-        allow_delegation=False,
-        verbose=False,
-        max_iter=8,
-        system_template=_fill(_PROMPTS / "3b_source_fetcher.md"),
-    )
-
     claim_extractor = Agent(
-        role="Claim Extractor",
-        goal="Extract verbatim numeric claims with exact citations from fetched passages.",
-        backstory="Fact-checker who copies sentences verbatim and never paraphrases numbers.",
-        llm=haiku(max_tokens=8_000),
+        role="Claim Structurer",
+        goal="Structure pre-found numeric candidates into NumericClaims with full qualifiers.",
+        backstory="Analyst who takes spans found by a deterministic prefilter and "
+                  "fills in subject, metric_kind, scope, and time qualifiers.",
+        llm=haiku(max_tokens=12_000),
         tools=[],
         allow_delegation=False,
         verbose=False,
@@ -68,4 +65,4 @@ def build_agents():
         system_template=_fill(_PROMPTS / "3d_topic_summarizer.md"),
     )
 
-    return search_planner, source_fetcher, claim_extractor, topic_summarizer
+    return search_planner, claim_extractor, topic_summarizer

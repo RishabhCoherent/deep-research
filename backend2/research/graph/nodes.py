@@ -27,7 +27,6 @@ _log = structlog.get_logger(__name__)
 
 
 # ── Per-node wall-time guards ──────────────────────────────────────────────
-#
 # Every CrewAI node wraps its `run_aN` coroutine in `asyncio.wait_for` so a
 # stuck LLM call / unbounded tool-loop / network hang cannot keep the graph
 # blocked indefinitely. On TimeoutError the node logs the timeout, returns
@@ -163,13 +162,21 @@ async def a1_node(state: RunState, *, config: RunnableConfig) -> Dict[str, Any]:
         }
 
     conf = config.get("configurable") or {}
+    chosen: str | None = None
     if conf.get("auto_pick") is not None:
         idx = int(conf["auto_pick"]) - 1
         if 0 <= idx < len(a1_result.variants_sorted):
             chosen = a1_result.variants_sorted[idx].variant.text
         else:
             raise ValueError(f"auto_pick {idx + 1} out of range (1-{len(a1_result.variants_sorted)})")
+    elif conf.get("interactive_http"):
+        # HTTP path: leave chosen_query empty. The graph is compiled with
+        # interrupt_before=["a2_questions"], so it will pause here and the
+        # HTTP layer surfaces the variants to the frontend. /select_variant
+        # writes chosen_query and resumes the graph.
+        chosen = ""
     else:
+        # CLI path: blocking prompt, unchanged behaviour.
         chosen = ask_user.ask_sync(
             question="Which refined query should we research?",
             options=[sv.variant.text for sv in a1_result.variants_sorted],
@@ -315,7 +322,7 @@ async def a5_node(state: RunState, **_) -> Dict[str, Any]:
     }
 
 
-_MAX_CLAIMS_PER_BUCKET = 20  # cap each bucket so A6 context stays under ~60 total claims
+_MAX_CLAIMS_PER_BUCKET = 35  # was 20; depth fix v2 — give a6 more material to compose with
 
 async def a6_node(state: RunState, **_) -> Dict[str, Any]:
     """Agent 6 - Consolidator node (join point after A3/A4/A5).

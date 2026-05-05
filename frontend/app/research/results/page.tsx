@@ -25,12 +25,13 @@ import { LayerPopupContent } from "@/components/LayerPopupContent";
 import { ComparatorContent } from "@/components/ComparatorContent";
 import { AnalystTraceOverlay } from "@/components/AnalystTrace";
 import { DecompositionTree } from "@/components/DecompositionTree";
+import Backend2Results from "@/components/backend2/Backend2Results";
 import { Button } from "@/components/ui/button";
 import { useResearchStore } from "@/lib/store";
 import type { ResearchTreeData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { LAYER_NAMES, LAYER_DESCRIPTIONS } from "@/lib/types";
-import { extractAnalystTrace, isAnalystFormat } from "@/lib/extract-agent-steps";
+import { extractAnalystTrace } from "@/lib/extract-agent-steps";
 
 /* ── Animated counter ─────────────────────────────────────── */
 
@@ -89,7 +90,7 @@ const CARD_CONFIG: Record<
 
 export default function ResearchResultsPage() {
   const router = useRouter();
-  const { report, reset } = useResearchStore();
+  const { backend, report, backend2Report, reset } = useResearchStore();
   const [openPopup, setOpenPopup] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -98,11 +99,68 @@ export default function ResearchResultsPage() {
   }, []);
 
   useEffect(() => {
-    if (!report) {
+    const hasResult = backend === "agentic" ? backend2Report : report;
+    if (!hasResult) {
       router.push("/research");
     }
-  }, [report, router]);
+  }, [backend, report, backend2Report, router]);
 
+  // ── Backend2 (agentic) results path ──────────────────────────
+  if (backend === "agentic") {
+    if (!backend2Report) return null;
+
+    function handleDownloadJsonB2() {
+      if (!backend2Report) return;
+      const blob = new Blob([JSON.stringify(backend2Report, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const name = (backend2Report.chosen_query || backend2Report.original_query || "research")
+        .slice(0, 40)
+        .replace(/\s+/g, "_");
+      a.download = `backend2_${name}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function handleNewResearchB2() {
+      reset();
+      router.push("/research");
+    }
+
+    return (
+      <ResearchLayout currentStep={3}>
+        <div
+          className={`mb-8 flex items-center justify-end gap-3 transition-all duration-700 ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          }`}
+        >
+          <Button
+            onClick={handleDownloadJsonB2}
+            variant="outline"
+            size="sm"
+            className="gap-1.5 rounded-full border-foreground/20 hover:bg-foreground/5"
+          >
+            <Download className="h-3.5 w-3.5" />
+            JSON
+          </Button>
+          <Button
+            onClick={handleNewResearchB2}
+            size="sm"
+            className="gap-1.5 bg-foreground hover:bg-foreground/90 text-background rounded-full group"
+          >
+            New Research
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+          </Button>
+        </div>
+        <Backend2Results report={backend2Report} />
+      </ResearchLayout>
+    );
+  }
+
+  // ── Legacy (3-layer) results path ────────────────────────────
   if (!report) return null;
 
   const totalSources = report.layers.reduce((s, l) => s + l.source_count, 0);

@@ -46,11 +46,15 @@ Extract every specific FACTUAL CLAIM from the report. Focus on:
   - Trial / study names
   - Percentage breakdowns
 
-DO NOT include:
-  - Analytical opinions or judgments ("this is transformative")
-  - Vague qualitative statements ("significant progress")
-  - Predictions framed as possibilities ("could lead to")
-  - Section headings or transitional sentences
+DO NOT include (skip these entirely — they are not factual claims):
+  - Analytical opinions or judgments ("this is transformative", "this is a key opportunity")
+  - Vague qualitative statements ("significant progress", "strong momentum")
+  - Generic trend filler with no specific number: "X is expected to grow significantly",
+    "X is poised for significant growth", "X will continue its upward trajectory",
+    "driven by increasing health awareness / consumer demand", "X is gaining traction"
+  - Predictions framed as possibilities ("could lead to", "may result in")
+  - Any sentence without at least ONE specific number, named entity, or dated event
+  - Section headings, transitional sentences, or "So what?" commentary
 
 For each factual claim, classify it:
   - "verified": the claim directly matches or is clearly supported by an evidence item above
@@ -83,12 +87,50 @@ def _strip_code_fences(s: str) -> str:
     return s
 
 
+# ─── Corruption thresholds (mirrors compose_two_pass.py) ────────────────────
+_MAX_SANE_UNKNOWN = 1e12
+
+
+def _cluster_is_sane(wmean: float, unit: str) -> bool:
+    if unit in ("percent", "score", "ratio"):
+        return abs(wmean) <= 1000
+    if unit == "unknown":
+        return abs(wmean) <= _MAX_SANE_UNKNOWN
+    return True
+
+
+def _si_fmt(value: float, unit: str) -> str:
+    """Human-readable SI-scaled number for a cluster weighted_mean."""
+    sym = {"USD": "$", "EUR": "EUR ", "GBP": "GBP ",
+           "INR": "INR ", "CNY": "CNY ", "JPY": "JPY "}.get(unit, "")
+    abs_v = abs(value)
+    if sym:
+        if abs_v >= 1e12: return f"{sym}{value/1e12:.2f}T"
+        if abs_v >= 1e9:  return f"{sym}{value/1e9:.2f}B"
+        if abs_v >= 1e6:  return f"{sym}{value/1e6:.2f}M"
+        if abs_v >= 1e3:  return f"{sym}{value/1e3:.2f}K"
+        if abs_v >= 1.0:  return f"{sym}{value:.2f}B"
+        if abs_v >= 0.001: return f"{sym}{value*1000:.2f}M"
+        return f"{sym}{value*1e6:.0f}K"
+    if unit == "percent": return f"{value:.1f}%"
+    if unit == "months":  return f"{value:.1f} months"
+    if abs_v >= 1e9:  return f"{value/1e9:.2f}B"
+    if abs_v >= 1e6:  return f"{value/1e6:.2f}M"
+    if abs_v >= 1e3:  return f"{value/1e3:.2f}K"
+    label = unit if unit and unit != "unknown" else ""
+    return f"{value:.3g}{' ' + label if label else ''}"
+
+
 def _format_evidence(
     validated_claims: list[NumericClaim],
     dimensional_clusters: list[dict],
 ) -> str:
     """Build the evidence list the verifier reads. Validated claims plus
-    multi-source dimensional clusters. Caps total lines."""
+    multi-source dimensional clusters. Caps total lines.
+
+    Corrupted clusters (unknown unit + astronomically large mean) are
+    filtered out so the verifier never sees unusable 3.50e+20 tokens.
+    """
     lines: list[str] = []
     for c in validated_claims[:_MAX_EVIDENCE_LINES // 2]:
         cite = c.citation
@@ -107,10 +149,12 @@ def _format_evidence(
         descriptor = dim.get("descriptor", "?")
         unit = dim.get("unit_family", "?")
         wmean = cl.get("weighted_mean", 0.0)
+        if not _cluster_is_sane(wmean, unit):
+            continue
         n_src = cl.get("n_unique_sources", 0)
         lines.append(
             f"- [multi-source consensus, {n_src} sources] {descriptor}: "
-            f"{wmean:.3g} {unit}"
+            f"{_si_fmt(wmean, unit)}"
         )
     return "\n".join(lines) if lines else "(no evidence collected)"
 

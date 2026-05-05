@@ -24,24 +24,57 @@ will appear.
 
 REQUIRED SECTIONS:
 - Executive Summary (verdicts only — no numbers, no detail)
-- 3-5 analytical sections (each with a clear thesis + evidence + so_what)
+- 3-5 analytical sections (each with a clear thesis + evidence)
 - Contrarian View (2-3 bold non-consensus claims at the end of the report)
 
 QUALITY RULES:
 1. Each section must argue ONE thesis. Multiple ideas = split into separate sections.
-2. Include AT LEAST ONE framework_table (comparison matrix, risk grid, taxonomy)
-   somewhere across the sections. Frameworks are the artefacts readers remember.
+2. Frameworks are valuable but OPTIONAL. Include a framework_table ONLY if
+   you can fill it completely with grounded data. Otherwise set
+   framework_table to null. The renderer drops thin or fake tables anyway,
+   so a missing table beats a half-empty one.
+
+   STRICT rules when you DO emit a framework_table:
+
+   (a) MINIMUM 3 ROWS. A two-row table isn't a comparison. If you can't
+       find 3 grounded complete rows that compare on the same dimension,
+       set framework_table to null.
+
+   (b) COLUMN COHERENCE. Every cell in a column must measure the SAME
+       quantity in the SAME unit as the column header. If the header is
+       "Investment (USD)", every cell in that column must be USD —
+       NEVER mix in INR/crore/local-currency values. If the header is
+       "Market Size (USD bn) — 2025", every cell must be a 2025 value
+       (no projections to 2030 in the same column). When the source
+       evidence is heterogeneous, prefer dropping rows over mixing units.
+
+   (c) UNIT-CLEAR CELLS. Every numeric cell ≥ 1,000 must carry a unit
+       marker: "$10.2B" not "10200000000"; "76,000 crore (≈ $9.1B)"
+       not "76000 crore" alone in a USD column; "12.4%" not "12.4".
+       Raw integers without units will be dropped.
+
+   (d) NO PLACEHOLDERS. Never emit "N/A", "TBD", "—", "?", empty
+       strings, or "unknown". A row is included only when EVERY cell
+       has real data. If you can't fill a cell, drop the row.
+
+   (e) GROUNDED NUMBERS. Every numeric cell MUST be a value that appears
+       verbatim in the EVIDENCE list above (validated claims +
+       dimensional cluster weighted_means). Do NOT interpolate,
+       extrapolate, average, or estimate. If a row's numbers are not in
+       the evidence, omit the row.
+
+   (f) Qualitative cells (labels like "high"/"low", short descriptive
+       phrases) are allowed without numeric citation but must still be
+       filled in — no placeholders.
 3. Include AT LEAST ONE causal_chain_rows entry across the sections. Cause →
    effect → implication forces a real argument rather than fact-listing.
 4. Include 1-3 case_studies across the sections — concrete company /
    jurisdiction / cohort examples that PROVE the thesis. Skip if you have no
    concrete examples in the evidence.
-5. so_what is the ONE-line answer to "what should the reader do differently?"
-   — strategic, not a summary.
-6. evidence_ids_to_cite assigns each piece of upstream evidence to ONE section
+5. evidence_ids_to_cite assigns each piece of upstream evidence to ONE section
    only. Do not double-count.
-7. MERGE overlapping sections. Fewer deeper sections > many thin ones.
-8. DROP sections with zero evidence. Do not pad.
+6. MERGE overlapping sections. Fewer deeper sections > many thin ones.
+7. DROP sections with zero evidence. Do not pad.
 
 DOMAIN HONESTY:
 The topic profile above tells you what KIND of topic this is. If the topic is
@@ -84,14 +117,16 @@ Return a single JSON object matching this shape (strict schema enforced):
       "case_studies": [
         {{"title": "Case Study: ...", "body": "150-300 word narrative"}}
       ],
-      "so_what": "one-line strategic implication",
       "evidence_ids_to_cite": ["claim_idx_3", "claim_idx_7", ...],
       "prose": ""
     }}
   ],
   "contrarian_claims": ["..."],
   "key_stats": ["specific verified numbers that MUST appear"],
-  "target_word_count": 2500
+  "target_word_count": 4000
 }}
 
-target_word_count = max(2000, num_sections * 600). Aim for 2000-3500 words.
+target_word_count = max(3500, num_sections * 800). Aim for 3500-5000 words.
+This is a long-form analyst brief, not a summary — the prose pass will
+expand each section with multi-paragraph evidence-rich body copy, so the
+outline should leave room for that depth.

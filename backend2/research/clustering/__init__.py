@@ -39,6 +39,7 @@ def cluster_numeric_claims(
     *,
     fuzzy_threshold: float = 0.88,
     link_trends: bool = True,
+    today_year: int | None = None,
     on_progress=None,
 ) -> list[ClusteredEstimate]:
     """Cluster a flat list of NumericClaims into dimensional clusters.
@@ -69,7 +70,9 @@ def cluster_numeric_claims(
     )
 
     # 3. Aggregate
-    estimates = build_estimates(protos, link_trends=link_trends)
+    estimates = build_estimates(
+        protos, link_trends=link_trends, today_year=today_year,
+    )
     log(f"[clustering] {len(raw_list)} claims -> {len(estimates)} clusters "
         f"({sum(1 for e in estimates if e.n_unique_sources >= 2)} multi-source)")
     return estimates

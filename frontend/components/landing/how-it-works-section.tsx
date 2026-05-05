@@ -51,7 +51,7 @@ console.log('Layers:', expert.comparison)`,
 
 export function HowItWorksSection() {
   const [activeStep, setActiveStep] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

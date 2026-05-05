@@ -29,7 +29,7 @@ const securityFeatures = [
 const tiers = ["Tier 1 Gold", "Tier 2 Known", "Tier 3 Unknown", "Auto-Filtered", "Cross-Verified"];
 
 export function SecuritySection() {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {

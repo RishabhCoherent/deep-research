@@ -52,10 +52,22 @@ NO FABRICATION:
 - If you have no evidence for a claim, delete the sentence.
 - No filler ("Technology plays a growing role...") without specifics.
 - Every number must come from the evidence above.
+- **BANNED SENTENCE PATTERNS — delete on sight, no exceptions:**
+  - "[X] is expected to grow significantly" → replace with the actual CAGR or size figure, or delete.
+  - "[X] is poised for significant growth" → delete unless followed immediately by a specific % or $ from evidence.
+  - "[X] will continue its upward trajectory" → delete. This is filler. State the actual trajectory numerically.
+  - "driven by increasing [health awareness / consumer demand / adoption]" → delete unless a survey/study number is cited.
+  - "[X] market is expected to reach [Y] by [Z]" → only keep if Y and Z appear verbatim in the EVIDENCE list above.
+  These sentences are unfalsifiable trend filler. A verifier will flag every one of them. Use the MANDATORY STATISTICS above instead.
 
 SOURCES:
 - END with a `## Sources & References` numbered list. Include only the sources you actually cited via [n] footnotes.
 
-TARGET: {target_words} words. Quality over quantity, but do not undershoot — every section in the outline must be substantively written.
+TARGET: {target_words} words minimum. This is a long-form analyst brief, not
+a summary. Each section needs multiple paragraphs (3-5) of evidence-rich
+prose. Pack every paragraph with specific numbers, named entities (companies,
+agencies, jurisdictions), and dated events from the EVIDENCE list above —
+density of facts is the single biggest signal of analyst-grade quality.
+A short brief is a failed brief. Do not undershoot.
 
 OUTPUT: Start with `## Executive Summary`. No preamble.

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Check, Loader2, Settings, BarChart3, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHealth } from "@/hooks/useHealth";
+import { BackendToggle } from "@/components/BackendToggle";
 
 const STEPS = [
   { label: "Configure", icon: Settings },
@@ -94,8 +95,10 @@ export function ResearchLayout({ children, currentStep }: ResearchLayoutProps) {
             </div>
           )}
 
-          {/* Right: History link + Status dot */}
+          {/* Right: Backend toggle + History link + Status dot */}
           <div className="flex items-center gap-6">
+            <BackendToggle />
+
             <Link
               href="/research/history"
               className={cn(

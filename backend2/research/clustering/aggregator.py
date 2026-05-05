@@ -177,19 +177,59 @@ def link_time_series(estimates: list[ClusteredEstimate]) -> None:
             s.trend_slope_pct_per_year = avg_rate
 
 
+# How old (in years) before a cluster is considered stale and pushed below
+# fresh clusters in the default sort. Forecast clusters (as_of in the future)
+# are NEVER stale.
+_STALE_THRESHOLD_YEARS = 2
+
+
+def _is_stale(est: ClusteredEstimate, today_year: int) -> bool:
+    """A cluster is stale if its newest as_of year is more than
+    `_STALE_THRESHOLD_YEARS` behind today and not a forecast (future year).
+    Clusters with no parseable year (e.g. only "unknown" / news events) are
+    treated as fresh — we don't want to demote them based on missing data.
+    """
+    y = _representative_year(est)
+    if y is None:
+        return False
+    if y >= today_year:
+        return False                                  # current or forecast
+    return (today_year - y) > _STALE_THRESHOLD_YEARS
+
+
 def build_estimates(
     protos: Iterable[_ProtoCluster],
     *,
     link_trends: bool = True,
+    today_year: int | None = None,
 ) -> list[ClusteredEstimate]:
-    """Run per-cluster aggregation + optional time-series linking."""
+    """Run per-cluster aggregation + optional time-series linking.
+
+    `today_year` defaults to current calendar year; override for reproducible
+    tests. Sort order is recency-aware: stale clusters (older than
+    `_STALE_THRESHOLD_YEARS` years) sink below fresh ones, regardless of
+    claim count. Within each tier the legacy sort applies.
+    """
+    if today_year is None:
+        from datetime import date as _date
+        today_year = _date.today().year
+
     estimates = [aggregate_cluster(p) for p in protos]
     if link_trends:
         link_time_series(estimates)
-    _consensus_order = {"high": 0, "medium": 1, "low": 2, "contested": 3, "single_source": 4}
-    estimates.sort(
-        key=lambda e: (-e.n_claims,
-                       _consensus_order.get(e.consensus_level, 5),
-                       -abs(e.weighted_mean)),
-    )
+    _consensus_order = {"high": 0, "medium": 1, "low": 2,
+                        "contested": 3, "single_source": 4}
+
+    def _sort_key(e: ClusteredEstimate) -> tuple:
+        stale = _is_stale(e, today_year)
+        # Stale comes after fresh (False=0 < True=1). Within a freshness tier:
+        # most claims first → highest consensus → biggest |weighted_mean|.
+        return (
+            stale,                                           # 0 fresh, 1 stale
+            -e.n_claims,
+            _consensus_order.get(e.consensus_level, 5),
+            -abs(e.weighted_mean),
+        )
+
+    estimates.sort(key=_sort_key)
     return estimates
